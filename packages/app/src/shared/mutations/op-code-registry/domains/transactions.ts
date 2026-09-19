@@ -356,6 +356,73 @@ export const transactionOps = {
     },
   },
 
+  // Push API v2: update an existing transaction by its push reference —
+  // the message_id of the POST /push that created it (recorded as
+  // import-provenance `push:<message_id>` on apply). The only stable handle
+  // an external integration can hold under E2E. Reuses the column-update
+  // service so every field keeps its existing validation and side effects.
+  'transactions.updateByRef': {
+    execute: async (args) => {
+      const ref = String(args.messageId ?? '');
+      if (!ref) throw new Error('"messageId" is required.');
+      const id = S().importHistory!.duplicates.findOperation(`push:${ref}`);
+      if (id === undefined) {
+        throw new Error(
+          `No transaction found for push message_id "${ref}". Only transactions created via the Push API (with a message_id) can be updated by reference.`
+        );
+      }
+      const fields = (args.fields ?? {}) as Record<string, unknown>;
+      const allowed = ['inflow', 'outflow', 'date', 'memo', 'payee', 'categoryId', 'accountId'];
+      const entries = Object.entries(fields).filter(([k]) => allowed.includes(k));
+      if (entries.length === 0) {
+        throw new Error(`"fields" must set at least one of: ${allowed.join(', ')}.`);
+      }
+      const columnFor: Record<string, string> = {
+        inflow: 'InflowConverted',
+        outflow: 'OutflowConverted',
+        date: 'Date',
+        memo: 'Memo',
+        payee: 'Payee',
+        categoryId: 'CategoryID',
+        accountId: 'AccountID',
+      };
+      for (const [key, value] of entries) {
+        await S().transactions!.updateTransactionColumn(
+          id,
+          columnFor[key],
+          value as string | number | null
+        );
+      }
+      return { transactionId: id, updated: entries.map(([k]) => k) };
+    },
+    invalidates: [...TX_WRITE_INVALIDATION_KEYS, ['payees'], ['payees', '*']],
+  },
+
+  // Push API v2: delete an existing transaction by its push reference.
+  // True removal via the same service the UI delete uses (undo-safe snapshot
+  // is unnecessary here: the caller is a headless integration, and the
+  // mutation history still records the operation).
+  'transactions.deleteByRef': {
+    execute: async (args) => {
+      const ref = String(args.messageId ?? '');
+      if (!ref) throw new Error('"messageId" is required.');
+      const id = S().importHistory!.duplicates.findOperation(`push:${ref}`);
+      if (id === undefined) {
+        throw new Error(
+          `No transaction found for push message_id "${ref}". Only transactions created via the Push API (with a message_id) can be deleted by reference.`
+        );
+      }
+      try {
+        await S().transactions!.getTransactionByID(id);
+      } catch {
+        return { transactionId: id, deleted: false }; // already gone — idempotent
+      }
+      await S().transactions!.deleteTransaction(id);
+      return { transactionId: id, deleted: true };
+    },
+    invalidates: TX_WRITE_INVALIDATION_KEYS,
+  },
+
   'transactions.deleteBatch': {
     execute: async (args) => {
       const ids = Array.isArray(args.ids) ? args.ids.map(Number) : [];
