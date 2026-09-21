@@ -391,12 +391,12 @@ func (h *Handlers) GetPushAPISpec(c echo.Context) error {
 				},
 			},
 			"transactions.addTransfer": map[string]interface{}{
-				"description": "Move money between two of your own accounts as a linked transfer (both legs created atomically, rolled back together on failure)",
+				"description": "Move money between two of your own accounts as a linked transfer; the app attempts to remove the source leg if destination creation fails",
 				"args": map[string]interface{}{
 					"budgetId":    map[string]string{"type": "integer", "description": "Budget ID"},
 					"transferId":  map[string]string{"type": "string", "description": "Client-generated unique id linking the two legs; store it to delete the transfer later"},
-					"source":      map[string]string{"type": "object", "description": "Outflow leg: inflow=0, outflow=<milliunits>, accountId, categoryId (0 = auto Transfers), date, memo, payee"},
-					"destination": map[string]string{"type": "object", "description": "Inflow leg: inflow=<milliunits>, outflow=0, accountId, categoryId (0 = auto Transfers), date, memo, payee"},
+					"source":      map[string]string{"type": "object", "description": "Outflow leg: inflow=0, outflow=<source-account milliunits>, accountId, categoryId (0 = auto Transfers), date, memo, payee"},
+					"destination": map[string]string{"type": "object", "description": "Inflow leg: inflow=<destination-account milliunits>, outflow=0, accountId, categoryId (0 = auto Transfers), date, memo, payee"},
 				},
 			},
 			"transactions.deleteTransfer": map[string]interface{}{

@@ -102,7 +102,7 @@ client.add_transaction(
 
 #### Transfers
 
-- `transactions.addTransfer` — move money between two of your own accounts as a **true linked transfer** (same operation the app UI uses), not two loose transactions. Args: `budgetId`, a client-generated `transferId` (any unique string — store it, it is the handle for deletion), and two legs `source` / `destination`, each with `inflow`/`outflow` (integer milliunits), `accountId`, `categoryId` (use `0` — the app assigns the Transfers category automatically for on-budget transfers), `date`, `memo`, `payee`. The source leg carries the `outflow`, the destination leg the same amount as `inflow`. If the second leg fails to apply, the first is rolled back — you never get a half transfer.
+- `transactions.addTransfer` — move money between two of your own accounts as a **true linked transfer** (same operation the app UI uses), not two loose transactions. Args: `budgetId`, a client-generated `transferId` (any unique string — store it, it is the handle for deletion), and two legs `source` / `destination`, each with `inflow`/`outflow` (integer milliunits), `accountId`, `categoryId` (use `0` — the app assigns the Transfers category automatically for on-budget transfers), `date`, `memo`, `payee`. Each leg uses its own account currency: the source carries the `outflow`, and the destination carries the received `inflow`. Use equal amounts only for same-currency transfers. If creating the second leg fails, the app attempts to remove the first leg.
 - `transactions.deleteTransfer` — delete **both legs** of a transfer by its `transferId`.
 
 ```json
@@ -117,6 +117,19 @@ client.add_transaction(
   }
 }
 ```
+
+With the Python SDK, keep the transfer handle separately from the queue message ID:
+
+```python
+result = client.add_transfer(
+    source_account_id=3, destination_account_id=7, budget_id=1,
+    date="2026-09-21", amount=480,
+    # destination_amount=520,  # required when the received currency amount differs
+)
+client.delete_transfer(result.transfer_id)
+```
+
+`result.message_id` identifies the push message; `result.transfer_id` links the two ledger entries. A transfer ID must be unique within the space.
 
 ## Encryption requirements
 
