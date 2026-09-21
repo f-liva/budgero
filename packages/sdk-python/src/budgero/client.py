@@ -6,6 +6,7 @@ This module provides the main client class for interacting with the Budgero API.
 from __future__ import annotations
 
 import hashlib
+import uuid
 import json
 from datetime import date
 from typing import Any, Optional
@@ -501,6 +502,82 @@ class BudgeroClient:
             queue_id=response.get("id"),
             message=response.get("message"),
             message_id=ref_id,
+        )
+
+    def add_transfer(
+        self,
+        source_account_id: int,
+        destination_account_id: int,
+        budget_id: int,
+        date: str | date,
+        amount: AmountLike,
+        *,
+        memo: str = "",
+        payee: str = "Transfer",
+        transfer_id: Optional[str] = None,
+    ) -> PushResult:
+        """
+        Move money between two of your own accounts as a true linked
+        transfer (the same operation the app UI performs) — not two
+        unrelated transactions.
+
+        Amount is in currency units and must be positive; the source leg
+        gets it as outflow, the destination leg as inflow. Category is
+        assigned automatically (Transfers) by the app on apply.
+
+        Returns a PushResult whose ``message_id`` is the ``transfer_id``
+        of the created transfer — store it to delete the transfer later
+        with ``delete_transfer()``.
+        """
+        amt = to_milliunits(amount)
+        if amt <= 0:
+            raise ValidationError("amount must be positive for a transfer")
+        if source_account_id == destination_account_id:
+            raise ValidationError("source and destination accounts must differ")
+        date_str = date if isinstance(date, str) else date.isoformat()
+        tid = transfer_id or str(uuid.uuid4())
+        leg = {"categoryId": 0, "date": date_str, "memo": memo, "payee": payee}
+        ref_id, encrypted = self._encrypt_mutation(
+            "transactions.addTransfer",
+            {
+                "budgetId": budget_id,
+                "transferId": tid,
+                "source": {**leg, "inflow": 0, "outflow": amt, "accountId": source_account_id},
+                "destination": {**leg, "inflow": amt, "outflow": 0, "accountId": destination_account_id},
+            },
+        )
+        response = self._make_request(
+            "POST",
+            "/api/v1/push",
+            json_data={"encrypted_payload": encrypted, "message_id": ref_id},
+            headers={"X-Data-Format-Version": str(PROTOCOL_VERSION)},
+        )
+        return PushResult(
+            success=True,
+            queue_id=response.get("id"),
+            message=response.get("message"),
+            message_id=tid,
+        )
+
+    def delete_transfer(self, transfer_id: str) -> PushResult:
+        """Delete both legs of a transfer created with ``add_transfer()``."""
+        if not transfer_id:
+            raise ValidationError("transfer_id is required")
+        ref_id, encrypted = self._encrypt_mutation(
+            "transactions.deleteTransfer",
+            {"transferId": transfer_id},
+        )
+        response = self._make_request(
+            "POST",
+            "/api/v1/push",
+            json_data={"encrypted_payload": encrypted, "message_id": ref_id},
+            headers={"X-Data-Format-Version": str(PROTOCOL_VERSION)},
+        )
+        return PushResult(
+            success=True,
+            queue_id=response.get("id"),
+            message=response.get("message"),
+            message_id=transfer_id,
         )
 
     def get_queue(self) -> list[PushQueueItem]:
