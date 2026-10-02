@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"budgero-server/internal/adapter/driven/lemonsqueezy"
+	"budgero-server/internal/adapter/driving/http/bankrelay"
 	synchub "budgero-server/internal/adapter/driving/http/websocket"
 	"budgero-server/internal/application"
 	"budgero-server/internal/application/email"
@@ -36,6 +37,9 @@ type Options struct {
 	// (update check disabled, APP_LATEST_VERSION pinned, tests) makes
 	// /version/latest fall back to the build version.
 	LatestVersion LatestVersionSource
+	// BankRelay serves the opaque bank sync tunnel. Optional — nil builds one
+	// with production settings (Enable Banking only).
+	BankRelay *bankrelay.Relay
 }
 
 // Handlers contains HTTP request handlers for the API.
@@ -53,6 +57,7 @@ type Handlers struct {
 	selfHostMode         bool
 	latestVersion        LatestVersionSource
 	email                *email.Service
+	bankRelay            *bankrelay.Relay
 }
 
 // NewHandlers creates a new Handlers instance.
@@ -80,7 +85,13 @@ func NewHandlers(services *application.Services, syncHub *synchub.Hub, opts Opti
 		legacyVariants = parseVariantIDList(opts.Config.LemonSqueezy.LegacyVariantIDs)
 	}
 
+	bankRelay := opts.BankRelay
+	if bankRelay == nil {
+		bankRelay = bankrelay.New(&bankrelay.Options{})
+	}
+
 	return &Handlers{
+		bankRelay:            bankRelay,
 		cfg:                  opts.Config,
 		services:             services,
 		usecases:             usecases,

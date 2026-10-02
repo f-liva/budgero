@@ -37,13 +37,58 @@ export interface SimpleFINAccountSet {
   accounts: SimpleFINAccount[];
 }
 
-export type BankProvider = 'simplefin';
+export type BankProvider = 'simplefin' | 'enablebanking';
+
+/** Provider-neutral bank row, so every feed shares the same dedupe planner. */
+export interface BankTransaction {
+  /** Stable per account; part of the import operation ID. */
+  id: string;
+  /** YYYY-MM-DD in the user's local calendar. */
+  date: string;
+  /** Signed milli-units: positive is an inflow. */
+  amount: number;
+  payee: string;
+  memo: string;
+  /** Pending rows are never imported; banks often re-key them once booked. */
+  pending: boolean;
+}
+
+/** One authorized Enable Banking session: a bank login good for ~180 days. */
+export interface EnableBankingSession {
+  sessionId: string;
+  aspsp: { name: string; country: string };
+  /** ISO timestamp the consent expires. */
+  validUntil: string;
+  accounts: EnableBankingSessionAccount[];
+  createdAt: string;
+}
+
+export interface EnableBankingSessionAccount {
+  /** Changes with every session; only used for API calls. */
+  uid: string;
+  /** Stable across sessions; used as the link's ExternalAccountID. */
+  hash: string;
+  name: string;
+  currency: string;
+  iban?: string;
+}
+
+/** Stored encrypted in the budget, exactly like the SimpleFIN access URL. */
+export interface EnableBankingConfig {
+  appId: string;
+  privateKeyPem: string;
+  appName?: string;
+  environment?: 'SANDBOX' | 'PRODUCTION';
+  sessions: EnableBankingSession[];
+}
 
 export interface BankConnection {
   ID: number;
   BudgetID: number;
   Provider: BankProvider;
   AccessURL: string;
+  /** Provider settings as JSON; `{}` for SimpleFIN. */
+  ConfigJSON: string;
   LastSyncAt: string | null;
   LastError: string | null;
   CreatedAt: string;
@@ -52,6 +97,8 @@ export interface BankConnection {
 export interface BankLink {
   ID: number;
   BudgetID: number;
+  /** Which connection feeds this link. */
+  Provider: BankProvider;
   AccountID: number;
   ExternalAccountID: string;
   ExternalName: string;
@@ -65,6 +112,8 @@ export interface BankLink {
 
 export interface BankLinkInput {
   budgetId: number;
+  /** Defaults to SimpleFIN, the only provider before per-provider connections. */
+  provider?: BankProvider;
   accountId: number;
   externalAccountId: string;
   externalName: string;
@@ -74,9 +123,12 @@ export interface BankLinkInput {
 
 export interface BankSyncRecordInput {
   budgetId: number;
+  /** Defaults to SimpleFIN for ops recorded before per-provider connections. */
+  provider?: BankProvider;
   at: string;
   error: string | null;
-  links: { accountId: number; balance: number; balanceDate: string }[];
+  /** A null balance still stamps LastSyncAt but keeps the last known balance. */
+  links: { accountId: number; balance: number | null; balanceDate: string | null }[];
 }
 
 export type BankReviewStatus = 'pending' | 'resolved' | 'dismissed';
@@ -110,7 +162,9 @@ export interface BankImportPlanInput {
   accountId: number;
   currency: string;
   link: Pick<BankLink, 'ExternalAccountID' | 'ImportFrom'>;
-  transactions: SimpleFINTransaction[];
+  /** Defaults to SimpleFIN, whose operation IDs predate this field. */
+  provider?: BankProvider;
+  transactions: BankTransaction[];
   /** True when this bank row was imported before, even if the ledger copy was deleted since. */
   wasImported: (identity: ImportIdentity) => boolean;
 }

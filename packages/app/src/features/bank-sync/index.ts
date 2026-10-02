@@ -2,4 +2,6 @@ export { BankAutoSync } from './ui/BankAutoSync';
 export { BankSyncButton } from './ui/BankSyncButton';
 export { BankConnectionPanel } from './ui/BankConnectionPanel';
 export { ConnectBankCard } from './ui/ConnectBankCard';
-export { useBankConnection } from './api/useBankSync';
+export { useBankConnections } from './api/useBankSync';
+export { invalidateAfterBankSync } from './api/useBankSync';
+export { completeAuthorization as completeBankAuthorization } from './model/enable-banking-auth';

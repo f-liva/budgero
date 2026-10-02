@@ -228,6 +228,9 @@ export {
 export * from './services/import/duplicate-planner.js';
 export {
   bankOperationId,
+  ENABLE_BANKING_API_URL,
+  fromSimpleFINTransaction,
   isPostedSimpleFINTransaction,
+  parseEnableBankingConfig,
   simpleFINDate,
 } from './services/bank-sync/index.js';

@@ -1,6 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { NodeSqlJsAdapter, ServiceManager, asMilli } from '../src';
-import type { SimpleFINTransaction } from '../src/services/bank-sync/types';
+import {
+  bankOperationId,
+  fromSimpleFINTransaction,
+  parseEnableBankingConfig,
+} from '../src/services/bank-sync';
+import type {
+  BankTransaction,
+  EnableBankingSession,
+  SimpleFINTransaction,
+} from '../src/services/bank-sync/types';
 
 const at = (date: string) => {
   const [y, m, d] = date.split('-').map(Number);
@@ -50,13 +59,16 @@ async function setup() {
     importFrom: '2026-09-01',
   });
   const link = services.bankSync.listLinks(budgetId)[0];
-  const plan = (transactions: SimpleFINTransaction[], wasImported = () => false) =>
+  const plan = (
+    transactions: SimpleFINTransaction[],
+    wasImported: (row: { operationId: string }) => boolean = () => false
+  ) =>
     services.bankSync.planImport({
       budgetId,
       accountId: account.ID,
       currency: 'USD',
       link,
-      transactions,
+      transactions: transactions.map(fromSimpleFINTransaction),
       wasImported,
     });
   const importRow = (identity: ReturnType<typeof plan>['imports'][number]) =>
@@ -201,8 +213,129 @@ describe('SimpleFIN import planning', () => {
 
   it('drops links and pending reviews with the connection', async () => {
     const { services, budgetId } = await setup();
-    services.bankSync.deleteConnection(budgetId);
-    expect(services.bankSync.getConnection(budgetId)).toBeNull();
+    services.bankSync.deleteConnection(budgetId, 'simplefin');
+    expect(services.bankSync.getConnection(budgetId, 'simplefin')).toBeNull();
     expect(services.bankSync.listLinks(budgetId)).toEqual([]);
+  });
+});
+
+const session = (id: string, bank: string, hash = 'HASH-1'): EnableBankingSession => ({
+  sessionId: id,
+  aspsp: { name: bank, country: 'FI' },
+  validUntil: '2027-03-31T00:00:00Z',
+  createdAt: '2026-10-02T00:00:00Z',
+  accounts: [{ uid: `uid-${id}`, hash, name: 'Current', currency: 'EUR' }],
+});
+
+describe('Enable Banking connections', () => {
+  it('stores credentials, replaces a re-authorized bank and keeps sessions on key changes', async () => {
+    const { services, budgetId } = await setup();
+    services.bankSync.deleteConnection(budgetId, 'simplefin');
+    services.bankSync.saveEnableBankingConnection(budgetId, {
+      appId: 'app-1',
+      privateKeyPem: 'PEM',
+    });
+    services.bankSync.saveEnableBankingSession(budgetId, session('s1', 'Nordea'));
+    services.bankSync.saveEnableBankingSession(budgetId, session('s2', 'OP'));
+    services.bankSync.saveEnableBankingSession(budgetId, session('s3', 'Nordea'));
+
+    const connection = services.bankSync.getConnection(budgetId, 'enablebanking')!;
+    expect(connection.Provider).toBe('enablebanking');
+    let config = parseEnableBankingConfig(connection)!;
+    expect(config.sessions.map((s) => s.sessionId)).toEqual(['s2', 's3']);
+
+    services.bankSync.saveEnableBankingConnection(budgetId, {
+      appId: 'app-1',
+      privateKeyPem: 'NEW PEM',
+    });
+    config = parseEnableBankingConfig(services.bankSync.getConnection(budgetId, 'enablebanking'))!;
+    expect(config.privateKeyPem).toBe('NEW PEM');
+    expect(config.sessions).toHaveLength(2);
+
+    services.bankSync.removeEnableBankingSession(budgetId, 's2');
+    config = parseEnableBankingConfig(services.bankSync.getConnection(budgetId, 'enablebanking'))!;
+    expect(config.sessions.map((s) => s.sessionId)).toEqual(['s3']);
+  });
+
+  it('keeps SimpleFIN and Enable Banking side by side, each with its own links', async () => {
+    const { services, budgetId, account } = await setup();
+    services.bankSync.saveEnableBankingConnection(budgetId, { appId: 'app', privateKeyPem: 'PEM' });
+    const euAccount = await services.accounts.createAccount(
+      'EU',
+      budgetId,
+      'Checking',
+      'EUR',
+      asMilli(0),
+      {},
+      true
+    );
+    services.bankSync.saveLink({
+      budgetId,
+      provider: 'enablebanking',
+      accountId: euAccount.ID,
+      externalAccountId: 'HASH-1',
+      externalName: 'Current',
+      orgName: 'Nordea',
+      importFrom: '2026-09-01',
+    });
+    services.bankSync.recordSync({
+      budgetId,
+      provider: 'enablebanking',
+      at: '2026-10-02T10:00:00Z',
+      error: null,
+      links: [],
+    });
+
+    expect(services.bankSync.listConnections(budgetId).map((c) => c.Provider)).toEqual([
+      'simplefin',
+      'enablebanking',
+    ]);
+    expect(services.bankSync.listLinks(budgetId, 'simplefin').map((l) => l.AccountID)).toEqual([
+      account.ID,
+    ]);
+    expect(services.bankSync.getConnection(budgetId, 'simplefin')?.LastSyncAt).toBeNull();
+    expect(services.bankSync.getConnection(budgetId, 'enablebanking')?.LastSyncAt).toBe(
+      '2026-10-02T10:00:00Z'
+    );
+
+    services.bankSync.deleteConnection(budgetId, 'enablebanking');
+    expect(services.bankSync.listConnections(budgetId).map((c) => c.Provider)).toEqual([
+      'simplefin',
+    ]);
+    expect(services.bankSync.listLinks(budgetId).map((l) => l.Provider)).toEqual(['simplefin']);
+  });
+
+  it('ignores SimpleFIN connections and broken config', () => {
+    expect(parseEnableBankingConfig({ Provider: 'simplefin', ConfigJSON: '{}' })).toBeNull();
+    expect(parseEnableBankingConfig({ Provider: 'enablebanking', ConfigJSON: 'nope' })).toBeNull();
+  });
+
+  it('plans Enable Banking rows under their own namespace, never colliding with SimpleFIN', async () => {
+    const { services, budgetId, account } = await setup();
+    const row = (id: string, amount: number, pending = false): BankTransaction => ({
+      id,
+      date: '2026-09-05',
+      amount,
+      payee: 'Cafe',
+      memo: '',
+      pending,
+    });
+    const result = services.bankSync.planImport({
+      budgetId,
+      accountId: account.ID,
+      currency: 'EUR',
+      provider: 'enablebanking',
+      link: { ExternalAccountID: 'HASH-1', ImportFrom: '2026-09-01' },
+      transactions: [row('e1', -3500), row('e2', 120000), row('p', -1000, true)],
+      wasImported: () => false,
+    });
+    expect(result.imports.map((r) => [r.sourceKey, r.inflow, r.outflow])).toEqual([
+      [JSON.stringify(['enablebanking-v1', 'HASH-1', 'e1']), 0, 3500],
+      [JSON.stringify(['enablebanking-v1', 'HASH-1', 'e2']), 120000, 0],
+    ]);
+    expect(result.imports[0].operationId).toBe(
+      bankOperationId(budgetId, account.ID, 'HASH-1', 'e1', 'enablebanking')
+    );
+    expect(bankOperationId(budgetId, account.ID, 'HASH-1', 'e1')).toContain('simplefin-v1');
   });
 });

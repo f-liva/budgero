@@ -49,6 +49,11 @@ func SetupRoutes(e *echo.Echo, h *handler.Handlers, services *application.Servic
 	log.Info().Msg("Registering WebSocket route: /api/v1/ws/sync")
 	api.GET("/ws/sync", h.WebSocketHandler)
 
+	// Opaque bank sync relay (Wisp over WebSocket, auth via ticket in path).
+	// Only TLS ciphertext to the bank aggregator passes through it.
+	api.GET("/bank-relay/:ticket", h.BankRelay)
+	api.GET("/bank-relay/:ticket/", h.BankRelay)
+
 	// Auth-only routes (JWT required, no subscription check)
 	authOnly := api.Group("")
 	authOnly.Use(middleware.JWTMiddleware(opts.Config))
@@ -149,6 +154,9 @@ func SetupRoutes(e *echo.Echo, h *handler.Handlers, services *application.Servic
 	protected.PUT("/budget-spaces/:spaceID/members/me/encrypted-key", h.UpdateMyEncryptedSpaceKey)
 	protected.PUT("/budget-spaces/members/me/encrypted-keys", h.UpdateMyEncryptedSpaceKeys)
 	// NOTE: encryption-key-version is now handled via WebSocket for proper sender exclusion
+
+	// Bank sync relay tickets (a paid feature, like the rest of sync)
+	protected.POST("/bank-relay/ticket", h.IssueBankRelayTicket)
 
 	// Legacy routes for backward compatibility (can be removed later)
 	protected.GET("/database/hash", h.GetDatabaseHash)

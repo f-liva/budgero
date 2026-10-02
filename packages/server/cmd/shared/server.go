@@ -104,7 +104,7 @@ func Run(selfHost bool) {
 			log.Warn().
 				Int("status", v.Status).
 				Str("method", v.Method).
-				Str("uri", v.URI).
+				Str("uri", redactURI(v.URI)).
 				Err(v.Error).
 				Msg("request failed")
 			return nil
@@ -466,4 +466,15 @@ func getContentType(path string) string {
 		}
 	}
 	return "application/octet-stream"
+}
+
+// redactURI keeps bank relay tickets (bearer capabilities that also name the
+// user) out of the logs. The relay records counters only.
+func redactURI(uri string) string {
+	const relayPrefix = "/api/v1/bank-relay/"
+	path, _, _ := strings.Cut(uri, "?")
+	if strings.HasPrefix(path, relayPrefix) && path != relayPrefix+"ticket" {
+		return relayPrefix + "[redacted]"
+	}
+	return uri
 }

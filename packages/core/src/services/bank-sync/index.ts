@@ -9,10 +9,14 @@ import type {
   BankImportPlanInput,
   BankLink,
   BankLinkInput,
+  BankProvider,
   BankReview,
   BankReviewInput,
   BankReviewStatus,
   BankSyncRecordInput,
+  BankTransaction,
+  EnableBankingConfig,
+  EnableBankingSession,
   SimpleFINTransaction,
 } from './types.js';
 
@@ -21,13 +25,32 @@ export * from './types.js';
 const MANUAL_MATCH_DAYS = 5;
 const REISSUE_DAYS = 3;
 
+/** Namespaces source keys and operation IDs. Never change an existing one. */
+const SOURCE_NAMESPACE: Record<BankProvider, string> = {
+  simplefin: 'simplefin-v1',
+  enablebanking: 'enablebanking-v1',
+};
+
+export const ENABLE_BANKING_API_URL = 'https://api.enablebanking.com';
+
 export function bankOperationId(
   budgetId: number,
   accountId: number,
   externalAccountId: string,
-  transactionId: string
+  transactionId: string,
+  provider: BankProvider = 'simplefin'
 ): string {
-  return JSON.stringify(['simplefin-v1', budgetId, accountId, externalAccountId, transactionId]);
+  return JSON.stringify([
+    SOURCE_NAMESPACE[provider],
+    budgetId,
+    accountId,
+    externalAccountId,
+    transactionId,
+  ]);
+}
+
+function bankSourceKey(provider: BankProvider, externalAccountId: string, id: string): string {
+  return JSON.stringify([SOURCE_NAMESPACE[provider], externalAccountId, id]);
 }
 
 export function simpleFINDate(transaction: SimpleFINTransaction): string {
@@ -36,6 +59,32 @@ export function simpleFINDate(transaction: SimpleFINTransaction): string {
 
 export function isPostedSimpleFINTransaction(transaction: SimpleFINTransaction): boolean {
   return !transaction.pending && transaction.posted > 0;
+}
+
+export function fromSimpleFINTransaction(transaction: SimpleFINTransaction): BankTransaction {
+  const description = transaction.description?.trim() ?? '';
+  const payee = transaction.payee?.trim() || description;
+  return {
+    id: transaction.id,
+    date: simpleFINDate(transaction),
+    amount: fromDecimalString(transaction.amount.replace(/^\+/, '')),
+    payee,
+    memo: transaction.memo?.trim() || (payee === description ? '' : description),
+    pending: !isPostedSimpleFINTransaction(transaction),
+  };
+}
+
+export function parseEnableBankingConfig(
+  connection: Pick<BankConnection, 'Provider' | 'ConfigJSON'> | null | undefined
+): EnableBankingConfig | null {
+  if (connection?.Provider !== 'enablebanking') return null;
+  try {
+    const config = JSON.parse(connection.ConfigJSON || '{}') as Partial<EnableBankingConfig>;
+    if (!config.appId || !config.privateKeyPem) return null;
+    return { ...config, sessions: config.sessions ?? [] } as EnableBankingConfig;
+  } catch {
+    return null;
+  }
 }
 
 function shiftDate(date: string, days: number): string {
@@ -50,21 +99,69 @@ export class BankSyncService {
     this.queries = new BankSyncQueries(db);
   }
 
-  getConnection(budgetId: number): BankConnection | null {
-    return this.queries.getConnection(budgetId);
+  getConnection(budgetId: number, provider: BankProvider): BankConnection | null {
+    return this.queries.getConnection(budgetId, provider);
+  }
+
+  /** Every provider connected for the budget: SimpleFIN and Enable Banking can coexist. */
+  listConnections(budgetId: number): BankConnection[] {
+    return this.queries.listConnections(budgetId);
   }
 
   saveConnection(budgetId: number, accessUrl: string): BankConnection {
-    this.queries.upsertConnection(budgetId, accessUrl);
-    return this.queries.getConnection(budgetId)!;
+    this.queries.upsertConnection(budgetId, 'simplefin', accessUrl, '{}');
+    return this.queries.getConnection(budgetId, 'simplefin')!;
   }
 
-  deleteConnection(budgetId: number): void {
-    this.queries.deleteConnection(budgetId);
+  /** Saves the app credentials; keeps authorized sessions when only the key changes. */
+  saveEnableBankingConnection(
+    budgetId: number,
+    config: Omit<EnableBankingConfig, 'sessions'>
+  ): BankConnection {
+    const sessions = this.enableBankingConfig(budgetId)?.sessions ?? [];
+    this.writeEnableBankingConfig(budgetId, { ...config, sessions });
+    return this.queries.getConnection(budgetId, 'enablebanking')!;
   }
 
-  listLinks(budgetId: number): BankLink[] {
-    return this.queries.listLinks(budgetId);
+  /** Adds a session, replacing any earlier one for the same bank (re-authorization). */
+  saveEnableBankingSession(budgetId: number, session: EnableBankingSession): void {
+    const config = this.enableBankingConfig(budgetId);
+    if (!config) throw new Error('Enable Banking is not connected for this budget');
+    const sessions = config.sessions.filter(
+      (s) =>
+        s.sessionId !== session.sessionId &&
+        !(s.aspsp.name === session.aspsp.name && s.aspsp.country === session.aspsp.country)
+    );
+    this.writeEnableBankingConfig(budgetId, { ...config, sessions: [...sessions, session] });
+  }
+
+  removeEnableBankingSession(budgetId: number, sessionId: string): void {
+    const config = this.enableBankingConfig(budgetId);
+    if (!config) return;
+    const sessions = config.sessions.filter((s) => s.sessionId !== sessionId);
+    this.writeEnableBankingConfig(budgetId, { ...config, sessions });
+  }
+
+  private enableBankingConfig(budgetId: number): EnableBankingConfig | null {
+    return parseEnableBankingConfig(this.getConnection(budgetId, 'enablebanking'));
+  }
+
+  private writeEnableBankingConfig(budgetId: number, config: EnableBankingConfig): void {
+    this.queries.upsertConnection(
+      budgetId,
+      'enablebanking',
+      ENABLE_BANKING_API_URL,
+      JSON.stringify(config)
+    );
+  }
+
+  /** Removes one provider's connection with its links and pending reviews. */
+  deleteConnection(budgetId: number, provider: BankProvider): void {
+    this.queries.deleteConnection(budgetId, provider);
+  }
+
+  listLinks(budgetId: number, provider?: BankProvider): BankLink[] {
+    return this.queries.listLinks(budgetId, provider);
   }
 
   saveLink(input: BankLinkInput): void {
@@ -97,43 +194,45 @@ export class BankSyncService {
 
   planImport(input: BankImportPlanInput): BankImportPlan {
     const { budgetId, accountId, currency, link } = input;
+    const provider = input.provider ?? 'simplefin';
     const reviewed = this.queries.reviewedOperationIds(budgetId, accountId);
     let skipped = 0;
     const rows: DuplicateInput[] = [];
     for (const transaction of input.transactions) {
-      const date = simpleFINDate(transaction);
-      if (!isPostedSimpleFINTransaction(transaction) || date < link.ImportFrom) continue;
-      const amount: MilliUnits = fromDecimalString(transaction.amount.replace(/^\+/, ''));
+      const { date, amount } = transaction;
+      if (transaction.pending || date < link.ImportFrom) continue;
       if (amount === 0) continue;
-      const sourceKey = JSON.stringify(['simplefin-v1', link.ExternalAccountID, transaction.id]);
-      const description = transaction.description?.trim() ?? '';
-      const payee = transaction.payee?.trim() || description;
+      const sourceKey = bankSourceKey(provider, link.ExternalAccountID, transaction.id);
       const row: DuplicateInput = {
         index: rows.length,
         valid: true,
         budgetId,
         accountId,
         currency,
-        operationId: bankOperationId(budgetId, accountId, link.ExternalAccountID, transaction.id),
+        operationId: bankOperationId(
+          budgetId,
+          accountId,
+          link.ExternalAccountID,
+          transaction.id,
+          provider
+        ),
         fileRowKey: sourceKey,
         sourceKey,
         date,
-        inflow: amount > 0 ? amount : ZERO_MILLI,
-        outflow: amount < 0 ? subMilli(ZERO_MILLI, amount) : ZERO_MILLI,
-        payee,
-        memo: transaction.memo?.trim() || (payee === description ? '' : description),
+        inflow: amount > 0 ? (amount as MilliUnits) : ZERO_MILLI,
+        outflow: amount < 0 ? subMilli(ZERO_MILLI, amount as MilliUnits) : ZERO_MILLI,
+        payee: transaction.payee,
+        memo: transaction.memo,
       };
       if (reviewed.has(row.operationId) || input.wasImported(row)) skipped++;
       else rows.push({ ...row, index: rows.length });
     }
 
     const fetchedKeys = new Set(
-      input.transactions.map((tx) =>
-        JSON.stringify(['simplefin-v1', link.ExternalAccountID, tx.id])
-      )
+      input.transactions.map((tx) => bankSourceKey(provider, link.ExternalAccountID, tx.id))
     );
-    const sourcePrefix = `${JSON.stringify(['simplefin-v1', link.ExternalAccountID]).slice(0, -1)},`;
-    const fetchedFrom = input.transactions.map(simpleFINDate).sort()[0] ?? '';
+    const sourcePrefix = `${JSON.stringify([SOURCE_NAMESPACE[provider], link.ExternalAccountID]).slice(0, -1)},`;
+    const fetchedFrom = input.transactions.map((tx) => tx.date).sort()[0] ?? '';
     const orphans = this.queries
       .bankImportedRows(budgetId, accountId, sourcePrefix)
       .filter(

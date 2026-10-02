@@ -1,8 +1,11 @@
 import type {
   BankLinkInput,
+  BankProvider,
   BankReviewInput,
   BankReviewStatus,
   BankSyncRecordInput,
+  EnableBankingConfig,
+  EnableBankingSession,
 } from '@budgero/core/browser';
 import { S, type OpCodeEntry } from '../shared';
 
@@ -14,9 +17,36 @@ export const bankSyncOps = {
       S().bankSync.saveConnection(args.budgetId as number, args.accessUrl as string),
     invalidates: BANK_SYNC_KEYS,
   },
+  'bankSync.saveEnableBankingConnection': {
+    execute: async (args) =>
+      S().bankSync.saveEnableBankingConnection(
+        args.budgetId as number,
+        args.config as Omit<EnableBankingConfig, 'sessions'>
+      ),
+    invalidates: BANK_SYNC_KEYS,
+  },
+  'bankSync.saveEnableBankingSession': {
+    execute: async (args) => {
+      S().bankSync.saveEnableBankingSession(
+        args.budgetId as number,
+        args.session as EnableBankingSession
+      );
+    },
+    invalidates: BANK_SYNC_KEYS,
+  },
+  'bankSync.removeEnableBankingSession': {
+    execute: async (args) => {
+      S().bankSync.removeEnableBankingSession(args.budgetId as number, args.sessionId as string);
+    },
+    invalidates: BANK_SYNC_KEYS,
+  },
   'bankSync.deleteConnection': {
     execute: async (args) => {
-      S().bankSync.deleteConnection(args.budgetId as number);
+      // Ops recorded before per-provider connections carry no provider: SimpleFIN.
+      S().bankSync.deleteConnection(
+        args.budgetId as number,
+        (args.provider as BankProvider | undefined) ?? 'simplefin'
+      );
     },
     invalidates: BANK_SYNC_KEYS,
   },

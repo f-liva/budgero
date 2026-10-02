@@ -1,15 +1,21 @@
 import { t } from '@lingui/core/macro';
 import {
   bankOperationId,
-  fromDecimalString,
+  type BankConnection,
   type BankLink,
+  type BankProvider,
+  type BankSyncRecordInput,
   type ImportIdentity,
-  type SimpleFINAccountSet,
 } from '@budgero/core/browser';
 import type { AppRuntime } from '@shared/runtime/app-runtime';
 import { executeSpaceMutation } from '@shared/runtime/mutation-router';
 import { getErrorMessage } from '@shared/lib/errors';
-import { fetchTransactions } from '../lib/simplefin-client';
+import {
+  fetchRemoteTransactions,
+  linkedExternalIds,
+  providerName,
+  type RemoteAccountSet,
+} from '../lib/provider';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const OVERLAP_DAYS = 7;
@@ -47,10 +53,16 @@ export async function bankIdempotencyKey(operationId: string): Promise<string> {
 
 const inFlight = new Map<number, Promise<BankSyncResult>>();
 
+/** Data a caller already fetched for one provider, so it isn't fetched twice. */
+export interface PrefetchedSet {
+  provider: BankProvider;
+  set: RemoteAccountSet;
+}
+
 export function runBankSync(
   runtime: AppRuntime,
   budgetId: number,
-  prefetched?: SimpleFINAccountSet
+  prefetched?: PrefetchedSet
 ): Promise<BankSyncResult> {
   const running = inFlight.get(budgetId);
   if (running) return running;
@@ -61,34 +73,73 @@ export function runBankSync(
   return promise;
 }
 
+/** Syncs every connected provider; one failing provider doesn't stop the others. */
 async function syncBudget(
   runtime: AppRuntime,
   budgetId: number,
-  prefetched?: SimpleFINAccountSet
+  prefetched?: PrefetchedSet
+): Promise<BankSyncResult> {
+  const result: BankSyncResult = { imported: 0, reviews: 0, errors: [] };
+  const failures: unknown[] = [];
+  let attempted = 0;
+  for (const connection of runtime.services().bankSync.listConnections(budgetId)) {
+    const links = runtime.services().bankSync.listLinks(budgetId, connection.Provider);
+    if (!links.length) continue;
+    attempted++;
+    try {
+      const part = await syncConnection(
+        runtime,
+        connection,
+        links,
+        prefetched?.provider === connection.Provider ? prefetched.set : undefined
+      );
+      result.imported += part.imported;
+      result.reviews += part.reviews;
+      result.errors.push(...part.errors);
+    } catch (error) {
+      failures.push(error);
+      result.errors.push(getErrorMessage(error, t`Bank sync failed`));
+    }
+  }
+  if (attempted && failures.length === attempted) throw failures[0];
+  if (attempted) {
+    try {
+      await runtime.save();
+    } catch (error) {
+      console.warn('[BankSync] Failed to push synced changes', error);
+    }
+  }
+  return result;
+}
+
+async function syncConnection(
+  runtime: AppRuntime,
+  connection: BankConnection,
+  links: BankLink[],
+  prefetched?: RemoteAccountSet
 ): Promise<BankSyncResult> {
   const services = runtime.services();
-  const connection = services.bankSync.getConnection(budgetId);
-  const links = services.bankSync.listLinks(budgetId);
+  const budgetId = connection.BudgetID;
+  const provider = connection.Provider;
   const result: BankSyncResult = { imported: 0, reviews: 0, errors: [] };
-  if (!connection || !links.length) return result;
 
-  const record = (
-    error: string | null,
-    balances: { accountId: number; balance: number; balanceDate: string }[]
-  ) =>
+  const record = (error: string | null, balances: BankSyncRecordInput['links']) =>
     executeSpaceMutation(runtime, {
       op: 'bankSync.recordSync',
       payload: {
         budgetId,
-        input: { budgetId, at: new Date().toISOString(), error, links: balances },
+        input: { budgetId, provider, at: new Date().toISOString(), error, links: balances },
       },
       meta: { label: 'bank-sync', skipUndo: true },
     });
 
-  let set: SimpleFINAccountSet;
+  let set: RemoteAccountSet;
   try {
     const start = new Date(Math.min(...links.map((link) => syncStart(link).getTime())));
-    set = prefetched ?? (await fetchTransactions(connection.AccessURL, start));
+    const firstSync = new Set(links.filter((l) => !l.LastSyncAt).map((l) => l.ExternalAccountID));
+    set =
+      prefetched ??
+      (await fetchRemoteTransactions(connection, start, linkedExternalIds(links), firstSync));
   } catch (error) {
     const message = getErrorMessage(error, t`Bank sync failed`);
     await record(message, []);
@@ -97,14 +148,15 @@ async function syncBudget(
 
   result.errors.push(...(set.errors ?? []));
   const accounts = new Map(services.accounts.listAccounts(budgetId).map((a) => [a.ID, a]));
-  const balances: { accountId: number; balance: number; balanceDate: string }[] = [];
+  const balances: BankSyncRecordInput['links'] = [];
 
   for (const link of links) {
     const account = accounts.get(link.AccountID);
     const remote = set.accounts.find((candidate) => candidate.id === link.ExternalAccountID);
     if (!account) continue;
     if (!remote) {
-      result.errors.push(t`${link.ExternalName} wasn't returned by SimpleFIN.`);
+      const provider = providerName(connection);
+      result.errors.push(t`${link.ExternalName} wasn't returned by ${provider}.`);
       continue;
     }
     try {
@@ -115,7 +167,8 @@ async function syncBudget(
           budgetId,
           account.ID,
           link.ExternalAccountID,
-          transaction.id
+          transaction.id,
+          connection.Provider
         );
         keys.set(operationId, await bankIdempotencyKey(operationId));
       }
@@ -124,6 +177,7 @@ async function syncBudget(
         accountId: account.ID,
         currency: account.Currency,
         link,
+        provider: connection.Provider,
         transactions,
         wasImported: (row: ImportIdentity) =>
           runtime.isMutationApplied(keys.get(row.operationId) ?? ''),
@@ -166,8 +220,9 @@ async function syncBudget(
       }
       balances.push({
         accountId: account.ID,
-        balance: fromDecimalString(remote.balance.replace(/^\+/, '')),
-        balanceDate: new Date(remote['balance-date'] * 1000).toISOString(),
+        balance: remote.balance,
+        balanceDate:
+          remote.balance === null ? null : (remote.balanceDate ?? new Date().toISOString()),
       });
     } catch (error) {
       result.errors.push(`${link.ExternalName}: ${getErrorMessage(error, t`Sync failed`)}`);
@@ -175,10 +230,5 @@ async function syncBudget(
   }
 
   await record(result.errors.length ? result.errors.join('\n') : null, balances);
-  try {
-    await runtime.save();
-  } catch (error) {
-    console.warn('[BankSync] Failed to push synced changes', error);
-  }
   return result;
 }
