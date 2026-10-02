@@ -6,6 +6,7 @@ import { migration066 } from './066-add-transaction-cleared-status.js';
 import { migration067 } from './067-add-bank-sync.js';
 import { migration068 } from './068-add-bank-connection-config.js';
 import { migration069 } from './069-bank-connection-per-provider.js';
+import { migration070 } from './070-add-bank-link-settings.js';
 import { migration001 } from './001-initial-schema.js';
 import { migration002 } from './002-add-exclude-from-budget-pace-to-categories.js';
 import { migration003 } from './003-add-metadata-column-to-accounts-for-liability-tr.js';
@@ -137,4 +138,5 @@ export const migrations: Migration[] = [
   migration067,
   migration068,
   migration069,
+  migration070,
 ];

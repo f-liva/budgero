@@ -52,11 +52,22 @@ An account can be linked to only one bank feed at a time. **Unlink** stops the s
 - **Automatic.** Budgero syncs when you open the app or come back to it, at most every 6 hours. This works across devices: if your phone synced an hour ago, your laptop won't sync again.
 - **On demand.** Select **Sync now** in **Settings › Bank sync**, or use the sync button on a linked account's page.
 - **Overlap.** Each sync looks back a week before the last one, to catch transactions the bank posted late. Transactions Budgero has already imported are skipped, even ones you deleted afterwards. A deleted bank transaction stays deleted.
-- **Pending transactions** are skipped until the bank posts them, so you never get a pending row and a posted row for the same purchase.
+- **Pending transactions** are skipped until the bank posts them, unless you turn on **Import pending transactions** for the account (see below). Either way, you never end up with a pending row and a posted row for the same purchase.
 - **Re-issued transactions.** Banks sometimes re-issue a transaction under a new ID. Budgero recognizes it by date, amount, and payee and updates the existing row instead of adding a copy.
 - **Balances.** **Settings › Bank sync** shows your bank's balance for each linked account and flags it when your cleared balance in Budgero differs.
 
 SimpleFIN refreshes data from most banks about once a day. A transaction you made this morning may not show up until tomorrow.
+
+## Bank feed settings
+
+Each linked account has its own settings. Select the gear icon next to it in **Settings › Bank sync**:
+
+- **Import pending transactions.** Off by default. When it's on, card payments show up before the bank posts them, as uncleared transactions. Once the bank posts one, Budgero updates the same transaction in place, with the posted date and amount, and marks it cleared. Your category, and any payee or memo you changed, stay. If the bank drops a pending transaction without posting it, for example a released card hold, Budgero removes it.
+- **Date.** Choose the purchase date (when you paid) or the posted date (when the bank recorded it). **Automatic** uses the purchase date when SimpleFIN has one.
+- **Payee** and **Memo.** Choose whether the merchant name or the bank's description goes into each field, or leave the memo empty.
+- **Tidy ALL-CAPS payee names.** On by default. Turns `TRADER JOE'S #552` into `Trader Joe's #552`. Names that already have lowercase letters stay exactly as the bank sent them.
+
+Settings apply to transactions imported from then on. If a field you picked is missing for a transaction, Budgero falls back to the automatic choice. Your [rules](/docs/rules-engine) run on every imported transaction too, so you can clean up the rest there.
 
 ## Reviewing possible matches
 
@@ -128,6 +139,10 @@ Select **Disconnect** in **Settings › Bank sync**. Budgero removes the access 
     <tr>
       <td>"Your SimpleFIN Bridge subscription needs attention"</td>
       <td>Check your payment details in SimpleFIN Bridge.</td>
+    </tr>
+    <tr>
+      <td>"… needs attention in SimpleFIN Bridge"</td>
+      <td>Your bank login in SimpleFIN Bridge stopped working. Sign in to SimpleFIN Bridge, fix that bank's connection, and sync again.</td>
     </tr>
     <tr>
       <td>An account says it "wasn't returned by SimpleFIN"</td>

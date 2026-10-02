@@ -6,7 +6,6 @@ import {
   type EnableBankingSession,
   type EnableBankingSessionAccount,
 } from '@budgero/core/browser';
-import { formatDateISO } from '@shared/lib/date-utils';
 import { signEnableBankingJwt, type EnableBankingCredentials } from './jwt';
 import { openTunnel, resetTunnel } from './tunnel';
 
@@ -95,14 +94,22 @@ export class EnableBankingError extends Error {
     this.name = 'EnableBankingError';
   }
 
-  /** The bank revoked or expired consent; only a new authorization helps. */
+  /**
+   * The bank revoked or expired consent; only a new authorization helps.
+   * Banks word this differently, so any 401/403 or session error counts.
+   */
   get needsReauthorization(): boolean {
+    const code = (this.code ?? '').toUpperCase();
     return (
-      this.code === 'EXPIRED_SESSION' ||
-      this.code === 'REVOKED_SESSION' ||
-      this.code === 'CLOSED_SESSION' ||
-      this.code === 'SESSION_DOES_NOT_EXIST'
+      this.status === 401 ||
+      this.status === 403 ||
+      /SESSION/.test(code) ||
+      (this.status >= 400 && this.status < 500 && /session|expired/i.test(this.message))
     );
+  }
+
+  get rateLimited(): boolean {
+    return this.status === 429;
   }
 }
 
@@ -161,6 +168,13 @@ export async function enableBankingRequest<T>(
   } catch {
     /* non-JSON error body */
   }
+  if (response.status === 429) {
+    throw new EnableBankingError(
+      t`Your bank limits how often its data can be read. Try again in a few hours.`,
+      429,
+      'RATE_LIMIT_EXCEEDED'
+    );
+  }
   if (!response.ok) {
     const payload = (json ?? {}) as { message?: string; error?: string; detail?: unknown };
     const detail = typeof payload.detail === 'string' ? ` ${payload.detail}` : '';
@@ -187,13 +201,16 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONSENT_DAYS = 180;
 
 /** Asks for the longest consent the bank allows, capped at 180 days. */
+/** Banks that don't state a limit may reject long consents; 90 days is safe everywhere. */
+const DEFAULT_CONSENT_DAYS = 90;
+
 export function consentValidUntil(
   aspsp: Pick<Aspsp, 'maximum_consent_validity'>,
   now = Date.now()
 ) {
   const maxMs = aspsp.maximum_consent_validity
     ? aspsp.maximum_consent_validity * 1000
-    : MAX_CONSENT_DAYS * DAY_MS;
+    : DEFAULT_CONSENT_DAYS * DAY_MS;
   return new Date(now + Math.min(maxMs, MAX_CONSENT_DAYS * DAY_MS) - 60 * 60 * 1000).toISOString();
 }
 
@@ -328,26 +345,56 @@ function fingerprint(value: string): string {
   return `${(h1 >>> 0).toString(16).padStart(8, '0')}${(h2 >>> 0).toString(16).padStart(8, '0')}`;
 }
 
+// SEPA / ISO 20022 structured remittance prefixes (e.g. `SVWZ+Rechnung 42`),
+// common at German and Austrian banks. They're clearing-system metadata, not
+// text people want to read. An allowlist, so merchant tokens like `BMW+` stay.
+const SEPA_PREFIX =
+  /^(?:EREF|KREF|MREF|CRED|DBTR|CDTR|SVWZ|SVCL|PURP|RTRN|REJT|REFE|SDVA|INDA|NTAV|ULTC|ULTD|ULTB|ABWA|ABWE|IBAN|BIC|COAM|OAMT|REMI|SQTP|ROC)\+/;
+
+export function cleanRemittance(lines: string[] | null | undefined): string {
+  return clean(
+    (lines ?? [])
+      .map((line) => line.trim().replace(SEPA_PREFIX, '').trim())
+      .filter(Boolean)
+      .join(' ')
+  );
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const PENDING_STATUSES = new Set(['PDNG', 'HOLD']);
+
+function isoDay(value: string | null | undefined): string | undefined {
+  const day = value?.slice(0, 10);
+  return day && ISO_DATE.test(day) ? day : undefined;
+}
+
 /**
  * Maps Enable Banking rows to neutral bank rows. Amounts arrive unsigned with
  * a CRDT/DBIT indicator. Rows without an entry reference get a content
  * fingerprint plus an occurrence counter, so two identical coffees on the same
- * day stay two rows.
+ * day stay two rows. Rows with no usable date or amount are skipped rather
+ * than failing the whole account, and cancelled, rejected, scheduled or
+ * informational rows never become transactions.
  */
 export function toBankTransactions(rows: EnableBankingTransaction[]): BankTransaction[] {
   const seen = new Map<string, number>();
-  return rows.map((row) => {
-    const magnitude = Math.abs(
-      fromDecimalString(row.transaction_amount.amount.replace(/^[+-]/, ''))
-    );
+  const result: BankTransaction[] = [];
+  for (const row of rows) {
+    const status = row.status ?? 'BOOK';
+    if (status !== 'BOOK' && !PENDING_STATUSES.has(status)) continue;
+    const bookingDate = isoDay(row.booking_date);
+    const valueDate = isoDay(row.value_date);
+    const transactionDate = isoDay(row.transaction_date);
+    const date = bookingDate ?? valueDate ?? transactionDate;
+    const rawAmount = row.transaction_amount?.amount?.trim() ?? '';
+    if (!date || !/^[+-]?\d+(\.\d+)?$/.test(rawAmount)) continue;
+
+    const magnitude = Math.abs(fromDecimalString(rawAmount.replace(/^[+-]/, '')));
     const debit =
       row.credit_debit_indicator === 'DBIT' ||
-      (!row.credit_debit_indicator && row.transaction_amount.amount.trim().startsWith('-'));
+      (!row.credit_debit_indicator && rawAmount.startsWith('-'));
     const amount = debit ? -magnitude : magnitude;
-    const date =
-      (row.booking_date || row.value_date || row.transaction_date || '').slice(0, 10) ||
-      formatDateISO(new Date());
-    const remittance = clean((row.remittance_information ?? []).join(' '));
+    const remittance = cleanRemittance(row.remittance_information);
     // Banks name the other side as creditor on debits and debtor on credits, but
     // some (Enable Banking's Mock ASPSP among them) only ever fill one of the two.
     const counterparty =
@@ -366,13 +413,21 @@ export function toBankTransactions(rows: EnableBankingTransaction[]): BankTransa
       seen.set(base, n);
       id = `fp:${base}:${n}`;
     }
-    return {
+    result.push({
       id,
       date,
       amount,
       payee: payee.slice(0, 200),
       memo: memo === payee ? '' : memo,
-      pending: row.status !== undefined && row.status !== 'BOOK',
-    };
-  });
+      pending: PENDING_STATUSES.has(status),
+      fields: {
+        counterparty: counterparty || undefined,
+        description: remittance || fallback || undefined,
+        bookingDate,
+        transactionDate,
+        valueDate,
+      },
+    });
+  }
+  return result;
 }

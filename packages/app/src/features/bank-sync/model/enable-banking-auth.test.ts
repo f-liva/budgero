@@ -24,7 +24,7 @@ describe('Enable Banking authorization', () => {
     ]);
     mock.start.mockResolvedValue({ url: 'https://bank.example/login' });
 
-    const url = await beginAuthorization(connection, { name: 'OP', country: 'FI' });
+    const { url } = await beginAuthorization(connection, { name: 'OP', country: 'FI' });
 
     expect(url).toBe('https://bank.example/login');
     expect(mock.list).toHaveBeenCalledWith({ appId: 'app', privateKeyPem: 'PEM' }, 'FI');

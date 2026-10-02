@@ -52,11 +52,22 @@ Una cuenta solo puede estar vinculada a un feed bancario a la vez. **Desvincular
 - **Automática.** Budgero sincroniza cuando abres la aplicación o vuelves a ella, como máximo cada 6 horas. Esto funciona entre dispositivos: si tu móvil sincronizó hace una hora, tu portátil no volverá a sincronizar.
 - **Bajo demanda.** Selecciona **Sincronizar ahora** en **Ajustes › Sincronización bancaria**, o usa el botón de sincronización en la página de una cuenta vinculada.
 - **Solapamiento.** Cada sincronización retrocede hasta una semana antes de la anterior, para recoger transacciones que el banco contabilizó con retraso. Las transacciones que Budgero ya importó se omiten, incluso las que eliminaste después. Una transacción bancaria eliminada sigue eliminada.
-- **Las transacciones pendientes** se omiten hasta que el banco las contabiliza, así que nunca tendrás una fila pendiente y otra contabilizada para la misma compra.
+- **Las transacciones pendientes** se omiten hasta que el banco las contabiliza, salvo que actives **Importar transacciones pendientes** para la cuenta (ver más abajo). En cualquier caso, nunca acabarás con una fila pendiente y otra contabilizada para la misma compra.
 - **Transacciones reemitidas.** A veces los bancos vuelven a emitir una transacción con un ID nuevo. Budgero la reconoce por fecha, importe y beneficiario, y actualiza la fila existente en lugar de añadir una copia.
 - **Saldos.** **Ajustes › Sincronización bancaria** muestra el saldo de tu banco para cada cuenta vinculada y te avisa cuando tu saldo confirmado en Budgero no coincide.
 
 SimpleFIN actualiza los datos de la mayoría de los bancos aproximadamente una vez al día. Una transacción que hiciste esta mañana puede no aparecer hasta mañana.
+
+## Ajustes del feed bancario
+
+Cada cuenta vinculada tiene sus propios ajustes. Selecciona el icono del engranaje junto a ella en **Ajustes › Sincronización bancaria**:
+
+- **Importar transacciones pendientes.** Desactivado por defecto. Cuando está activado, los pagos con tarjeta aparecen antes de que el banco los contabilice, como transacciones sin confirmar. Cuando el banco contabiliza uno, Budgero actualiza directamente esa misma transacción, con la fecha y el importe contabilizados, y la marca como confirmada. Tu categoría, y cualquier beneficiario o nota que hayas cambiado, se mantienen. Si el banco descarta una transacción pendiente sin contabilizarla, por ejemplo una retención de tarjeta liberada, Budgero la elimina.
+- **Fecha.** Elige la fecha de compra (cuando pagaste) o la fecha contable (cuando el banco la registró). **Automático** usa la fecha de compra si SimpleFIN la tiene.
+- **Beneficiario** y **Nota.** Elige si cada campo recibe el nombre del comercio o la descripción del banco, o deja la nota vacía.
+- **Arreglar nombres de beneficiarios en MAYÚSCULAS.** Activado por defecto. Convierte `TRADER JOE'S #552` en `Trader Joe's #552`. Los nombres que ya tienen minúsculas se quedan exactamente como los envió el banco.
+
+Los ajustes se aplican a las transacciones que se importen a partir de ese momento. Si falta el campo que elegiste en una transacción, Budgero recurre a la opción automática. Tus [reglas](/docs/rules-engine) también se ejecutan sobre cada transacción importada, así que puedes limpiar el resto allí.
 
 ## Revisar posibles coincidencias
 
@@ -128,6 +139,10 @@ Selecciona **Desconectar** en **Ajustes › Sincronización bancaria**. Budgero 
     <tr>
       <td>"Tu suscripción a SimpleFIN Bridge necesita atención"</td>
       <td>Revisa tus datos de pago en SimpleFIN Bridge.</td>
+    </tr>
+    <tr>
+      <td>"… necesita atención en SimpleFIN Bridge"</td>
+      <td>El inicio de sesión de tu banco en SimpleFIN Bridge dejó de funcionar. Inicia sesión en SimpleFIN Bridge, arregla la conexión de ese banco y vuelve a sincronizar.</td>
     </tr>
     <tr>
       <td>Una cuenta muestra el aviso "SimpleFIN no devolvió …"</td>

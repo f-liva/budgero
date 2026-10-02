@@ -2,9 +2,11 @@ import type { DatabaseAdapter } from '../../database/interface.js';
 import { ImportDuplicateService, type DuplicateInput } from '../import/duplicate-planner.js';
 import { fromDecimalString, subMilli, ZERO_MILLI, type MilliUnits } from '../../money/index.js';
 import { getLocalDateString } from '../../utils/date.js';
+import { applyBankFeedSettings, DEFAULT_BANK_FEED_SETTINGS } from './feed-settings.js';
 import { BankSyncQueries } from './queries.js';
 import type {
   BankConnection,
+  BankFeedSettings,
   BankImportPlan,
   BankImportPlanInput,
   BankLink,
@@ -21,9 +23,12 @@ import type {
 } from './types.js';
 
 export * from './types.js';
+export * from './feed-settings.js';
 
 const MANUAL_MATCH_DAYS = 5;
 const REISSUE_DAYS = 3;
+/** A pending card payment usually books within a few days, sometimes a week. */
+const SETTLE_DAYS = 7;
 
 /** Namespaces source keys and operation IDs. Never change an existing one. */
 const SOURCE_NAMESPACE: Record<BankProvider, string> = {
@@ -53,6 +58,14 @@ function bankSourceKey(provider: BankProvider, externalAccountId: string, id: st
   return JSON.stringify([SOURCE_NAMESPACE[provider], externalAccountId, id]);
 }
 
+/**
+ * Pending imports get their own operation ID, so the booked version of the
+ * same bank row can record a second identity on the settled transaction.
+ */
+export function pendingOperationId(operationId: string): string {
+  return `${operationId}#pending`;
+}
+
 export function simpleFINDate(transaction: SimpleFINTransaction): string {
   return getLocalDateString(new Date((transaction.transacted_at || transaction.posted) * 1000));
 }
@@ -64,7 +77,15 @@ export function isPostedSimpleFINTransaction(transaction: SimpleFINTransaction):
 export function fromSimpleFINTransaction(transaction: SimpleFINTransaction): BankTransaction {
   const description = transaction.description?.trim() ?? '';
   const payee = transaction.payee?.trim() || description;
+  const day = (seconds: number | undefined) =>
+    seconds ? getLocalDateString(new Date(seconds * 1000)) : undefined;
   return {
+    fields: {
+      counterparty: transaction.payee?.trim() || undefined,
+      description: description || undefined,
+      bookingDate: day(transaction.posted),
+      transactionDate: day(transaction.transacted_at),
+    },
     id: transaction.id,
     date: simpleFINDate(transaction),
     amount: fromDecimalString(transaction.amount.replace(/^\+/, '')),
@@ -93,6 +114,14 @@ export function parseEnableBankingConfig(
 function shiftDate(date: string, days: number): string {
   const [y, m, d] = date.split('-').map(Number);
   return getLocalDateString(new Date(y, m - 1, d + days));
+}
+
+function dayDiff(a: string, b: string): number {
+  const toUtc = (date: string) => {
+    const [y, m, d] = date.split('-').map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.round((toUtc(a) - toUtc(b)) / 86_400_000);
 }
 
 export class BankSyncService {
@@ -183,6 +212,10 @@ export class BankSyncService {
     this.queries.deleteLink(accountId);
   }
 
+  updateLinkSettings(accountId: number, settings: BankFeedSettings): void {
+    this.queries.updateLinkSettings(accountId, JSON.stringify(settings));
+  }
+
   latestTransactionDate(accountId: number): string | null {
     return this.queries.latestTransactionDate(accountId, getLocalDateString());
   }
@@ -206,27 +239,44 @@ export class BankSyncService {
   planImport(input: BankImportPlanInput): BankImportPlan {
     const { budgetId, accountId, currency, link } = input;
     const provider = input.provider ?? 'simplefin';
+    const settings = input.settings ?? DEFAULT_BANK_FEED_SETTINGS;
+    const transactions = input.transactions.map((tx) => applyBankFeedSettings(tx, settings));
     const reviewed = this.queries.reviewedOperationIds(budgetId, accountId);
+    const keyOf = (id: string) => bankSourceKey(provider, link.ExternalAccountID, id);
+    const sourcePrefix = `${JSON.stringify([SOURCE_NAMESPACE[provider], link.ExternalAccountID]).slice(0, -1)},`;
+
+    // Imported rows for this feed. A transaction that has any booked identity
+    // is settled; one with only a pending identity is still waiting.
+    const imported = this.queries.bankImportedRows(budgetId, accountId, sourcePrefix);
+    const settled = new Set(
+      imported.filter((r) => !r.identity.pending).map((r) => r.transactionId)
+    );
+    const waiting = imported.filter((r) => r.identity.pending && !settled.has(r.transactionId));
+    const waitingByKey = new Map(waiting.map((r) => [r.identity.sourceKey ?? '', r]));
+    const claimedPending = new Set<number>();
+
     let skipped = 0;
+    const settles: BankImportPlan['settles'] = [];
     const rows: DuplicateInput[] = [];
-    for (const transaction of input.transactions) {
+    for (const transaction of transactions) {
       const { date, amount } = transaction;
-      if (transaction.pending || date < link.ImportFrom) continue;
-      if (amount === 0) continue;
-      const sourceKey = bankSourceKey(provider, link.ExternalAccountID, transaction.id);
+      if (date < link.ImportFrom || amount === 0) continue;
+      if (transaction.pending && !settings.importPending) continue;
+      const sourceKey = keyOf(transaction.id);
+      const operationId = bankOperationId(
+        budgetId,
+        accountId,
+        link.ExternalAccountID,
+        transaction.id,
+        provider
+      );
       const row: DuplicateInput = {
         index: rows.length,
         valid: true,
         budgetId,
         accountId,
         currency,
-        operationId: bankOperationId(
-          budgetId,
-          accountId,
-          link.ExternalAccountID,
-          transaction.id,
-          provider
-        ),
+        operationId: transaction.pending ? pendingOperationId(operationId) : operationId,
         fileRowKey: sourceKey,
         sourceKey,
         date,
@@ -234,21 +284,44 @@ export class BankSyncService {
         outflow: amount < 0 ? subMilli(ZERO_MILLI, amount as MilliUnits) : ZERO_MILLI,
         payee: transaction.payee,
         memo: transaction.memo,
+        ...(transaction.pending ? { pending: true } : {}),
       };
-      if (reviewed.has(row.operationId) || input.wasImported(row)) skipped++;
+      const waitingRow = waitingByKey.get(sourceKey);
+      if (waitingRow) {
+        // Imported while pending. Still pending: nothing to do. Booked under
+        // the same ID: settle the existing transaction.
+        claimedPending.add(waitingRow.transactionId);
+        if (transaction.pending) skipped++;
+        else {
+          const { index: _i, valid: _v, budgetId: _b, accountId: _a, ...identity } = row;
+          settles.push({
+            identity,
+            previous: waitingRow.identity,
+            transactionId: waitingRow.transactionId,
+          });
+        }
+        continue;
+      }
+      const deletedWhilePending =
+        !transaction.pending &&
+        input.wasImported({ ...row, operationId: pendingOperationId(operationId) });
+      if (reviewed.has(row.operationId) || input.wasImported(row) || deletedWhilePending) skipped++;
       else rows.push({ ...row, index: rows.length });
     }
 
-    const fetchedKeys = new Set(
-      input.transactions.map((tx) => bankSourceKey(provider, link.ExternalAccountID, tx.id))
+    const fetchedKeys = new Set(transactions.map((tx) => keyOf(tx.id)));
+    const fetchedFrom = transactions.map((tx) => tx.date).sort()[0] ?? '';
+    const orphans = imported.filter(
+      (row) =>
+        !row.identity.pending &&
+        !fetchedKeys.has(row.identity.sourceKey ?? '') &&
+        row.identity.date >= fetchedFrom
     );
-    const sourcePrefix = `${JSON.stringify([SOURCE_NAMESPACE[provider], link.ExternalAccountID]).slice(0, -1)},`;
-    const fetchedFrom = input.transactions.map((tx) => tx.date).sort()[0] ?? '';
-    const orphans = this.queries
-      .bankImportedRows(budgetId, accountId, sourcePrefix)
-      .filter(
-        (row) => !fetchedKeys.has(row.identity.sourceKey ?? '') && row.identity.date >= fetchedFrom
-      );
+    // Pending rows whose ID vanished: banks often book them under a new ID.
+    const vanished = waiting.filter(
+      (row) =>
+        !claimedPending.has(row.transactionId) && !fetchedKeys.has(row.identity.sourceKey ?? '')
+    );
     const rekeys: BankImportPlan['rekeys'] = [];
     const normalized = (s: string) => s.trim().toLowerCase();
 
@@ -266,20 +339,51 @@ export class BankSyncService {
         skipped++;
         continue;
       }
+      if (!identity.pending) {
+        // A booked row matching a vanished pending row of the same amount is
+        // its booked version: prefer the same payee, then the nearest date.
+        const settle = vanished
+          .filter(
+            (row) =>
+              !claimedPending.has(row.transactionId) &&
+              row.identity.inflow === identity.inflow &&
+              row.identity.outflow === identity.outflow &&
+              row.identity.date >= shiftDate(identity.date, -SETTLE_DAYS) &&
+              row.identity.date <= shiftDate(identity.date, SETTLE_DAYS)
+          )
+          .sort(
+            (a, b) =>
+              Number(normalized(b.identity.payee) === normalized(identity.payee)) -
+                Number(normalized(a.identity.payee) === normalized(identity.payee)) ||
+              Math.abs(dayDiff(a.identity.date, identity.date)) -
+                Math.abs(dayDiff(b.identity.date, identity.date))
+          )[0];
+        if (settle) {
+          claimedPending.add(settle.transactionId);
+          settles.push({
+            identity,
+            previous: settle.identity,
+            transactionId: settle.transactionId,
+          });
+          continue;
+        }
+      }
       // Same-date/amount hints are for files; bank rows carry real IDs, so only a reused ID needs review.
       const reusedId = plan.status === 'needs-review' && plan.reason.startsWith('Repeated bank');
-      if (reusedId && plan.candidates[0]) {
+      if (reusedId && plan.candidates[0] && !identity.pending) {
         review(plan.candidates[0].id);
         continue;
       }
-      const reissued = orphans.findIndex(
-        (row) =>
-          row.identity.date >= shiftDate(identity.date, -REISSUE_DAYS) &&
-          row.identity.date <= shiftDate(identity.date, REISSUE_DAYS) &&
-          row.identity.inflow === identity.inflow &&
-          row.identity.outflow === identity.outflow &&
-          normalized(row.identity.payee) === normalized(identity.payee)
-      );
+      const reissued = identity.pending
+        ? -1
+        : orphans.findIndex(
+            (row) =>
+              row.identity.date >= shiftDate(identity.date, -REISSUE_DAYS) &&
+              row.identity.date <= shiftDate(identity.date, REISSUE_DAYS) &&
+              row.identity.inflow === identity.inflow &&
+              row.identity.outflow === identity.outflow &&
+              normalized(row.identity.payee) === normalized(identity.payee)
+          );
       if (reissued >= 0) {
         rekeys.push({ identity, transactionId: orphans[reissued].transactionId });
         orphans.splice(reissued, 1);
@@ -295,9 +399,22 @@ export class BankSyncService {
           shiftDate(identity.date, MANUAL_MATCH_DAYS)
         )
         .find((match) => !claimed.has(match.id));
-      if (manual) review(manual.id);
+      // A pending row that looks like an entry typed by hand isn't imported:
+      // the booked version asks for review instead, so nothing doubles up.
+      if (manual && identity.pending) skipped++;
+      else if (manual) review(manual.id);
       else imports.push(identity);
     }
-    return { imports, reviews, rekeys, skipped };
+
+    // Pending rows the bank dropped without booking (a released hold, say).
+    // Only judged when the bank returned data covering their date.
+    const removals = transactions.length
+      ? vanished
+          .filter(
+            (row) => !claimedPending.has(row.transactionId) && row.identity.date >= fetchedFrom
+          )
+          .map((row) => row.transactionId)
+      : [];
+    return { imports, reviews, rekeys, settles, removals, skipped };
   }
 }

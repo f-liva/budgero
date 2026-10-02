@@ -1,6 +1,14 @@
 import { generateKeyPairSync } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { consentValidUntil, pickBalance, toBankTransactions } from './client';
+import {
+  cleanRemittance,
+  consentValidUntil,
+  EnableBankingError,
+  pickBalance,
+  toBankTransactions,
+  type EnableBankingTransaction,
+} from './client';
+import { describeSimpleFINError } from '../provider';
 import { appIdFromFileName, pemToPkcs8, signEnableBankingJwt } from './jwt';
 import { isPublicIp, relayUrl } from './tunnel';
 
@@ -91,7 +99,7 @@ describe('Enable Banking transactions', () => {
         remittance_information: ['Pending kiosk'],
       },
     ]);
-    expect(rows).toEqual([
+    expect(rows).toMatchObject([
       {
         id: 'r1',
         date: '2026-09-05',
@@ -185,7 +193,8 @@ describe('Enable Banking transactions', () => {
       180,
       0
     );
-    expect(days(consentValidUntil({}, now))).toBeLessThan(180);
+    // No stated limit: 90 days, which every bank accepts.
+    expect(days(consentValidUntil({}, now))).toBeCloseTo(90, 0);
   });
 });
 
@@ -205,5 +214,87 @@ describe('relay tunnel', () => {
     for (const ip of ['127.0.0.1', '10.1.2.3', '192.168.1.5', '172.20.0.1', '::1', 'fd00::1', '']) {
       expect(isPublicIp(ip)).toBe(false);
     }
+  });
+});
+
+describe('lessons from Actual Budget', () => {
+  const base: EnableBankingTransaction = {
+    entry_reference: 'r',
+    transaction_amount: { amount: '10.00', currency: 'EUR' },
+    credit_debit_indicator: 'DBIT',
+    status: 'BOOK',
+    booking_date: '2026-09-05',
+  };
+
+  it('strips SEPA structured prefixes but keeps merchant tokens', () => {
+    expect(cleanRemittance(['SVWZ+Rechnung 42', 'EREF+INV-7'])).toBe('Rechnung 42 INV-7');
+    expect(cleanRemittance(['BMW+ Service'])).toBe('BMW+ Service');
+    const [row] = toBankTransactions([{ ...base, remittance_information: ['SVWZ+Miete Oktober'] }]);
+    expect(row.payee).toBe('Miete Oktober');
+  });
+
+  it('skips rows without a usable date or amount instead of failing the account', () => {
+    const rows = toBankTransactions([
+      { ...base, entry_reference: 'no-date', booking_date: null },
+      {
+        ...base,
+        entry_reference: 'bad-amount',
+        transaction_amount: { amount: 'n/a', currency: 'EUR' },
+      },
+      { ...base, entry_reference: 'ok' },
+    ]);
+    expect(rows.map((row) => row.id)).toEqual(['ok']);
+  });
+
+  it('never turns cancelled, rejected or scheduled rows into transactions', () => {
+    const rows = toBankTransactions(
+      ['BOOK', 'PDNG', 'HOLD', 'CNCL', 'RJCT', 'SCHD', 'INFO'].map((status) => ({
+        ...base,
+        entry_reference: status,
+        status,
+      }))
+    );
+    expect(rows.map((row) => [row.id, row.pending])).toEqual([
+      ['BOOK', false],
+      ['PDNG', true],
+      ['HOLD', true],
+    ]);
+  });
+
+  it('keeps every raw field for the per-account mapping', () => {
+    const [row] = toBankTransactions([
+      {
+        ...base,
+        value_date: '2026-09-06',
+        transaction_date: '2026-09-04',
+        creditor: { name: 'SHOP' },
+        remittance_information: ['Card 1234'],
+      },
+    ]);
+    expect(row.fields).toEqual({
+      counterparty: 'SHOP',
+      description: 'Card 1234',
+      bookingDate: '2026-09-05',
+      transactionDate: '2026-09-04',
+      valueDate: '2026-09-06',
+    });
+  });
+
+  it('treats any 401/403 or session error as needing a new bank login', () => {
+    expect(new EnableBankingError('x', 401).needsReauthorization).toBe(true);
+    expect(new EnableBankingError('x', 403).needsReauthorization).toBe(true);
+    expect(new EnableBankingError('x', 400, 'closed_session').needsReauthorization).toBe(true);
+    expect(new EnableBankingError('Session has expired', 422).needsReauthorization).toBe(true);
+    expect(new EnableBankingError('Bad date', 422, 'WRONG_REQUEST').needsReauthorization).toBe(
+      false
+    );
+    expect(new EnableBankingError('x', 429).rateLimited).toBe(true);
+  });
+
+  it('explains SimpleFIN connections that need attention', () => {
+    expect(describeSimpleFINError('Connection to Chase may need attention')).toMatch(
+      /^Chase needs attention in SimpleFIN Bridge/
+    );
+    expect(describeSimpleFINError('Something else')).toBe('Something else');
   });
 });

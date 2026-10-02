@@ -191,6 +191,7 @@ export function formatOpCode(op: string): string {
     'bankSync.removeEnableBankingSession': 'Remove Bank',
     'bankSync.saveLink': 'Link Bank Account',
     'bankSync.deleteLink': 'Unlink Bank Account',
+    'bankSync.updateLinkSettings': 'Change Bank Feed Settings',
     'bankSync.recordSync': 'Bank Sync',
     'bankSync.addReviews': 'Queue Bank Matches',
     'bankSync.setReviewStatus': 'Review Bank Match',

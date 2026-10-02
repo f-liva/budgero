@@ -81,8 +81,10 @@ Budgero controleert de sleutel bij Enable Banking voordat er iets wordt opgeslag
 ## Stap 5: Je bank verbinden
 
 1. Kies onder **Banken** je land en je bank, en selecteer daarna **Verder naar inloggen bij de bank**.
-2. De inlogpagina van je bank wordt geopend. Log in en geef toestemming. Ja, nog een keer: door de rekeningen in stap 3 te koppelen heb je je applicatie geactiveerd, maar je bank moet ook deze specifieke verbinding goedkeuren.
-3. Je bank stuurt je terug naar Budgero, dat de verbinding opslaat.
+2. De inlogpagina van je bank wordt geopend in een klein venster. Log in en geef toestemming. Ja, nog een keer: door de rekeningen in stap 3 te koppelen heb je je applicatie geactiveerd, maar je bank moet ook deze specifieke verbinding goedkeuren.
+3. Het venster sluit vanzelf, en Budgero slaat de verbinding op.
+
+Blokkeert je browser pop-ups, of gebruik je Budgero als geïnstalleerde app, dan wordt de inlogpagina van de bank in plaats daarvan in hetzelfde tabblad geopend, en stuurt je bank je terug naar Budgero als je klaar bent.
 
 Wil je nog een bank toevoegen, selecteer dan **Bank toevoegen** en herhaal deze stappen.
 
@@ -99,14 +101,26 @@ Selecteer **Koppelen en importeren**. Transacties verschijnen meteen en worden a
 
 - **Automatisch.** Budgero synchroniseert wanneer je de app opent of ernaar terugkeert, hooguit eens per 6 uur, over al je apparaten heen.
 - **Op verzoek.** Selecteer **Nu synchroniseren** in **Instellingen › Banksync**, of gebruik de synchronisatieknop op de pagina van een gekoppelde rekening.
-- **Alleen geboekte transacties.** Kaartbetalingen die nog in behandeling zijn, worden overgeslagen totdat je bank ze boekt. Banken geven een betaling in behandeling vaak een nieuwe referentie zodra die is geboekt, dus als je beide zou importeren, ontstaan er duplicaten.
+- **Standaard alleen geboekte transacties.** Kaartbetalingen die nog in behandeling zijn, worden overgeslagen totdat je bank ze boekt, tenzij je **Transacties in behandeling importeren** aanzet voor de rekening (zie hieronder). Geannuleerde en geweigerde betalingen worden nooit geïmporteerd.
+- **Opgeschoonde beschrijvingen.** Veel banken, vooral in Duitsland en Oostenrijk, laten beschrijvingen beginnen met SEPA-codes zoals `SVWZ+` of `EREF+`. Budgero verwijdert die voorvoegsels.
 - **Geen duplicaten.** Elke banktransactie wordt één keer geïmporteerd, ook nadat je de toegang hebt vernieuwd. Sommige banken sturen transacties zonder referentie; Budgero houdt twee identieke koffies op dezelfde dag dan toch uit elkaar.
 - **Mogelijke matches.** Heeft een banktransactie hetzelfde bedrag als iets wat je zelf hebt ingevoerd, binnen vijf dagen ervan, dan vraagt Budgero je om **Matchen**, **Als nieuw toevoegen** of **Overslaan** te kiezen in plaats van te gokken.
 - **Synchroniseren terwijl je de app gebruikt.** Banken kunnen beperken hoe vaak een app je rekeningen op de achtergrond mag uitlezen, vaak tot vier keer per dag. Budgero synchroniseert terwijl je de app gebruikt en laat Enable Banking dat weten, waardoor je meestal niet tegen die limiet aanloopt.
 
+## Instellingen bankfeed
+
+Elke gekoppelde rekening heeft eigen instellingen. Selecteer het tandwielpictogram ernaast in **Instellingen › Banksync**:
+
+- **Transacties in behandeling importeren.** Staat standaard uit. Staat het aan, dan verschijnen kaartbetalingen al voordat je bank ze boekt, als niet-bevestigde transacties. Zodra de bank er een boekt, werkt Budgero diezelfde transactie bij met de boekingsdatum en het geboekte bedrag, en markeert het die als bevestigd. Dat werkt ook als de bank de geboekte transactie een nieuwe referentie geeft. Je categorie blijft behouden, net als een begunstigde of memo die je hebt aangepast. Laat de bank een transactie in behandeling vallen zonder die te boeken, bijvoorbeeld een vrijgegeven kaartreservering, dan verwijdert Budgero die.
+- **Datum.** Kies de aankoopdatum (wanneer je betaalde), de boekingsdatum (wanneer de bank het verwerkte) of de valutadatum (wanneer het geld werd verplaatst). **Automatisch** gebruikt de boekingsdatum.
+- **Begunstigde** en **Memo.** Kies per veld wat erin komt: de naam van de winkel of tegenpartij, of de beschrijving van de betaling. De memo kun je ook leeg laten. Europese banken vullen deze velden verschillend in, dus het loont om hier even naar te kijken als je begunstigden als referentiecodes binnenkomen.
+- **Namen van begunstigden in HOOFDLETTERS opschonen.** Staat standaard aan. Verandert `K-MARKET KAMPPI` in `K-Market Kamppi`. Namen die al kleine letters bevatten, blijven precies zoals de bank ze heeft gestuurd.
+
+De instellingen gelden voor transacties die vanaf dat moment worden geïmporteerd. Ontbreekt het veld dat je hebt gekozen bij een transactie, dan valt Budgero terug op de automatische keuze. Je [regels](/docs/rules-engine) worden ook op elke geïmporteerde transactie toegepast, dus de rest kun je daar opschonen.
+
 ## Elke 180 dagen de toegang vernieuwen
 
-PSD2 beperkt hoe lang een bankautorisatie geldig is, meestal 180 dagen. **Instellingen › Banksync** toont per bank wanneer de toegang verloopt. Een week daarvoor herinnert Budgero je eraan wanneer je de app opent. Selecteer **Opnieuw koppelen** naast de bank en log opnieuw in.
+PSD2 beperkt hoe lang een bankautorisatie geldig is, meestal 180 dagen. Budgero vraagt toegang aan voor zo lang als je bank toestaat, of voor 90 dagen als de bank dat niet aangeeft. **Instellingen › Banksync** toont per bank wanneer de toegang verloopt. Een week daarvoor herinnert Budgero je eraan wanneer je de app opent. Selecteer **Opnieuw koppelen** naast de bank en log opnieuw in.
 
 Sommige banken beëindigen de toegang eerder, bijvoorbeeld voor een jaarlijkse identiteitscontrole. De synchronisatie meldt dan dat de toegang tot die bank is verlopen, en **Opnieuw koppelen** lost dat op dezelfde manier op.
 
@@ -217,6 +231,14 @@ Je synchronisaties gebruiken de relay van je eigen server, nooit die van Budgero
     <tr>
       <td>"Enable Banking was niet bereikbaar via de Budgero-relay"</td>
       <td>Controleer je verbinding. Controleer op een zelf gehoste server of die <code>api.enablebanking.com</code> op poort 443 kan bereiken.</td>
+    </tr>
+    <tr>
+      <td>"Je bank beperkt hoe vaak de gegevens gelezen kunnen worden"</td>
+      <td>Je bank laat je gegevens maar een paar keer per dag uitlezen. Wacht een paar uur en synchroniseer opnieuw.</td>
+    </tr>
+    <tr>
+      <td>Het inlogvenster wordt niet geopend</td>
+      <td>Je browser heeft de pop-up geblokkeerd. Sta pop-ups toe voor Budgero, of ga gewoon verder: Budgero opent de inlogpagina van de bank dan in hetzelfde tabblad.</td>
     </tr>
     <tr>
       <td>"Toegang tot … is verlopen"</td>

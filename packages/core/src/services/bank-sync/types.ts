@@ -53,6 +53,37 @@ export interface BankTransaction {
   pending: boolean;
   /** ISO timestamp the bank posted it, when the provider gives one (SimpleFIN). */
   postedAt?: string;
+  /** Raw fields a linked account's settings can choose from. */
+  fields?: BankTransactionFields;
+}
+
+export interface BankTransactionFields {
+  /** The other party: merchant, payer or payee as the bank names it. */
+  counterparty?: string;
+  /** Free text: SimpleFIN's description, Enable Banking's remittance information. */
+  description?: string;
+  /** YYYY-MM-DD the bank booked or posted it. */
+  bookingDate?: string;
+  /** YYYY-MM-DD the purchase happened. */
+  transactionDate?: string;
+  /** YYYY-MM-DD the money moved (Enable Banking). */
+  valueDate?: string;
+}
+
+/** Which bank field becomes a transaction's date. `auto` is the provider's default. */
+export type BankDateField = 'auto' | 'booking' | 'transaction' | 'value';
+export type BankPayeeField = 'auto' | 'counterparty' | 'description';
+export type BankMemoField = 'auto' | 'description' | 'counterparty' | 'none';
+
+/** Per linked account; stored in the budget and synced like any other setting. */
+export interface BankFeedSettings {
+  /** Import pending transactions as uncleared, settling them once booked. */
+  importPending: boolean;
+  date: BankDateField;
+  payee: BankPayeeField;
+  memo: BankMemoField;
+  /** Title-case payee names the bank sends in ALL CAPS. */
+  tidyPayees: boolean;
 }
 
 /** One authorized Enable Banking session: a bank login good for ~180 days. */
@@ -110,6 +141,8 @@ export interface BankLink {
   LastSyncAt: string | null;
   LastBalance: number | null;
   LastBalanceDate: string | null;
+  /** BankFeedSettings as JSON; `{}` means defaults. */
+  SettingsJSON: string;
 }
 
 export interface BankLinkInput {
@@ -166,6 +199,8 @@ export interface BankImportPlanInput {
   link: Pick<BankLink, 'ExternalAccountID' | 'ImportFrom'>;
   /** Defaults to SimpleFIN, whose operation IDs predate this field. */
   provider?: BankProvider;
+  /** The link's feed settings; defaults when omitted. */
+  settings?: BankFeedSettings;
   transactions: BankTransaction[];
   /** True when this bank row was imported before, even if the ledger copy was deleted since. */
   wasImported: (identity: ImportIdentity) => boolean;
@@ -176,5 +211,13 @@ export interface BankImportPlan {
   reviews: BankReviewInput[];
   /** Rows the bank re-issued under a new ID: attach the new identity instead of importing. */
   rekeys: { identity: ImportIdentity; transactionId: number }[];
+  /**
+   * Imported pending rows the bank has now booked: update the existing
+   * transaction to the booked values and mark it cleared. `previous` is the
+   * pending identity, so user edits to payee or memo can be kept.
+   */
+  settles: { identity: ImportIdentity; previous: ImportIdentity; transactionId: number }[];
+  /** Imported pending rows the bank dropped without booking (e.g. a released hold). */
+  removals: number[];
   skipped: number;
 }

@@ -81,8 +81,10 @@ Budgero prüft den Schlüssel bei Enable Banking, bevor irgendetwas gespeichert 
 ## Schritt 5: Deine Bank verbinden
 
 1. Wähle unter **Banken** dein Land und deine Bank und dann **Weiter zum Bank-Login**.
-2. Die Anmeldeseite deiner Bank öffnet sich. Melde dich an und erteile den Zugriff. Ja, schon wieder: Das Verknüpfen der Konten in Schritt 3 hat deine Anwendung aktiviert, aber deine Bank muss auch diese konkrete Verbindung freigeben.
-3. Deine Bank leitet dich zurück zu Budgero, und Budgero speichert die Verbindung.
+2. Die Anmeldeseite deiner Bank öffnet sich in einem kleinen Fenster. Melde dich an und erteile den Zugriff. Ja, schon wieder: Das Verknüpfen der Konten in Schritt 3 hat deine Anwendung aktiviert, aber deine Bank muss auch diese konkrete Verbindung freigeben.
+3. Das Fenster schließt sich von selbst, und Budgero speichert die Verbindung.
+
+Wenn dein Browser Pop-ups blockiert oder du Budgero als installierte App nutzt, öffnet sich die Anmeldeseite der Bank stattdessen im selben Tab, und deine Bank leitet dich zurück zu Budgero, sobald du fertig bist.
 
 Um eine weitere Bank hinzuzufügen, wähle **Bank hinzufügen** und wiederhole die Schritte.
 
@@ -99,14 +101,26 @@ Wähle **Verknüpfen und importieren**. Die Transaktionen erscheinen sofort und 
 
 - **Automatisch.** Budgero synchronisiert, wenn du die App öffnest oder zu ihr zurückkehrst, höchstens alle 6 Stunden, und zwar über alle deine Geräte hinweg.
 - **Bei Bedarf.** Wähle **Jetzt synchronisieren** unter **Einstellungen › Banksync** oder nutze die Sync-Schaltfläche auf der Seite eines verknüpften Kontos.
-- **Nur gebuchte Transaktionen.** Ausstehende Kartenzahlungen werden übersprungen, bis deine Bank sie bucht. Banken vergeben einer ausstehenden Zahlung nach der Buchung oft eine neue Referenz, sodass ein Import beider Einträge zu Duplikaten führen würde.
+- **Standardmäßig nur gebuchte Transaktionen.** Ausstehende Kartenzahlungen werden übersprungen, bis deine Bank sie bucht, es sei denn, du aktivierst **Ausstehende Transaktionen importieren** für das Konto (siehe unten). Stornierte und abgelehnte Zahlungen werden nie importiert.
+- **Saubere Beschreibungen.** Viele Banken, vor allem in Deutschland und Österreich, stellen Beschreibungen SEPA-Kürzel wie `SVWZ+` oder `EREF+` voran. Budgero entfernt diese Präfixe.
 - **Keine Duplikate.** Jede Banktransaktion wird nur einmal importiert, auch nachdem du den Zugriff erneuert hast. Manche Banken senden Transaktionen ohne Referenz. Budgero hält trotzdem zwei identische Kaffees am selben Tag auseinander.
 - **Mögliche Übereinstimmungen.** Hat eine Banktransaktion denselben Betrag wie ein Eintrag, den du erfasst hast, und liegen die beiden höchstens fünf Tage auseinander, rät Budgero nicht, sondern bittet dich um **Zuordnen**, **Als neu hinzufügen** oder **Überspringen**.
 - **Synchronisierung bei aktiver Nutzung.** Banken können begrenzen, wie oft eine App deine Konten im Hintergrund abrufen darf, häufig auf viermal täglich. Budgero synchronisiert, während du die App nutzt, und teilt das Enable Banking mit. Dadurch bleibst du in der Regel unter diesem Limit.
 
+## Einstellungen für den Bankfeed
+
+Jedes verknüpfte Konto hat seine eigenen Einstellungen. Wähle das Zahnradsymbol neben dem Konto unter **Einstellungen › Banksync**:
+
+- **Ausstehende Transaktionen importieren.** Standardmäßig deaktiviert. Ist die Option aktiviert, erscheinen Kartenzahlungen schon, bevor deine Bank sie bucht, und zwar als nicht gebuchte Transaktionen. Sobald die Bank eine davon bucht, aktualisiert Budgero direkt dieselbe Transaktion mit dem Buchungsdatum und dem gebuchten Betrag und markiert sie als gebucht. Das funktioniert auch dann, wenn die Bank der gebuchten Transaktion eine neue Referenz gibt. Deine Kategorie bleibt erhalten, ebenso ein Empfänger oder Memo, das du geändert hast. Verwirft die Bank eine ausstehende Transaktion, ohne sie zu buchen, zum Beispiel eine freigegebene Kartenreservierung, entfernt Budgero sie.
+- **Datum.** Wähle das Kaufdatum (wann du bezahlt hast), das Buchungsdatum (wann die Bank die Transaktion erfasst hat) oder das Wertstellungsdatum (wann das Geld bewegt wurde). **Automatisch** verwendet das Buchungsdatum.
+- **Empfänger** und **Memo.** Wähle, ob der Name des Händlers oder der Gegenpartei oder die Zahlungsbeschreibung in das jeweilige Feld kommt, oder lass das Memo leer. Europäische Banken befüllen diese Felder unterschiedlich, daher lohnt sich ein Blick darauf, wenn deine Empfänger als Referenzcodes erscheinen.
+- **Empfängernamen in GROSSBUCHSTABEN aufräumen.** Standardmäßig aktiviert. Aus `K-MARKET KAMPPI` wird `K-Market Kamppi`. Namen, die bereits Kleinbuchstaben enthalten, bleiben genau so, wie die Bank sie gesendet hat.
+
+Die Einstellungen gelten für Transaktionen, die ab dann importiert werden. Fehlt das gewählte Feld bei einer Transaktion, greift Budgero auf die automatische Auswahl zurück. Deine [Regeln](/docs/rules-engine) werden außerdem auf jede importierte Transaktion angewendet, sodass du den Rest dort aufräumen kannst.
+
 ## Zugriff alle 180 Tage erneuern
 
-PSD2 begrenzt, wie lange eine Bankautorisierung gültig ist, in der Regel 180 Tage. **Einstellungen › Banksync** zeigt, wann der Zugriff für jede Bank abläuft. Eine Woche vorher erinnert Budgero dich daran, wenn du die App öffnest. Wähle neben der Bank **Erneut verbinden** und melde dich erneut an.
+PSD2 begrenzt, wie lange eine Bankautorisierung gültig ist, in der Regel 180 Tage. Budgero beantragt den Zugriff so lange, wie deine Bank es zulässt, oder für 90 Tage, wenn die Bank keine Angabe macht. **Einstellungen › Banksync** zeigt, wann der Zugriff für jede Bank abläuft. Eine Woche vorher erinnert Budgero dich daran, wenn du die App öffnest. Wähle neben der Bank **Erneut verbinden** und melde dich erneut an.
 
 Manche Banken beenden den Zugriff vorzeitig, zum Beispiel für eine jährliche Identitätsprüfung. Die Synchronisierung meldet dann, dass der Zugriff auf diese Bank abgelaufen ist, und **Erneut verbinden** behebt das auf dieselbe Weise.
 
@@ -217,6 +231,14 @@ Deine Synchronisierungen laufen über das Relay deines eigenen Servers, niemals 
     <tr>
       <td>„Enable Banking war über das Budgero-Relay nicht erreichbar“</td>
       <td>Prüfe deine Verbindung. Prüfe bei einem selbst gehosteten Server, ob er <code>api.enablebanking.com</code> auf Port 443 erreichen kann.</td>
+    </tr>
+    <tr>
+      <td>„Deine Bank begrenzt, wie oft ihre Daten abgerufen werden können“</td>
+      <td>Deine Bank erlaubt nur wenige Abrufe pro Tag. Warte ein paar Stunden und synchronisiere dann erneut.</td>
+    </tr>
+    <tr>
+      <td>Das Anmeldefenster öffnet sich nicht</td>
+      <td>Dein Browser hat das Pop-up blockiert. Erlaube Pop-ups für Budgero oder fahre einfach fort: Budgero öffnet die Anmeldeseite der Bank dann stattdessen im selben Tab.</td>
     </tr>
     <tr>
       <td>„Der Zugriff auf … ist abgelaufen“</td>

@@ -1,8 +1,12 @@
 import { Trans, useLingui } from '@lingui/react/macro';
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Link2, Loader2, RefreshCw, Unplug } from 'lucide-react';
+import { AlertTriangle, Link2, Loader2, RefreshCw, Settings2, Unplug } from 'lucide-react';
 import { toast } from 'sonner';
-import { parseEnableBankingConfig, type BankConnection } from '@budgero/core/browser';
+import {
+  parseEnableBankingConfig,
+  type BankConnection,
+  type BankLink,
+} from '@budgero/core/browser';
 import { useAccounts } from '@entities/account/api/useAccounts';
 import { getErrorMessage } from '@shared/lib/errors';
 import { cn } from '@shared/lib/utils';
@@ -22,6 +26,7 @@ import {
 import { formatBankAmount, formatSyncedAgo } from '../lib/format';
 import { providerName, type RemoteBankAccount } from '../lib/provider';
 import { describeAccessUrl } from '../lib/simplefin-client';
+import { BankFeedSettingsDialog } from './BankFeedSettingsDialog';
 import { BankReviewDialog } from './BankReviewDialog';
 import { EnableBankingBanksCard } from './EnableBankingBanksCard';
 import { LinkAccountDialog } from './LinkAccountDialog';
@@ -47,6 +52,7 @@ export function BankConnectionPanel({ connection }: { connection: BankConnection
   const disconnect = useDisconnectBank();
   const unlink = useUnlinkBankAccount();
   const [linking, setLinking] = useState<RemoteBankAccount | null>(null);
+  const [configuring, setConfiguring] = useState<BankLink | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
 
@@ -197,15 +203,26 @@ export function BankConnectionPanel({ connection }: { connection: BankConnection
                       </div>
                     ) : null}
                     {link ? (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs"
-                        disabled={unlink.isPending}
-                        onClick={() => unlink.mutate({ budgetId, accountId: link.AccountID })}
-                      >
-                        <Trans>Unlink</Trans>
-                      </Button>
+                      <>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          aria-label={t`Bank feed settings`}
+                          onClick={() => setConfiguring(link)}
+                        >
+                          <Settings2 className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs"
+                          disabled={unlink.isPending}
+                          onClick={() => unlink.mutate({ budgetId, accountId: link.AccountID })}
+                        >
+                          <Trans>Unlink</Trans>
+                        </Button>
+                      </>
                     ) : (
                       <Button
                         size="sm"
@@ -245,6 +262,14 @@ export function BankConnectionPanel({ connection }: { connection: BankConnection
           remote={linking}
           linkedAccountIds={linkedAccountIds}
           onOpenChange={(open) => !open && setLinking(null)}
+        />
+      )}
+      {configuring && (
+        <BankFeedSettingsDialog
+          link={configuring}
+          provider={connection.Provider}
+          accountName={accountsById.get(configuring.AccountID)?.Name ?? ''}
+          onOpenChange={(open) => !open && setConfiguring(null)}
         />
       )}
       <BankReviewDialog budgetId={budgetId} open={reviewOpen} onOpenChange={setReviewOpen} />

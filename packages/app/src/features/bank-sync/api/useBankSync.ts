@@ -2,9 +2,11 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tansta
 import {
   parseEnableBankingConfig,
   type BankConnection,
+  type BankFeedSettings,
   type BankLink,
   type BankProvider,
   type BankReview,
+  type EnableBankingSession,
 } from '@budgero/core/browser';
 import { useSpaceQuery } from '@shared/api/useSpaceQuery';
 import { invalidateRoots } from '@shared/lib/query-utils';
@@ -20,7 +22,8 @@ import {
 import type { EnableBankingCredentials } from '../lib/enable-banking/jwt';
 import { fetchRemoteAccounts } from '../lib/provider';
 import { claimSetupToken } from '../lib/simplefin-client';
-import { beginAuthorization } from '../model/enable-banking-auth';
+import { navigatePopup, waitForBankCallback } from '../model/bank-auth-popup';
+import { beginAuthorization, completeAuthorization } from '../model/enable-banking-auth';
 import { linkAccounts, type LinkRequest } from '../model/link-accounts';
 import { bankIdempotencyKey, runBankSync } from '../model/run-bank-sync';
 
@@ -117,6 +120,18 @@ export function useLinkBankAccounts() {
     mutationFn: (input: { connection: BankConnection; requests: LinkRequest[] }) =>
       linkAccounts(runtime, input.connection, input.requests),
     onSettled: () => invalidateAfterBankSync(queryClient),
+  });
+}
+
+export function useUpdateBankFeedSettings() {
+  const runtime = useRuntime();
+  return useMutation({
+    mutationFn: (input: { budgetId: number; accountId: number; settings: BankFeedSettings }) =>
+      executeSpaceMutation(runtime, {
+        op: 'bankSync.updateLinkSettings',
+        payload: input,
+        meta: { label: 'bank-sync' },
+      }),
   });
 }
 
@@ -226,16 +241,46 @@ export function useAspsps(connection: BankConnection | undefined, country: strin
   });
 }
 
-/** Sends the browser to the bank's login page; resolves only if that fails. */
+/**
+ * Runs the bank login. With a popup (opened synchronously by the caller), the
+ * login happens there and this resolves with the new session. Without one,
+ * the page redirects to the bank and the callback page finishes the job.
+ */
 export function useStartBankAuthorization() {
+  const runtime = useRuntime();
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: {
+    mutationFn: async ({
+      connection,
+      aspsp,
+      popup,
+      signal,
+    }: {
       connection: BankConnection;
       aspsp: Parameters<typeof beginAuthorization>[1];
-    }) => {
-      const url = await beginAuthorization(input.connection, input.aspsp);
-      window.location.assign(url);
+      popup: Window | null;
+      signal?: AbortSignal;
+    }): Promise<EnableBankingSession | null> => {
+      if (!popup) {
+        const { url } = await beginAuthorization(connection, aspsp, 'redirect');
+        window.location.assign(url);
+        return null;
+      }
+      try {
+        const { url, state } = await beginAuthorization(connection, aspsp, 'popup');
+        navigatePopup(popup, url);
+        const params = await waitForBankCallback(state, popup, signal);
+        return (await completeAuthorization(runtime, params)).session;
+      } catch (error) {
+        try {
+          popup.close();
+        } catch {
+          /* already gone */
+        }
+        throw error;
+      }
     },
+    onSettled: () => invalidateAfterBankSync(queryClient),
   });
 }
 

@@ -52,11 +52,22 @@ Un compte ne peut être lié qu'à un seul flux bancaire à la fois. **Délier**
 - **Automatique.** Budgero se synchronise quand vous ouvrez l'application ou y revenez, au plus une fois toutes les 6 heures. Cela vaut pour l'ensemble de vos appareils : si votre téléphone s'est synchronisé il y a une heure, votre ordinateur portable ne se synchronisera pas à nouveau.
 - **À la demande.** Sélectionnez **Synchroniser** dans **Paramètres › Synchro bancaire**, ou utilisez le bouton de synchronisation sur la page d'un compte lié.
 - **Chevauchement.** Chaque synchronisation remonte une semaine avant la précédente, pour rattraper les transactions que la banque a comptabilisées en retard. Les transactions déjà importées par Budgero sont ignorées, même celles que vous avez supprimées depuis. Une transaction bancaire supprimée le reste.
-- **Les transactions en attente** sont ignorées jusqu'à ce que la banque les comptabilise : vous n'aurez donc jamais une ligne en attente et une ligne comptabilisée pour le même achat.
+- **Les transactions en attente** sont ignorées jusqu'à ce que la banque les comptabilise, sauf si vous activez **Importer les transactions en attente** pour le compte (voir ci-dessous). Dans les deux cas, vous ne vous retrouvez jamais avec une ligne en attente et une ligne comptabilisée pour le même achat.
 - **Transactions réémises.** Les banques réémettent parfois une transaction sous un nouvel identifiant. Budgero la reconnaît à sa date, son montant et son bénéficiaire, et met à jour la ligne existante au lieu d'en ajouter une copie.
 - **Soldes.** **Paramètres › Synchro bancaire** affiche le solde bancaire de chaque compte lié et le signale lorsque votre solde pointé dans Budgero est différent.
 
 Pour la plupart des banques, SimpleFIN actualise les données environ une fois par jour. Une transaction effectuée ce matin peut n'apparaître que demain.
+
+## Réglages du flux bancaire
+
+Chaque compte lié a ses propres réglages. Sélectionnez l'icône en forme d'engrenage à côté du compte dans **Paramètres › Synchro bancaire** :
+
+- **Importer les transactions en attente.** Désactivée par défaut. Lorsque cette option est activée, les paiements par carte apparaissent avant que la banque ne les comptabilise, sous forme de transactions non pointées. Dès que la banque en comptabilise un, Budgero met directement à jour cette même transaction, avec la date et le montant comptabilisés, et la marque comme pointée. Votre catégorie, ainsi que tout bénéficiaire ou mémo que vous avez modifié, sont conservés. Si la banque abandonne une transaction en attente sans la comptabiliser, par exemple une pré-autorisation de carte levée, Budgero la supprime.
+- **Date.** Choisissez la date d'achat (quand vous avez payé) ou la date de comptabilisation (quand la banque l'a enregistrée). **Automatique** utilise la date d'achat lorsque SimpleFIN en fournit une.
+- **Bénéficiaire** et **Mémo.** Choisissez, pour chaque champ, entre le nom du commerçant et la description de la banque, ou laissez le mémo vide.
+- **Nettoyer les noms de bénéficiaires en MAJUSCULES.** Activée par défaut. Transforme `TRADER JOE'S #552` en `Trader Joe's #552`. Les noms qui contiennent déjà des minuscules restent exactement tels que la banque les a envoyés.
+
+Les réglages s'appliquent aux transactions importées à partir de ce moment. Si le champ choisi manque pour une transaction, Budgero revient au choix automatique. Vos [règles](/docs/rules-engine) s'appliquent aussi à chaque transaction importée : vous pouvez donc y faire le reste du nettoyage.
 
 ## Vérifier les correspondances possibles
 
@@ -128,6 +139,10 @@ Sélectionnez **Déconnecter** dans **Paramètres › Synchro bancaire**. Budger
     <tr>
       <td>« Votre abonnement SimpleFIN Bridge nécessite votre attention »</td>
       <td>Vérifiez vos informations de paiement dans SimpleFIN Bridge.</td>
+    </tr>
+    <tr>
+      <td>« … nécessite votre attention dans SimpleFIN Bridge »</td>
+      <td>La connexion à votre banque dans SimpleFIN Bridge a cessé de fonctionner. Connectez-vous à SimpleFIN Bridge, corrigez la connexion de cette banque, puis synchronisez à nouveau.</td>
     </tr>
     <tr>
       <td>Un compte affiche « … n'a pas été renvoyé par SimpleFIN »</td>

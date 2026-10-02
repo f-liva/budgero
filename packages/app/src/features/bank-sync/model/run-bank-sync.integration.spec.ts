@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // The integration test needs the Node database adapter; production uses the browser entry.
 // eslint-disable-next-line no-restricted-imports
 import { asMilli, NodeSqlJsAdapter, ServiceManager, type Services } from '@budgero/core';
+import { DEFAULT_BANK_FEED_SETTINGS } from '@budgero/core/browser';
 import type {
   EnableBankingSession,
   SimpleFINAccount,
@@ -417,6 +418,49 @@ describe('bank sync engine', () => {
       await expect(newEnableBankingAccount()).rejects.toThrow(/didn't send a balance/);
       expect(services.accounts.listAccounts(budgetId)).toHaveLength(before);
       expect(services.bankSync.listLinks(budgetId, 'enablebanking')).toEqual([]);
+    });
+
+    it('imports pending rows uncleared, then settles or removes them as the bank decides', async () => {
+      const accountId = await linkEnableBanking();
+      services.bankSync.updateLinkSettings(accountId, {
+        ...DEFAULT_BANK_FEED_SETTINGS,
+        importPending: true,
+      });
+      const pending = (ref: string, date: string, amount: string) => ({
+        ...ebRow(ref, date, amount),
+        status: 'PDNG',
+      });
+      state.eb.rows = [
+        ebRow('e0', '2026-09-02', '5.00'),
+        pending('p1', '2026-09-05', '12.00'),
+        pending('hold', '2026-09-05', '80.00'),
+      ];
+      expect(await runBankSync(runtime, budgetId)).toMatchObject({ imported: 3 });
+      const byOutflow = () =>
+        new Map(
+          services.transactions
+            .getTransactionsByAccount(accountId)
+            .map((row) => [Number(row.OutflowNative), row] as const)
+        );
+      const coffee = byOutflow().get(12000)!;
+      expect(Boolean(coffee.Cleared)).toBe(false);
+      expect(Boolean(byOutflow().get(80000)!.Cleared)).toBe(false);
+      await services.transactions.updateTransactionColumn(coffee.ID, 'memo', 'with Anna');
+
+      // Booked under a new reference a day later; the hold was released.
+      state.eb.rows = [ebRow('e0', '2026-09-02', '5.00'), ebRow('b1', '2026-09-06', '12.00')];
+      expect(await runBankSync(runtime, budgetId)).toMatchObject({ imported: 0, errors: [] });
+      const after = byOutflow();
+      const settled = after.get(12000)!;
+      expect(settled.ID).toBe(coffee.ID);
+      expect(Boolean(settled.Cleared)).toBe(true);
+      expect(settled.Date).toBe('2026-09-06');
+      expect(settled.Memo).toBe('with Anna');
+      expect(after.has(80000)).toBe(false);
+
+      // Nothing doubles up on the next sync.
+      expect(await runBankSync(runtime, budgetId)).toMatchObject({ imported: 0 });
+      expect(services.transactions.getTransactionsByAccount(accountId)).toHaveLength(2);
     });
 
     it('reports an expired consent without calling the bank', async () => {

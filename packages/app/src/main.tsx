@@ -11,6 +11,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { initAnalytics } from '@shared/lib/analytics/analytics';
 import { setupKlaro } from '@shared/lib/analytics/klaro';
 import { writePendingSpaceInvite } from '@features/budget-sharing/lib/pending-space-invite';
+import { relayBankCallbackFromPopup } from '@features/bank-sync/model/bank-auth-popup';
 
 // Capture workspace-invite secrets from the URL fragment before React mounts.
 // /join#code=… can land here unauthenticated, which means StartupController
@@ -84,6 +85,9 @@ function renderAppBody() {
 
 // Catalogs load before mount so no screen renders in the wrong language first.
 void initI18n().then(() => {
+  // The bank login popup returns here; it hands the answer to the Budgero
+  // window that opened it and closes without starting the app.
+  if (relayBankCallbackFromPopup()) return;
   createRoot(document.getElementById('root')!).render(
     <I18nProvider i18n={i18n}>
       <HelmetProvider>

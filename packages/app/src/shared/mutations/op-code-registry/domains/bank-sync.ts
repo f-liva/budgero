@@ -1,4 +1,5 @@
 import type {
+  BankFeedSettings,
   BankLinkInput,
   BankProvider,
   BankReviewInput,
@@ -53,6 +54,12 @@ export const bankSyncOps = {
   'bankSync.saveLink': {
     execute: async (args) => {
       S().bankSync.saveLink(args.input as BankLinkInput);
+    },
+    invalidates: BANK_SYNC_KEYS,
+  },
+  'bankSync.updateLinkSettings': {
+    execute: async (args) => {
+      S().bankSync.updateLinkSettings(args.accountId as number, args.settings as BankFeedSettings);
     },
     invalidates: BANK_SYNC_KEYS,
   },

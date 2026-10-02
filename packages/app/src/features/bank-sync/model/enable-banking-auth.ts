@@ -22,6 +22,8 @@ export interface PendingAuthorization {
   state: string;
   budgetId: number;
   aspsp: { name: string; country: string };
+  /** A popup hands the bank's answer back to the window that opened it. */
+  mode: 'popup' | 'redirect';
   createdAt: number;
 }
 
@@ -29,7 +31,7 @@ export function bankRedirectUrl(origin = window.location.origin): string {
   return `${origin}${BANK_CALLBACK_PATH}`;
 }
 
-function readPending(): PendingAuthorization | null {
+export function readPending(): PendingAuthorization | null {
   try {
     const raw = localStorage.getItem(PENDING_KEY);
     if (!raw) return null;
@@ -58,12 +60,13 @@ function credentialsOf(connection: BankConnection | null) {
 /**
  * Asks Enable Banking for the bank's login URL. The state ties the callback
  * to this request (and to the budget it was started from); the caller then
- * navigates to the returned URL.
+ * opens the returned URL in a popup or navigates to it.
  */
 export async function beginAuthorization(
   connection: BankConnection,
-  aspsp: Aspsp
-): Promise<string> {
+  aspsp: Aspsp,
+  mode: PendingAuthorization['mode'] = 'redirect'
+): Promise<{ url: string; state: string }> {
   const state = crypto.randomUUID();
   const credentials = credentialsOf(connection);
   const { url } = await startAuthorization(credentials, {
@@ -75,9 +78,10 @@ export async function beginAuthorization(
     state,
     budgetId: connection.BudgetID,
     aspsp: { name: aspsp.name, country: aspsp.country },
+    mode,
     createdAt: Date.now(),
   });
-  return url;
+  return { url, state };
 }
 
 /**

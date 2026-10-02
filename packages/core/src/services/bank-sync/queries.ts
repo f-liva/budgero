@@ -127,6 +127,15 @@ export class BankSyncQueries {
     );
   }
 
+  updateLinkSettings(accountId: number, settingsJson: string): void {
+    run(
+      this.db,
+      'UPDATE bank_links SET SettingsJSON = ? WHERE AccountID = ?',
+      settingsJson,
+      accountId
+    );
+  }
+
   deleteLink(accountId: number): void {
     run(this.db, "DELETE FROM bank_reviews WHERE AccountID = ? AND Status = 'pending'", accountId);
     run(this.db, 'DELETE FROM bank_links WHERE AccountID = ?', accountId);

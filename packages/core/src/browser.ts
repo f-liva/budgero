@@ -227,10 +227,15 @@ export {
 
 export * from './services/import/duplicate-planner.js';
 export {
+  applyBankFeedSettings,
   bankOperationId,
+  DEFAULT_BANK_FEED_SETTINGS,
   ENABLE_BANKING_API_URL,
   fromSimpleFINTransaction,
   isPostedSimpleFINTransaction,
+  parseBankFeedSettings,
   parseEnableBankingConfig,
+  pendingOperationId,
   simpleFINDate,
+  tidyPayeeName,
 } from './services/bank-sync/index.js';

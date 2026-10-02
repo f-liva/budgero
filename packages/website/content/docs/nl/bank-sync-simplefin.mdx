@@ -52,11 +52,22 @@ Een rekening kan maar aan één bankfeed tegelijk gekoppeld zijn. **Ontkoppelen*
 - **Automatisch.** Budgero synchroniseert wanneer je de app opent of ernaar terugkeert, hooguit eens per 6 uur. Dat geldt over al je apparaten heen: heeft je telefoon een uur geleden gesynchroniseerd, dan synchroniseert je laptop niet opnieuw.
 - **Op verzoek.** Selecteer **Nu synchroniseren** in **Instellingen › Banksync**, of gebruik de synchronisatieknop op de pagina van een gekoppelde rekening.
 - **Overlap.** Elke synchronisatie kijkt terug tot een week vóór de vorige, om transacties op te vangen die de bank pas later heeft geboekt. Transacties die Budgero al heeft geïmporteerd worden overgeslagen, ook als je ze daarna hebt verwijderd. Een verwijderde banktransactie blijft verwijderd.
-- **Transacties in behandeling** worden overgeslagen totdat de bank ze boekt, zodat je nooit een regel in behandeling én een geboekte regel voor dezelfde aankoop krijgt.
+- **Transacties in behandeling** worden overgeslagen totdat de bank ze boekt, tenzij je **Transacties in behandeling importeren** aanzet voor de rekening (zie hieronder). In beide gevallen krijg je nooit een regel in behandeling én een geboekte regel voor dezelfde aankoop.
 - **Opnieuw uitgegeven transacties.** Banken geven een transactie soms opnieuw uit onder een nieuwe ID. Budgero herkent die aan datum, bedrag en begunstigde en werkt de bestaande regel bij in plaats van een kopie toe te voegen.
 - **Saldi.** **Instellingen › Banksync** toont voor elke gekoppelde rekening het saldo bij je bank, en geeft een signaal wanneer je bevestigde saldo in Budgero daarvan afwijkt.
 
 SimpleFIN ververst de gegevens van de meeste banken ongeveer één keer per dag. Een transactie die je vanochtend hebt gedaan, verschijnt mogelijk pas morgen.
+
+## Instellingen bankfeed
+
+Elke gekoppelde rekening heeft eigen instellingen. Selecteer het tandwielpictogram ernaast in **Instellingen › Banksync**:
+
+- **Transacties in behandeling importeren.** Staat standaard uit. Staat het aan, dan verschijnen kaartbetalingen al voordat de bank ze boekt, als niet-bevestigde transacties. Zodra de bank er een boekt, werkt Budgero diezelfde transactie bij met de boekingsdatum en het geboekte bedrag, en markeert het die als bevestigd. Je categorie blijft behouden, net als een begunstigde of memo die je hebt aangepast. Laat de bank een transactie in behandeling vallen zonder die te boeken, bijvoorbeeld een vrijgegeven kaartreservering, dan verwijdert Budgero die.
+- **Datum.** Kies de aankoopdatum (wanneer je betaalde) of de boekingsdatum (wanneer de bank het verwerkte). **Automatisch** gebruikt de aankoopdatum als SimpleFIN die heeft.
+- **Begunstigde** en **Memo.** Kies per veld wat erin komt: de naam van de winkel of de beschrijving van de bank. De memo kun je ook leeg laten.
+- **Namen van begunstigden in HOOFDLETTERS opschonen.** Staat standaard aan. Verandert `TRADER JOE'S #552` in `Trader Joe's #552`. Namen die al kleine letters bevatten, blijven precies zoals de bank ze heeft gestuurd.
+
+De instellingen gelden voor transacties die vanaf dat moment worden geïmporteerd. Ontbreekt het veld dat je hebt gekozen bij een transactie, dan valt Budgero terug op de automatische keuze. Je [regels](/docs/rules-engine) worden ook op elke geïmporteerde transactie toegepast, dus de rest kun je daar opschonen.
 
 ## Mogelijke matches nakijken
 
@@ -128,6 +139,10 @@ Selecteer **Verbreken** in **Instellingen › Banksync**. Budgero verwijdert de 
     <tr>
       <td>"Je SimpleFIN Bridge-abonnement vraagt om aandacht"</td>
       <td>Controleer je betaalgegevens in SimpleFIN Bridge.</td>
+    </tr>
+    <tr>
+      <td>"… heeft aandacht nodig in SimpleFIN Bridge"</td>
+      <td>Het inloggen bij je bank via SimpleFIN Bridge werkt niet meer. Log in bij SimpleFIN Bridge, herstel de verbinding met die bank en synchroniseer opnieuw.</td>
     </tr>
     <tr>
       <td>Een rekening meldt "… is niet teruggegeven door SimpleFIN"</td>

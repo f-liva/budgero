@@ -52,11 +52,22 @@ Ein Konto kann immer nur mit einer Bankanbindung gleichzeitig verknüpft sein. *
 - **Automatisch.** Budgero synchronisiert, wenn du die App öffnest oder zu ihr zurückkehrst, höchstens alle 6 Stunden. Das gilt geräteübergreifend: Hat dein Smartphone vor einer Stunde synchronisiert, synchronisiert dein Laptop nicht noch einmal.
 - **Bei Bedarf.** Wähle **Jetzt synchronisieren** unter **Einstellungen › Banksync** oder nutze die Sync-Schaltfläche auf der Seite eines verknüpften Kontos.
 - **Überlappung.** Jede Synchronisierung reicht eine Woche vor die letzte zurück, um Transaktionen zu erfassen, die die Bank verspätet gebucht hat. Transaktionen, die Budgero bereits importiert hat, werden übersprungen, auch wenn du sie danach gelöscht hast. Eine gelöschte Banktransaktion bleibt gelöscht.
-- **Ausstehende Transaktionen** werden übersprungen, bis die Bank sie bucht. So hast du nie eine ausstehende und eine gebuchte Zeile für denselben Kauf.
+- **Ausstehende Transaktionen** werden übersprungen, bis die Bank sie bucht, es sei denn, du aktivierst **Ausstehende Transaktionen importieren** für das Konto (siehe unten). So oder so hast du am Ende nie eine ausstehende und eine gebuchte Zeile für denselben Kauf.
 - **Erneut übermittelte Transaktionen.** Banken übermitteln eine Transaktion manchmal erneut unter einer neuen ID. Budgero erkennt sie an Datum, Betrag und Empfänger und aktualisiert die bestehende Zeile, statt eine Kopie hinzuzufügen.
 - **Kontostände.** **Einstellungen › Banksync** zeigt für jedes verknüpfte Konto den Kontostand deiner Bank an und weist dich darauf hin, wenn dein gebuchter Saldo in Budgero davon abweicht.
 
 SimpleFIN aktualisiert die Daten der meisten Banken etwa einmal täglich. Eine Transaktion, die du heute Morgen getätigt hast, erscheint unter Umständen erst morgen.
+
+## Einstellungen für den Bankfeed
+
+Jedes verknüpfte Konto hat seine eigenen Einstellungen. Wähle das Zahnradsymbol neben dem Konto unter **Einstellungen › Banksync**:
+
+- **Ausstehende Transaktionen importieren.** Standardmäßig deaktiviert. Ist die Option aktiviert, erscheinen Kartenzahlungen schon, bevor die Bank sie bucht, und zwar als nicht gebuchte Transaktionen. Sobald die Bank eine davon bucht, aktualisiert Budgero direkt dieselbe Transaktion mit dem Buchungsdatum und dem gebuchten Betrag und markiert sie als gebucht. Deine Kategorie bleibt erhalten, ebenso ein Empfänger oder Memo, das du geändert hast. Verwirft die Bank eine ausstehende Transaktion, ohne sie zu buchen, zum Beispiel eine freigegebene Kartenreservierung, entfernt Budgero sie.
+- **Datum.** Wähle das Kaufdatum (wann du bezahlt hast) oder das Buchungsdatum (wann die Bank die Transaktion erfasst hat). **Automatisch** verwendet das Kaufdatum, sofern SimpleFIN eines liefert.
+- **Empfänger** und **Memo.** Wähle, ob der Name des Händlers oder die Beschreibung der Bank in das jeweilige Feld kommt, oder lass das Memo leer.
+- **Empfängernamen in GROSSBUCHSTABEN aufräumen.** Standardmäßig aktiviert. Aus `TRADER JOE'S #552` wird `Trader Joe's #552`. Namen, die bereits Kleinbuchstaben enthalten, bleiben genau so, wie die Bank sie gesendet hat.
+
+Die Einstellungen gelten für Transaktionen, die ab dann importiert werden. Fehlt das gewählte Feld bei einer Transaktion, greift Budgero auf die automatische Auswahl zurück. Deine [Regeln](/docs/rules-engine) werden außerdem auf jede importierte Transaktion angewendet, sodass du den Rest dort aufräumen kannst.
 
 ## Mögliche Übereinstimmungen prüfen
 
@@ -128,6 +139,10 @@ Wähle **Trennen** unter **Einstellungen › Banksync**. Budgero entfernt den Zu
     <tr>
       <td>„Dein SimpleFIN-Bridge-Abo braucht deine Aufmerksamkeit“</td>
       <td>Prüfe deine Zahlungsdaten in SimpleFIN Bridge.</td>
+    </tr>
+    <tr>
+      <td>„… benötigt Aufmerksamkeit in SimpleFIN Bridge“</td>
+      <td>Deine Bankanmeldung in SimpleFIN Bridge funktioniert nicht mehr. Melde dich bei SimpleFIN Bridge an, repariere die Verbindung zu dieser Bank und synchronisiere erneut.</td>
     </tr>
     <tr>
       <td>Bei einem Konto steht „wurde von SimpleFIN nicht zurückgegeben“</td>

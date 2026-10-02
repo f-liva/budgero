@@ -58,8 +58,19 @@ export function fromSimpleFINAccount(account: SimpleFINAccount): RemoteBankAccou
   };
 }
 
+/** SimpleFIN reports a broken bank login as "Connection to X may need attention". */
+export function describeSimpleFINError(error: string): string {
+  const org = error.match(/^Connection to (.+?) may need attention/i)?.[1];
+  return org
+    ? t`${org} needs attention in SimpleFIN Bridge. Sign in there and fix the connection, then sync again.`
+    : error;
+}
+
 function fromSimpleFINSet(set: SimpleFINAccountSet): RemoteAccountSet {
-  return { errors: set.errors ?? [], accounts: set.accounts.map(fromSimpleFINAccount) };
+  return {
+    errors: (set.errors ?? []).map(describeSimpleFINError),
+    accounts: set.accounts.map(fromSimpleFINAccount),
+  };
 }
 
 function requireEnableBankingConfig(connection: BankConnection): EnableBankingConfig {
@@ -120,7 +131,8 @@ export async function fetchRemoteTransactions(
   firstSyncIds: Set<string> = new Set()
 ): Promise<RemoteAccountSet> {
   if (connection.Provider !== 'enablebanking') {
-    return fromSimpleFINSet(await fetchTransactions(connection.AccessURL, start));
+    const ids = onlyAccountIds ? [...onlyAccountIds] : undefined;
+    return fromSimpleFINSet(await fetchTransactions(connection.AccessURL, start, new Date(), ids));
   }
   const config = requireEnableBankingConfig(connection);
   const credentials = { appId: config.appId, privateKeyPem: config.privateKeyPem };

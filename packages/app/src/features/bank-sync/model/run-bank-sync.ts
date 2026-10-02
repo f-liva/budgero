@@ -1,6 +1,8 @@
 import { t } from '@lingui/core/macro';
 import {
   bankOperationId,
+  parseBankFeedSettings,
+  pendingOperationId,
   type BankConnection,
   type BankLink,
   type BankProvider,
@@ -27,6 +29,10 @@ export interface BankSyncResult {
   reviews: number;
   errors: string[];
 }
+
+type PlannedSettle = ReturnType<
+  ReturnType<AppRuntime['services']>['bankSync']['planImport']
+>['settles'][number];
 
 function localMidnight(date: string): Date {
   const [y, m, d] = date.split('-').map(Number);
@@ -190,6 +196,8 @@ async function syncConnection(
           connection.Provider
         );
         keys.set(operationId, await bankIdempotencyKey(operationId));
+        const pendingId = pendingOperationId(operationId);
+        keys.set(pendingId, await bankIdempotencyKey(pendingId));
       }
       const plan = services.bankSync.planImport({
         budgetId,
@@ -197,6 +205,7 @@ async function syncConnection(
         currency: account.Currency,
         link,
         provider: connection.Provider,
+        settings: parseBankFeedSettings(link),
         transactions,
         wasImported: (row: ImportIdentity) =>
           runtime.isMutationApplied(keys.get(row.operationId) ?? ''),
@@ -223,11 +232,25 @@ async function syncConnection(
             payee: identity.payee,
             transferId: '',
             importIdentities: [identity],
+            // Pending rows come in uncleared and are cleared once booked.
+            ...(identity.pending ? { cleared: false } : {}),
           },
           idempotencyKey: keys.get(identity.operationId),
           meta: { label: 'bank-sync', skipUndo: true, skipInvalidate: true },
         });
         result.imported++;
+      }
+      for (const settle of plan.settles) {
+        await settlePending(
+          runtime,
+          budgetId,
+          account.ID,
+          settle,
+          keys.get(settle.identity.operationId)
+        );
+      }
+      for (const transactionId of plan.removals) {
+        await removeDroppedPending(runtime, budgetId, transactionId);
       }
       if (plan.reviews.length) {
         await executeSpaceMutation(runtime, {
@@ -250,4 +273,76 @@ async function syncConnection(
 
   await record(result.errors.length ? result.errors.join('\n') : null, balances);
   return result;
+}
+
+/**
+ * Turns an imported pending transaction into its booked version: the bank's
+ * date and amount win, payee and memo only if the user hasn't edited them,
+ * and it's marked cleared. Category and other edits stay.
+ */
+async function settlePending(
+  runtime: AppRuntime,
+  budgetId: number,
+  accountId: number,
+  { identity, previous, transactionId }: PlannedSettle,
+  idempotencyKey: string | undefined
+): Promise<void> {
+  let current;
+  try {
+    current = await runtime.services().transactions.getTransactionByID(transactionId);
+  } catch {
+    return; // deleted meanwhile
+  }
+  const update = (columnName: string, newValue: string | number) =>
+    executeSpaceMutation(runtime, {
+      op: 'transactions.updateColumn',
+      payload: { budgetId, id: transactionId, columnName, newValue },
+      meta: { label: 'bank-sync', skipUndo: true, skipInvalidate: true },
+    });
+  if (!current.Reconciled) {
+    if (current.Date !== identity.date) await update('Date', identity.date);
+    if ((current.InflowNative ?? 0) !== identity.inflow)
+      await update('InflowNative', identity.inflow);
+    if ((current.OutflowNative ?? 0) !== identity.outflow) {
+      await update('OutflowNative', identity.outflow);
+    }
+    const payee = current.Payee ?? '';
+    if (payee === previous.payee && payee !== identity.payee) await update('Payee', identity.payee);
+    const memo = current.Memo ?? '';
+    if (memo === previous.memo && memo !== identity.memo) {
+      await update('Memo', identity.memo.substring(0, 255));
+    }
+    if (!current.Cleared) {
+      await executeSpaceMutation(runtime, {
+        op: 'transactions.setCleared',
+        payload: { budgetId, ids: [transactionId], cleared: true },
+        meta: { label: 'bank-sync', skipUndo: true, skipInvalidate: true },
+      });
+    }
+  }
+  await executeSpaceMutation(runtime, {
+    op: 'importHistory.match',
+    payload: { budgetId, accountId, transactionId, identity },
+    idempotencyKey,
+    meta: { label: 'bank-sync', skipUndo: true },
+  });
+}
+
+/** Removes a pending import the bank dropped, unless the user has cleared it since. */
+async function removeDroppedPending(
+  runtime: AppRuntime,
+  budgetId: number,
+  transactionId: number
+): Promise<void> {
+  try {
+    const current = await runtime.services().transactions.getTransactionByID(transactionId);
+    if (current.Cleared || current.Reconciled) return;
+  } catch {
+    return;
+  }
+  await executeSpaceMutation(runtime, {
+    op: 'transactions.delete',
+    payload: { budgetId, id: transactionId },
+    meta: { label: 'bank-sync', skipUndo: true, skipInvalidate: true },
+  });
 }

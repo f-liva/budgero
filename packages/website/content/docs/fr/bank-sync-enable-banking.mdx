@@ -81,8 +81,10 @@ Budgero vérifie la clé auprès d'Enable Banking avant d'enregistrer quoi que c
 ## Étape 5 : Connectez votre banque
 
 1. Dans **Banques**, choisissez votre pays et votre banque, puis sélectionnez **Continuer vers la connexion bancaire**.
-2. La page de connexion de votre banque s'ouvre. Connectez-vous et autorisez l'accès. Oui, encore une fois : lier les comptes à l'étape 3 a activé votre application, mais votre banque doit aussi approuver cette connexion précise.
-3. Votre banque vous renvoie vers Budgero, qui enregistre la connexion.
+2. La page de connexion de votre banque s'ouvre dans une petite fenêtre. Connectez-vous et autorisez l'accès. Oui, encore une fois : lier les comptes à l'étape 3 a activé votre application, mais votre banque doit aussi approuver cette connexion précise.
+3. La fenêtre se ferme d'elle-même, et Budgero enregistre la connexion.
+
+Si votre navigateur bloque les fenêtres pop-up, ou si vous utilisez Budgero comme application installée, la page de connexion de la banque s'ouvre plutôt dans le même onglet, et votre banque vous renvoie vers Budgero une fois que vous avez terminé.
 
 Pour ajouter une autre banque, sélectionnez **Ajouter une banque** et recommencez.
 
@@ -99,14 +101,26 @@ Sélectionnez **Lier et importer**. Les transactions apparaissent immédiatement
 
 - **Automatique.** Budgero se synchronise quand vous ouvrez l'application ou y revenez, au plus une fois toutes les 6 heures, tous appareils confondus.
 - **À la demande.** Sélectionnez **Synchroniser** dans **Paramètres › Synchro bancaire**, ou utilisez le bouton de synchronisation sur la page d'un compte lié.
-- **Uniquement les transactions comptabilisées.** Les paiements par carte en attente sont ignorés jusqu'à ce que votre banque les comptabilise. Les banques attribuent souvent une nouvelle référence à un paiement en attente une fois qu'il est comptabilisé : importer les deux créerait des doublons.
+- **Transactions comptabilisées par défaut.** Les paiements par carte en attente sont ignorés jusqu'à ce que votre banque les comptabilise, sauf si vous activez **Importer les transactions en attente** pour le compte (voir ci-dessous). Les paiements annulés ou rejetés ne sont jamais importés.
+- **Descriptions nettoyées.** De nombreuses banques, notamment en Allemagne et en Autriche, font précéder les descriptions de codes SEPA comme `SVWZ+` ou `EREF+`. Budgero supprime ces préfixes.
 - **Pas de doublons.** Chaque transaction bancaire n'est importée qu'une fois, même après un renouvellement de l'accès. Certaines banques envoient des transactions sans référence ; Budgero distingue malgré tout deux cafés identiques pris le même jour.
 - **Correspondances possibles.** Lorsqu'une transaction bancaire a le même montant qu'une saisie que vous avez faite, à cinq jours près, Budgero vous laisse choisir entre **Associer**, **Ajouter comme nouvelle** et **Ignorer** au lieu de deviner.
 - **Synchronisation en votre présence.** Les banques peuvent limiter la fréquence à laquelle une application lit vos comptes en arrière-plan, souvent à quatre fois par jour. Budgero se synchronise pendant que vous utilisez l'application et le signale à Enable Banking, ce qui vous maintient généralement en deçà de cette limite.
 
+## Réglages du flux bancaire
+
+Chaque compte lié a ses propres réglages. Sélectionnez l'icône en forme d'engrenage à côté du compte dans **Paramètres › Synchro bancaire** :
+
+- **Importer les transactions en attente.** Désactivée par défaut. Lorsque cette option est activée, les paiements par carte apparaissent avant que votre banque ne les comptabilise, sous forme de transactions non pointées. Dès que la banque en comptabilise un, Budgero met directement à jour cette même transaction, avec la date et le montant comptabilisés, et la marque comme pointée. Cela fonctionne même lorsque la banque attribue une nouvelle référence à la transaction comptabilisée. Votre catégorie, ainsi que tout bénéficiaire ou mémo que vous avez modifié, sont conservés. Si la banque abandonne une transaction en attente sans la comptabiliser, par exemple une pré-autorisation de carte levée, Budgero la supprime.
+- **Date.** Choisissez la date d'achat (quand vous avez payé), la date de comptabilisation (quand la banque l'a enregistrée) ou la date de valeur (quand l'argent a bougé). **Automatique** utilise la date de comptabilisation.
+- **Bénéficiaire** et **Mémo.** Choisissez, pour chaque champ, entre le nom du commerçant ou de la contrepartie et la description du paiement, ou laissez le mémo vide. Les banques européennes remplissent ces champs différemment : cela vaut donc la peine d'y jeter un œil si vos bénéficiaires apparaissent sous forme de codes de référence.
+- **Nettoyer les noms de bénéficiaires en MAJUSCULES.** Activée par défaut. Transforme `K-MARKET KAMPPI` en `K-Market Kamppi`. Les noms qui contiennent déjà des minuscules restent exactement tels que la banque les a envoyés.
+
+Les réglages s'appliquent aux transactions importées à partir de ce moment. Si le champ choisi manque pour une transaction, Budgero revient au choix automatique. Vos [règles](/docs/rules-engine) s'appliquent aussi à chaque transaction importée : vous pouvez donc y faire le reste du nettoyage.
+
 ## Renouveler l'accès tous les 180 jours
 
-La DSP2 limite la durée de validité d'une autorisation bancaire, généralement à 180 jours. **Paramètres › Synchro bancaire** indique quand l'accès à chaque banque expire. Une semaine avant l'échéance, Budgero vous le rappelle à l'ouverture de l'application. Sélectionnez **Reconnecter** à côté de la banque et connectez-vous à nouveau.
+La DSP2 limite la durée de validité d'une autorisation bancaire, généralement à 180 jours. Budgero demande la durée maximale autorisée par votre banque, ou 90 jours si la banque ne l'indique pas. **Paramètres › Synchro bancaire** indique quand l'accès à chaque banque expire. Une semaine avant l'échéance, Budgero vous le rappelle à l'ouverture de l'application. Sélectionnez **Reconnecter** à côté de la banque et connectez-vous à nouveau.
 
 Certaines banques mettent fin à l'accès plus tôt, par exemple pour une vérification d'identité annuelle. La synchronisation signale alors que l'accès à cette banque a expiré, et **Reconnecter** règle le problème de la même manière.
 
@@ -217,6 +231,14 @@ Vos synchronisations passent par le relais de votre propre serveur, jamais par c
     <tr>
       <td>« Impossible de joindre Enable Banking via le relais Budgero »</td>
       <td>Vérifiez votre connexion. Sur un serveur auto-hébergé, vérifiez qu'il peut joindre <code>api.enablebanking.com</code> sur le port 443.</td>
+    </tr>
+    <tr>
+      <td>« Votre banque limite la fréquence de lecture de ses données »</td>
+      <td>Votre banque n'autorise que quelques lectures par jour. Attendez quelques heures, puis synchronisez à nouveau.</td>
+    </tr>
+    <tr>
+      <td>La fenêtre de connexion ne s'ouvre pas</td>
+      <td>Votre navigateur a bloqué la fenêtre pop-up. Autorisez les fenêtres pop-up pour Budgero, ou continuez simplement : Budgero ouvre alors la page de connexion de la banque dans le même onglet.</td>
     </tr>
     <tr>
       <td>« L'accès à … a expiré »</td>

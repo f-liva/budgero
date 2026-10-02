@@ -1,5 +1,5 @@
 import { Trans, useLingui } from '@lingui/react/macro';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Landmark, Loader2, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAspsps, useRemoveBankSession, useStartBankAuthorization } from '../api/useBankSync';
 import type { Aspsp } from '../lib/enable-banking/client';
 import { isSessionExpired, sessionExpiresSoon } from '../lib/provider';
+import { AuthorizationCancelled, openBankLoginPopup } from '../model/bank-auth-popup';
 import { ENABLE_BANKING_CONTROL_PANEL_URL } from '../lib/enable-banking/client';
 
 /** Countries Enable Banking covers (EEA and the UK). */
@@ -69,12 +70,49 @@ function countryName(code: string): string {
   }
 }
 
-function AddBankForm({ connection }: { connection: BankConnection }) {
+/** Bank login in a popup, falling back to a full redirect when popups can't open. */
+function useBankLogin(onConnected?: () => void) {
+  const { t } = useLingui();
+  const start = useStartBankAuthorization();
+  const abort = useRef<AbortController | null>(null);
+  const login = (connection: BankConnection, aspsp: Aspsp) => {
+    // Opened right here in the click handler, or the browser blocks it.
+    const popup = openBankLoginPopup();
+    abort.current = new AbortController();
+    start.mutate(
+      { connection, aspsp, popup, signal: abort.current.signal },
+      {
+        onSuccess: (session) => {
+          if (!session) return;
+          toast.success(t`${session.aspsp.name} connected`, {
+            description: session.accounts.length
+              ? t`Link its accounts to start importing.`
+              : t`The bank returned no accounts. Link them to your app in the Enable Banking control panel, then reconnect.`,
+          });
+          onConnected?.();
+        },
+        onError: (error) => {
+          if (error instanceof AuthorizationCancelled) return;
+          toast.error(getErrorMessage(error, t`Couldn't finish connecting the bank`));
+        },
+      }
+    );
+  };
+  return { login, cancel: () => abort.current?.abort(), isPending: start.isPending };
+}
+
+function AddBankForm({
+  connection,
+  onConnected,
+}: {
+  connection: BankConnection;
+  onConnected?: () => void;
+}) {
   const { t } = useLingui();
   const [country, setCountry] = useState(guessCountry);
   const [bankName, setBankName] = useState('');
   const aspsps = useAspsps(connection, country);
-  const start = useStartBankAuthorization();
+  const bankLogin = useBankLogin(onConnected);
   const countries = useMemo(
     () =>
       COUNTRIES.map((code) => ({ code, name: countryName(code) })).sort((a, b) =>
@@ -83,12 +121,6 @@ function AddBankForm({ connection }: { connection: BankConnection }) {
     []
   );
   const bank = aspsps.data?.find((aspsp) => aspsp.name === bankName);
-
-  const submit = (aspsp: Aspsp) =>
-    start.mutate(
-      { connection, aspsp },
-      { onError: (error) => toast.error(getErrorMessage(error, t`Couldn't start the bank login`)) }
-    );
 
   return (
     <div className="space-y-3">
@@ -142,14 +174,29 @@ function AddBankForm({ connection }: { connection: BankConnection }) {
           {getErrorMessage(aspsps.error, t`Couldn't load banks from Enable Banking`)}
         </p>
       )}
-      <Button size="sm" disabled={!bank || start.isPending} onClick={() => bank && submit(bank)}>
-        {start.isPending ? (
-          <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-        ) : (
-          <Landmark className="h-3.5 w-3.5 mr-1.5" />
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          size="sm"
+          disabled={!bank || bankLogin.isPending}
+          onClick={() => bank && bankLogin.login(connection, bank)}
+        >
+          {bankLogin.isPending ? (
+            <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+          ) : (
+            <Landmark className="h-3.5 w-3.5 mr-1.5" />
+          )}
+          {bankLogin.isPending ? (
+            <Trans>Waiting for your bank…</Trans>
+          ) : (
+            <Trans>Continue to bank login</Trans>
+          )}
+        </Button>
+        {bankLogin.isPending && (
+          <Button size="sm" variant="ghost" onClick={bankLogin.cancel}>
+            <Trans>Cancel</Trans>
+          </Button>
         )}
-        <Trans>Continue to bank login</Trans>
-      </Button>
+      </div>
       <p className="text-[11px] text-muted-foreground">
         <Trans>
           You'll log in at your bank and come back here. Banks grant access for up to 180 days, and
@@ -163,7 +210,7 @@ function AddBankForm({ connection }: { connection: BankConnection }) {
 export function EnableBankingBanksCard({ connection }: { connection: BankConnection }) {
   const { t } = useLingui();
   const config = parseEnableBankingConfig(connection);
-  const start = useStartBankAuthorization();
+  const bankLogin = useBankLogin();
   const remove = useRemoveBankSession();
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState<EnableBankingSession | null>(null);
@@ -171,10 +218,7 @@ export function EnableBankingBanksCard({ connection }: { connection: BankConnect
   const showForm = adding || sessions.length === 0;
 
   const reconnect = (session: EnableBankingSession) =>
-    start.mutate(
-      { connection, aspsp: { name: session.aspsp.name, country: session.aspsp.country } },
-      { onError: (error) => toast.error(getErrorMessage(error, t`Couldn't start the bank login`)) }
-    );
+    bankLogin.login(connection, { name: session.aspsp.name, country: session.aspsp.country });
 
   return (
     <Card>
@@ -234,7 +278,7 @@ export function EnableBankingBanksCard({ connection }: { connection: BankConnect
                       size="sm"
                       variant="outline"
                       className="h-7 text-xs"
-                      disabled={start.isPending}
+                      disabled={bankLogin.isPending}
                       onClick={() => reconnect(session)}
                     >
                       <RefreshCw className="h-3.5 w-3.5 mr-1" />
@@ -276,7 +320,7 @@ export function EnableBankingBanksCard({ connection }: { connection: BankConnect
           </p>
         )}
 
-        {showForm && <AddBankForm connection={connection} />}
+        {showForm && <AddBankForm connection={connection} onConnected={() => setAdding(false)} />}
         {adding && sessions.length > 0 && (
           <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>
             <Trans>Cancel</Trans>

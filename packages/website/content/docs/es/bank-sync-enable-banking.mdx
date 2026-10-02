@@ -81,8 +81,10 @@ Budgero comprueba la clave con Enable Banking antes de guardar nada. Confirma qu
 ## Paso 5: Conectar tu banco
 
 1. En **Bancos**, elige tu país y tu banco, y selecciona **Continuar al inicio de sesión del banco**.
-2. Se abre la página de inicio de sesión de tu banco. Inicia sesión y aprueba el acceso. Sí, otra vez: vincular las cuentas en el paso 3 activó tu aplicación, pero tu banco también tiene que aprobar esta conexión concreta.
-3. Tu banco te devuelve a Budgero, que guarda la conexión.
+2. Se abre la página de inicio de sesión de tu banco en una ventana pequeña. Inicia sesión y aprueba el acceso. Sí, otra vez: vincular las cuentas en el paso 3 activó tu aplicación, pero tu banco también tiene que aprobar esta conexión concreta.
+3. La ventana se cierra sola y Budgero guarda la conexión.
+
+Si tu navegador bloquea las ventanas emergentes, o usas Budgero como aplicación instalada, la página de inicio de sesión del banco se abre, en cambio, en la misma pestaña, y tu banco te devuelve a Budgero cuando termines.
 
 Para añadir otro banco, selecciona **Añadir banco** y repite el proceso.
 
@@ -99,14 +101,26 @@ Selecciona **Vincular e importar**. Las transacciones aparecen al instante y se 
 
 - **Automática.** Budgero sincroniza cuando abres la aplicación o vuelves a ella, como máximo cada 6 horas, en todos tus dispositivos.
 - **Bajo demanda.** Selecciona **Sincronizar ahora** en **Ajustes › Sincronización bancaria**, o usa el botón de sincronización en la página de una cuenta vinculada.
-- **Solo transacciones contabilizadas.** Los pagos con tarjeta pendientes se omiten hasta que tu banco los contabiliza. Los bancos suelen dar una referencia nueva a un pago pendiente cuando lo contabilizan, así que importar ambos crearía duplicados.
+- **Transacciones contabilizadas por defecto.** Los pagos con tarjeta pendientes se omiten hasta que tu banco los contabiliza, salvo que actives **Importar transacciones pendientes** para la cuenta (ver más abajo). Los pagos cancelados y rechazados nunca se importan.
+- **Descripciones limpias.** Muchos bancos, sobre todo en Alemania y Austria, anteponen a las descripciones códigos SEPA como `SVWZ+` o `EREF+`. Budgero elimina esos prefijos.
 - **Sin duplicados.** Cada transacción bancaria se importa una sola vez, incluso después de renovar el acceso. Algunos bancos envían transacciones sin referencia; aun así, Budgero distingue dos cafés idénticos del mismo día.
 - **Posibles coincidencias.** Cuando una transacción bancaria tiene el mismo importe que un movimiento que registraste tú, con cinco días o menos de diferencia, Budgero te pide que elijas **Emparejar**, **Añadir como nueva** u **Omitir** en lugar de adivinar.
 - **Sincronización con el usuario presente.** Los bancos pueden limitar cuántas veces una aplicación lee tus cuentas en segundo plano, a menudo a cuatro veces al día. Budgero sincroniza mientras usas la aplicación y se lo indica a Enable Banking, lo que normalmente evita que llegues a ese límite.
 
+## Ajustes del feed bancario
+
+Cada cuenta vinculada tiene sus propios ajustes. Selecciona el icono del engranaje junto a ella en **Ajustes › Sincronización bancaria**:
+
+- **Importar transacciones pendientes.** Desactivado por defecto. Cuando está activado, los pagos con tarjeta aparecen antes de que tu banco los contabilice, como transacciones sin confirmar. Cuando el banco contabiliza uno, Budgero actualiza directamente esa misma transacción, con la fecha y el importe contabilizados, y la marca como confirmada. Eso funciona incluso cuando el banco da una referencia nueva a la transacción contabilizada. Tu categoría, y cualquier beneficiario o nota que hayas cambiado, se mantienen. Si el banco descarta una transacción pendiente sin contabilizarla, por ejemplo una retención de tarjeta liberada, Budgero la elimina.
+- **Fecha.** Elige la fecha de compra (cuando pagaste), la fecha contable (cuando el banco la registró) o la fecha valor (cuando se movió el dinero). **Automático** usa la fecha contable.
+- **Beneficiario** y **Nota.** Elige si cada campo recibe el nombre del comercio o de la contraparte, o bien la descripción del pago, o deja la nota vacía. Los bancos europeos rellenan estos campos de forma distinta, así que vale la pena revisarlos si tus beneficiarios aparecen como códigos de referencia.
+- **Arreglar nombres de beneficiarios en MAYÚSCULAS.** Activado por defecto. Convierte `K-MARKET KAMPPI` en `K-Market Kamppi`. Los nombres que ya tienen minúsculas se quedan exactamente como los envió el banco.
+
+Los ajustes se aplican a las transacciones que se importen a partir de ese momento. Si falta el campo que elegiste en una transacción, Budgero recurre a la opción automática. Tus [reglas](/docs/rules-engine) también se ejecutan sobre cada transacción importada, así que puedes limpiar el resto allí.
+
 ## Renovar el acceso cada 180 días
 
-PSD2 limita la duración de una autorización bancaria, normalmente a 180 días. **Ajustes › Sincronización bancaria** muestra cuándo caduca el acceso de cada banco. Una semana antes, Budgero te lo recuerda al abrir la aplicación. Selecciona **Volver a conectar** junto al banco e inicia sesión de nuevo.
+PSD2 limita la duración de una autorización bancaria, normalmente a 180 días. Budgero pide el plazo más largo que permita tu banco, o 90 días si el banco no lo indica. **Ajustes › Sincronización bancaria** muestra cuándo caduca el acceso de cada banco. Una semana antes, Budgero te lo recuerda al abrir la aplicación. Selecciona **Volver a conectar** junto al banco e inicia sesión de nuevo.
 
 Algunos bancos retiran el acceso antes, por ejemplo por una verificación de identidad anual. En ese caso, la sincronización informa de que el acceso a ese banco ha caducado, y **Volver a conectar** lo soluciona de la misma forma.
 
@@ -217,6 +231,14 @@ Tus sincronizaciones usan el relé de tu propio servidor, nunca el de Budgero Cl
     <tr>
       <td>"No se pudo contactar con Enable Banking a través del relé de Budgero"</td>
       <td>Comprueba tu conexión. En un servidor autoalojado, comprueba que pueda llegar a <code>api.enablebanking.com</code> en el puerto 443.</td>
+    </tr>
+    <tr>
+      <td>"Tu banco limita la frecuencia con la que se pueden leer sus datos"</td>
+      <td>Tu banco solo permite unas pocas lecturas al día. Espera unas horas y vuelve a sincronizar.</td>
+    </tr>
+    <tr>
+      <td>La ventana de inicio de sesión no se abre</td>
+      <td>Tu navegador bloqueó la ventana emergente. Permite las ventanas emergentes para Budgero, o simplemente continúa: Budgero abre en su lugar la página de inicio de sesión del banco en la misma pestaña.</td>
     </tr>
     <tr>
       <td>"El acceso a … caducó"</td>
