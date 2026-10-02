@@ -1,0 +1,141 @@
+---
+title: "Banksync mit SimpleFIN (USA & Kanada)"
+summary: "Importiere Transaktionen von Banken in den USA und Kanada über SimpleFIN Bridge, ohne dass deine Bankdaten jemals Budgeros Server passieren."
+section: accounts-and-imports
+topicId: bank-sync-simplefin
+takeaways:
+  - "Wie du SimpleFIN Bridge verbindest und deine Bankkonten in wenigen Minuten verknüpfst."
+  - "Wie Synchronisierung, Duplikatabgleich und ausstehende Transaktionen funktionieren."
+  - "Warum deine Bankdaten direkt von SimpleFIN in deinen Browser gelangen und Budgero nie erreichen."
+---
+
+[SimpleFIN Bridge](https://beta-bridge.simplefin.org/) verbindet sich mit Tausenden von Banken und Kreditgenossenschaften in den USA und Kanada. Budgero nutzt den Dienst, um deine Transaktionen und Kontostände automatisch zu importieren. Du behältst dein eigenes SimpleFIN-Abo, und Budgero kommuniziert direkt von deinem Gerät aus damit.
+
+Wenn deine Bank in Europa ist, nutze stattdessen [Enable Banking](/docs/bank-sync-enable-banking). Für die private Nutzung ist das kostenlos. Du kannst beide im selben Budget verbinden.
+
+Banksync befindet sich in der Beta-Phase. Importierte Transaktionen sind ganz normale Budgero-Transaktionen: Du kannst sie wie jede andere bearbeiten, kategorisieren oder löschen.
+
+## Bevor du loslegst
+
+- **Ein SimpleFIN-Bridge-Abo.** SimpleFIN verlangt eine kleine Gebühr, als dieser Leitfaden entstand etwa 1,50 $ im Monat oder 15 $ im Jahr. Budgero berechnet nichts zusätzlich.
+- **Etwa fünf Minuten Zeit.**
+- **Ein entsperrtes Budgero auf dem Gerät, auf dem du die Einrichtung vornimmst.** Die Verbindung wird in deinem verschlüsselten Budget gespeichert und synchronisiert sich deshalb automatisch auf deine anderen Geräte.
+
+## Schritt 1: Banken in SimpleFIN Bridge verbinden
+
+1. Öffne [beta-bridge.simplefin.org](https://beta-bridge.simplefin.org/) und wähle **Get Started**. Melde dich über den Link an, den SimpleFIN dir per E-Mail schickt.
+2. Füge unter **Financial Institutions** für jede Bank, die du synchronisieren möchtest, eine neue Verbindung hinzu und melde dich bei der Bank an, wenn du dazu aufgefordert wirst.
+3. Erstelle unter **Apps** eine neue App-Verbindung und kopiere ihren **Setup-Token**, eine lange Folge aus Buchstaben und Zahlen.
+
+Ein Setup-Token funktioniert nur einmal. Wenn du ihn verlierst oder die Verbindung fehlschlägt, erstelle einen neuen.
+
+## Schritt 2: Budgero verbinden
+
+1. Öffne in Budgero **Einstellungen › Banksync** und wähle den Tab **USA & Kanada**.
+2. Füge den Setup-Token ein und wähle **Verbinden**.
+
+Budgero tauscht den Token gegen einen privaten Zugriffsschlüssel ein und speichert diesen Schlüssel in deinem Budget. Anschließend listet der Bereich jedes Konto auf, das SimpleFIN sehen kann.
+
+## Schritt 3: Konten verknüpfen
+
+Wähle **Verknüpfen** neben einem Bankkonto und lege fest, wohin seine Transaktionen sollen:
+
+- **Neues Konto.** Budgero erstellt das Konto und setzt den Anfangssaldo so, dass das Konto heute mit deiner Bank übereinstimmt. Wähle, wie weit zurück importiert werden soll. Standardmäßig sind es 30 Tage.
+- **Bestehendes Konto.** Wähle ein Konto, das du bisher von Hand geführt hast. Der Import beginnt am Tag nach deinem letzten Eintrag, sodass nichts doppelt importiert wird. Wenn eine Banktransaktion wie eine aussieht, die du bereits erfasst hast, bittet Budgero dich, sie zu prüfen, statt ein Duplikat anzulegen.
+
+Wähle **Verknüpfen und importieren**. Die Transaktionen erscheinen sofort und sind als gebucht markiert, weil die Bank sie bereits verbucht hat.
+
+Ein Konto kann immer nur mit einer Bankanbindung gleichzeitig verknüpft sein. **Trennen** beendet die Synchronisierung, behält aber alle bereits importierten Transaktionen.
+
+## So funktioniert die Synchronisierung
+
+- **Automatisch.** Budgero synchronisiert, wenn du die App öffnest oder zu ihr zurückkehrst, höchstens alle 6 Stunden. Das gilt geräteübergreifend: Hat dein Smartphone vor einer Stunde synchronisiert, synchronisiert dein Laptop nicht noch einmal.
+- **Bei Bedarf.** Wähle **Jetzt synchronisieren** unter **Einstellungen › Banksync** oder nutze die Sync-Schaltfläche auf der Seite eines verknüpften Kontos.
+- **Überlappung.** Jede Synchronisierung reicht eine Woche vor die letzte zurück, um Transaktionen zu erfassen, die die Bank verspätet gebucht hat. Transaktionen, die Budgero bereits importiert hat, werden übersprungen, auch wenn du sie danach gelöscht hast. Eine gelöschte Banktransaktion bleibt gelöscht.
+- **Ausstehende Transaktionen** werden übersprungen, bis die Bank sie bucht. So hast du nie eine ausstehende und eine gebuchte Zeile für denselben Kauf.
+- **Erneut übermittelte Transaktionen.** Banken übermitteln eine Transaktion manchmal erneut unter einer neuen ID. Budgero erkennt sie an Datum, Betrag und Empfänger und aktualisiert die bestehende Zeile, statt eine Kopie hinzuzufügen.
+- **Kontostände.** **Einstellungen › Banksync** zeigt für jedes verknüpfte Konto den Kontostand deiner Bank an und weist dich darauf hin, wenn dein gebuchter Saldo in Budgero davon abweicht.
+
+SimpleFIN aktualisiert die Daten der meisten Banken etwa einmal täglich. Eine Transaktion, die du heute Morgen getätigt hast, erscheint unter Umständen erst morgen.
+
+## Mögliche Übereinstimmungen prüfen
+
+Hat eine Banktransaktion denselben Betrag wie ein Eintrag, den du selbst erfasst hast, und liegen die beiden höchstens fünf Tage auseinander, importiert Budgero sie nicht automatisch. Stattdessen erscheint die Aufforderung **Prüfen**:
+
+- **Zuordnen** verknüpft die Banktransaktion mit deinem Eintrag und markiert den Eintrag als gebucht.
+- **Als neu hinzufügen** importiert die Banktransaktion als eigene Transaktion.
+- **Überspringen** ignoriert sie dauerhaft.
+
+## Wie die SimpleFIN-Synchronisierung Zero-Knowledge wahrt
+
+Budgero ist [Ende-zu-Ende-verschlüsselt](/docs/security): Unsere Server speichern dein Budget nur als Chiffretext, den sie nicht lesen können. Der Banksync hält dieses Versprechen, weil Budgeros Server am Austausch deiner Bankdaten überhaupt nicht beteiligt sind.
+
+1. **Dein Browser spricht direkt mit SimpleFIN.** SimpleFIN Bridge erlaubt Web-Apps, den Dienst direkt aus dem Browser aufzurufen. Deshalb sendet Budgero die Anfrage über HTTPS direkt von deinem Gerät an SimpleFIN. Die Antwort mit deinen Konten, Kontoständen und Transaktionen kommt direkt zurück auf dein Gerät. Kein Budgero-Server leitet sie weiter, speichert sie zwischen oder protokolliert sie.
+2. **Der Zugriffsschlüssel bleibt in deinem verschlüsselten Budget.** Der Schlüssel, den SimpleFIN ausstellt, wird zusammen mit deinen Transaktionen in deinem Budget gespeichert. Er erreicht unsere Server nur innerhalb des verschlüsselten Budgets, niemals in lesbarer Form.
+3. **Importierte Transaktionen werden wie alles andere verschlüsselt.** Budgero schreibt sie auf deinem Gerät in dein Budget, verschlüsselt sie und synchronisiert sie erst dann.
+
+<table>
+  <thead>
+    <tr>
+      <th>Wer</th>
+      <th>Kann deine Bankdaten sehen?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Deine Geräte</td>
+      <td>Ja. Sie entschlüsseln dein Budget.</td>
+    </tr>
+    <tr>
+      <td>SimpleFIN Bridge</td>
+      <td>Ja. Es ist der Dienst, der die Verbindung zu deiner Bank herstellt, und es gilt seine eigene Datenschutzerklärung.</td>
+    </tr>
+    <tr>
+      <td>Budgeros Server</td>
+      <td>Nein. Sie erhalten niemals die Anfragen, die Antworten oder den Zugriffsschlüssel in lesbarer Form.</td>
+    </tr>
+    <tr>
+      <td>Personen, mit denen du das Budget teilst</td>
+      <td>Ja. Der Zugriffsschlüssel liegt im Budget, deshalb können auch sie synchronisieren.</td>
+    </tr>
+  </tbody>
+</table>
+
+Wie bei jeder Ende-zu-Ende-verschlüsselten Web-App hängt das vom App-Code ab, den dein Browser ausführt. Budgeros Code ist [Open Source](https://github.com/tombadilo-bombadilo/budgero), und du kannst Budgero [selbst hosten](/docs/self-hosting-guide).
+
+## Verbindung trennen
+
+Wähle **Trennen** unter **Einstellungen › Banksync**. Budgero entfernt den Zugriffsschlüssel, die Verknüpfungen und offene Prüfungen und behält alle bereits importierten Transaktionen. Um den Zugriff vollständig zu widerrufen, lösche außerdem die App-Verbindung in SimpleFIN Bridge.
+
+## Fehlerbehebung
+
+<table>
+  <thead>
+    <tr>
+      <th>Meldung</th>
+      <th>Was zu tun ist</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>„Dieser Setup-Token wurde bereits verwendet oder widerrufen“</td>
+      <td>Setup-Tokens funktionieren nur einmal. Erstelle in SimpleFIN Bridge einen neuen.</td>
+    </tr>
+    <tr>
+      <td>„SimpleFIN hat den Zugriff verweigert“</td>
+      <td>Die App-Verbindung wurde gelöscht oder widerrufen. Trenne die Verbindung in Budgero und verbinde dich dann mit einem neuen Setup-Token erneut.</td>
+    </tr>
+    <tr>
+      <td>„Dein SimpleFIN-Bridge-Abo braucht deine Aufmerksamkeit“</td>
+      <td>Prüfe deine Zahlungsdaten in SimpleFIN Bridge.</td>
+    </tr>
+    <tr>
+      <td>Bei einem Konto steht „wurde von SimpleFIN nicht zurückgegeben“</td>
+      <td>Die Bankverbindung in SimpleFIN Bridge muss überprüft werden, oft ist eine erneute Anmeldung bei der Bank nötig. Behebe das dort und synchronisiere erneut.</td>
+    </tr>
+    <tr>
+      <td>Ältere Transaktionen fehlen</td>
+      <td>Wie weit SimpleFIN zurückreicht, hängt von deiner Bank ab. Budgero importiert alles, was SimpleFIN ab deinem gewählten Startdatum liefert.</td>
+    </tr>
+  </tbody>
+</table>

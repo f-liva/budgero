@@ -155,6 +155,26 @@ export const getDocsSections = (t: Translator): DocsSection[] => [
         summary: t('top_csv_import_summary'),
         takeaways: [t('top_csv_import_tk1'), t('top_csv_import_tk2'), t('top_csv_import_tk3')],
       },
+      {
+        id: 'bank-sync-enable-banking',
+        title: t('top_bank_sync_enable_banking_title'),
+        summary: t('top_bank_sync_enable_banking_summary'),
+        takeaways: [
+          t('top_bank_sync_enable_banking_tk1'),
+          t('top_bank_sync_enable_banking_tk2'),
+          t('top_bank_sync_enable_banking_tk3'),
+        ],
+      },
+      {
+        id: 'bank-sync-simplefin',
+        title: t('top_bank_sync_simplefin_title'),
+        summary: t('top_bank_sync_simplefin_summary'),
+        takeaways: [
+          t('top_bank_sync_simplefin_tk1'),
+          t('top_bank_sync_simplefin_tk2'),
+          t('top_bank_sync_simplefin_tk3'),
+        ],
+      },
     ],
   },
   {

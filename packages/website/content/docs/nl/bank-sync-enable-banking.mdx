@@ -1,0 +1,230 @@
+---
+title: "Banksync met Enable Banking (Europa)"
+summary: "Synchroniseer Europese bankrekeningen gratis via Enable Banking en PSD2-open banking, end-to-end versleuteld tussen je browser en de bankdatadienst."
+section: accounts-and-imports
+topicId: bank-sync-enable-banking
+takeaways:
+  - "Hoe je je eigen gratis Enable Banking-app registreert en aan Budgero koppelt."
+  - "Hoe banktoegang werkt, en hoe je die elke 180 dagen vernieuwt."
+  - "Hoe een blinde relay je bankgegevens onleesbaar houdt voor de servers van Budgero."
+---
+
+[Enable Banking](https://enablebanking.com) maakt via PSD2, de open-bankingregels van de EU, verbinding met duizenden banken in de Europese Economische Ruimte en het Verenigd Koninkrijk. Budgero gebruikt het om je transacties en saldi automatisch te importeren.
+
+**Het is gratis voor persoonlijk gebruik.** Particulieren mogen de API van Enable Banking kosteloos gebruiken in de "restricted"-modus, die alleen rekeningen leest die van jou zijn en die je zelf koppelt. Je betaalt Enable Banking niets, en Budgero rekent niets extra voor banksync.
+
+Zit je in de VS of Canada? Gebruik dan [SimpleFIN](/docs/bank-sync-simplefin). Je kunt beide in hetzelfde budget verbinden.
+
+Banksync is in bèta.
+
+## Hoe het instellen werkt
+
+Om Enable Banking gratis te gebruiken, registreer je daar je **eigen applicatie**. Daardoor blijft het gratis, en het betekent dat de toegangssleutel van jou is, niet van Budgero. Zelf gehoste budgetapps zoals [Actual Budget](https://actualbudget.org/docs/advanced/bank-sync/enable-banking/) en [Firefly III](https://docs.firefly-iii.org/tutorials/data-importer/eb/) gebruiken hetzelfde proces. Heb je dit al eens voor een van die apps gedaan, dan komt het je bekend voor. Registreer een aparte applicatie voor Budgero, zodat elke app zijn eigen sleutel heeft.
+
+Het instellen kost eenmalig ongeveer 15 minuten. Daarna loopt de synchronisatie op de achtergrond, totdat je bank je vraagt de toegang te vernieuwen, meestal elke 180 dagen.
+
+## Stap 1: Een Enable Banking-account aanmaken
+
+Meld je aan op [enablebanking.com](https://enablebanking.com). Enable Banking stuurt je mogelijk eerst een bevestigingsmail voordat je het control panel kunt gebruiken, en dat kan even duren.
+
+## Stap 2: Je applicatie registreren
+
+Open in het [Enable Banking control panel](https://enablebanking.com/cp/applications) **API applications** en registreer een nieuwe applicatie:
+
+<table>
+  <thead>
+    <tr>
+      <th>Veld</th>
+      <th>Wat je invult</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Environment</td>
+      <td><strong>Production</strong>, voor je echte banken. Kies alleen Sandbox als je het eerst met een testbank wilt uitproberen (zie hieronder).</td>
+    </tr>
+    <tr>
+      <td>Application name</td>
+      <td>Wat je maar wilt, bijvoorbeeld "Budgero".</td>
+    </tr>
+    <tr>
+      <td>Allowed redirect URLs</td>
+      <td>Je Budgero-adres, gevolgd door <code>/bank-sync/callback</code>. Op Budgero Cloud is dat <code>https://my.budgero.app/bank-sync/callback</code>. Budgero toont de exacte URL, met een kopieerknop, onder <strong>Instellingen › Banksync › Europa</strong>.</td>
+    </tr>
+    <tr>
+      <td>Private key</td>
+      <td>Laat de standaardoptie staan: <strong>Generate in the browser</strong> (de sleutel wordt in je browser gegenereerd).</td>
+    </tr>
+    <tr>
+      <td>E-mail, beschrijving en URL's van privacybeleid en voorwaarden</td>
+      <td>Vul hier je eigen gegevens in. Enable Banking controleert de beleids-URL's niet bij persoonlijke (restricted) apps, dus <code>https://budgero.app/privacy</code> volstaat voor allebei.</td>
+    </tr>
+  </tbody>
+</table>
+
+Zodra je het formulier verstuurt, downloadt je browser een `.pem`-bestand met je applicatie-ID als naam. Dat bestand is de privésleutel van je app. Bewaar het goed: Enable Banking toont het niet nog een keer.
+
+## Stap 3: Je bankrekeningen aan de applicatie koppelen
+
+Gebruik in het control panel **Activate by linking accounts** (soms weergegeven als **Link accounts**) en log in bij je bank. Koppel **elke** rekening die je wilt synchroniseren.
+
+In de restricted-modus geeft Enable Banking alleen rekeningen terug die je hier hebt gekoppeld. Sla je deze stap over, dan verschijnt je bank in Budgero zonder rekeningen. Als het klaar is, staat je applicatie op **Restricted** en **Active**, en dat is precies goed voor persoonlijk gebruik.
+
+## Stap 4: De sleutel aan Budgero toevoegen
+
+1. Open in Budgero **Instellingen › Banksync** en kies het tabblad **Europa**.
+2. Upload het `.pem`-bestand. Budgero vult de applicatie-ID in op basis van de bestandsnaam; heb je het bestand hernoemd, plak dan de ID uit het control panel.
+3. Selecteer **Verifiëren en opslaan**.
+
+Budgero controleert de sleutel bij Enable Banking voordat er iets wordt opgeslagen. Het controleert of de sleutel werkt en of de redirect-URL van Budgero in je applicatie staat. Ontbreekt de redirect-URL, dan vertelt Budgero je welke je moet toevoegen.
+
+## Stap 5: Je bank verbinden
+
+1. Kies onder **Banken** je land en je bank, en selecteer daarna **Verder naar inloggen bij de bank**.
+2. De inlogpagina van je bank wordt geopend. Log in en geef toestemming. Ja, nog een keer: door de rekeningen in stap 3 te koppelen heb je je applicatie geactiveerd, maar je bank moet ook deze specifieke verbinding goedkeuren.
+3. Je bank stuurt je terug naar Budgero, dat de verbinding opslaat.
+
+Wil je nog een bank toevoegen, selecteer dan **Bank toevoegen** en herhaal deze stappen.
+
+## Stap 6: Je rekeningen koppelen
+
+Ga naar **Bankrekeningen**, selecteer **Koppelen** naast een rekening en kies waar de transacties naartoe moeten:
+
+- **Nieuwe rekening.** Budgero maakt de rekening aan en stelt het beginsaldo zo in dat de rekening vandaag overeenkomt met je bank. Kies hoe ver terug je wilt importeren. Standaard is dat 30 dagen. De eerste synchronisatie vraagt je bank om zoveel geschiedenis als die toestaat, en Budgero importeert vanaf de datum die je hebt gekozen.
+- **Bestaande rekening.** Kies een rekening die je tot nu toe handmatig bijhoudt. De import begint de dag na je laatste invoer, zodat niets dubbel wordt geïmporteerd. Lijkt een banktransactie op een transactie die je al hebt ingevoerd, dan vraagt Budgero je die na te kijken in plaats van een duplicaat toe te voegen.
+
+Selecteer **Koppelen en importeren**. Transacties verschijnen meteen en worden als bevestigd gemarkeerd, omdat de bank ze al heeft geboekt.
+
+## Hoe synchronisatie werkt
+
+- **Automatisch.** Budgero synchroniseert wanneer je de app opent of ernaar terugkeert, hooguit eens per 6 uur, over al je apparaten heen.
+- **Op verzoek.** Selecteer **Nu synchroniseren** in **Instellingen › Banksync**, of gebruik de synchronisatieknop op de pagina van een gekoppelde rekening.
+- **Alleen geboekte transacties.** Kaartbetalingen die nog in behandeling zijn, worden overgeslagen totdat je bank ze boekt. Banken geven een betaling in behandeling vaak een nieuwe referentie zodra die is geboekt, dus als je beide zou importeren, ontstaan er duplicaten.
+- **Geen duplicaten.** Elke banktransactie wordt één keer geïmporteerd, ook nadat je de toegang hebt vernieuwd. Sommige banken sturen transacties zonder referentie; Budgero houdt twee identieke koffies op dezelfde dag dan toch uit elkaar.
+- **Mogelijke matches.** Heeft een banktransactie hetzelfde bedrag als iets wat je zelf hebt ingevoerd, binnen vijf dagen ervan, dan vraagt Budgero je om **Matchen**, **Als nieuw toevoegen** of **Overslaan** te kiezen in plaats van te gokken.
+- **Synchroniseren terwijl je de app gebruikt.** Banken kunnen beperken hoe vaak een app je rekeningen op de achtergrond mag uitlezen, vaak tot vier keer per dag. Budgero synchroniseert terwijl je de app gebruikt en laat Enable Banking dat weten, waardoor je meestal niet tegen die limiet aanloopt.
+
+## Elke 180 dagen de toegang vernieuwen
+
+PSD2 beperkt hoe lang een bankautorisatie geldig is, meestal 180 dagen. **Instellingen › Banksync** toont per bank wanneer de toegang verloopt. Een week daarvoor herinnert Budgero je eraan wanneer je de app opent. Selecteer **Opnieuw koppelen** naast de bank en log opnieuw in.
+
+Sommige banken beëindigen de toegang eerder, bijvoorbeeld voor een jaarlijkse identiteitscontrole. De synchronisatie meldt dan dat de toegang tot die bank is verlopen, en **Opnieuw koppelen** lost dat op dezelfde manier op.
+
+Opnieuw koppelen verandert niets aan je budget. Budgero herkent je rekeningen aan een vaste identificatie die de vernieuwing overleeft, dus je koppelingen blijven staan en geen enkele transactie wordt dubbel geïmporteerd.
+
+## Hoe banksync via Enable Banking zero-knowledge blijft
+
+Budgero is [end-to-end versleuteld](/docs/security): onze servers hebben je budget nooit anders dan als versleutelde tekst. Banksync vanuit Europa behoudt die garantie. Hieronder lees je hoe, want dat is minder vanzelfsprekend dan het klinkt.
+
+### Het probleem
+
+De API van Enable Banking staat niet toe dat webpagina's hem rechtstreeks aanroepen. Browsers blokkeren die verzoeken vanwege een beveiligingsregel die CORS heet. De gebruikelijke oplossing is een proxyserver die namens jou de bankdatadienst aanroept. Maar HTTPS-versleuteling loopt alleen tussen twee eindpunten, dus een gewone proxy ontsleutelt alles wat erdoorheen gaat: de lijst met rekeningen, elke transactie, de toegangsgegevens. Dat zou de end-to-end-versleuteling doorbreken, en het publiceren van de broncode van de proxy zou dat niet oplossen, want niemand kan controleren wat er werkelijk op een server draait.
+
+### Wat Budgero in plaats daarvan doet
+
+Budgero verplaatst de versleuteling naar je browser.
+
+1. **Je browser voert zijn eigen versleuteling uit.** De eerste keer dat je EU-banksync gebruikt, laadt Budgero [libcurl.js](https://github.com/ading2210/libcurl.js): de bekende curl-bibliotheek en een TLS 1.3-implementatie, gecompileerd naar WebAssembly. Daarmee opent je browser een versleutelde HTTPS-sessie rechtstreeks naar `api.enablebanking.com`.
+2. **Je browser controleert zelf het certificaat van Enable Banking.** Hij gebruikt daarvoor een meegeleverde lijst van vertrouwde certificaatautoriteiten, dezelfde lijst die Firefox gebruikt. Schuift iets onderweg een vals certificaat ertussen, dan mislukt de verbinding in plaats van dat er gegevens uitlekken.
+3. **Een blinde relay vervoert de versleutelde bytes.** Browsers kunnen geen kale netwerkverbindingen openen, dus het versleutelde verkeer gaat via een WebSocket naar een kleine relay die in de server van Budgero is ingebouwd. De relay geeft de bytes door aan Enable Banking en stuurt de versleutelde antwoorden terug. Hij heeft geen sleutels, dus hij kan in geen van beide richtingen iets lezen.
+4. **De relay kan alleen Enable Banking bereiken.** Hij weigert elke andere bestemming, dus hij kan niet als open proxy worden gebruikt. Hij houdt tellers bij, geen logs van je verkeer.
+5. **Je privésleutel verlaat je budget nooit.** Elk verzoek wordt geautoriseerd met een kortlevend token dat je browser ondertekent met de privésleutel van je app. De sleutel wordt alleen in je versleutelde budget opgeslagen, en het ondertekende token wordt alleen binnen de versleutelde sessie verstuurd.
+
+Zie het als een kist met een slot. Bij een gewone proxy geef je de proxy een brief, en die schrijft zelf een nieuwe brief aan de bank. Bij de relay van Budgero sluit je de brief op in een kist die alleen Enable Banking kan openen, en is de relay alleen de koerier. Die weet waar de kist naartoe gaat en ongeveer hoe zwaar hij is, maar kan er niet in kijken. Wordt de kist verwisseld, dan past het slot niet.
+
+Dit patroon bestaat al tientallen jaren: zo sturen webbrowsers HTTPS via bedrijfsproxy's, die versleuteld verkeer doorsturen dat ze niet kunnen lezen.
+
+<table>
+  <thead>
+    <tr>
+      <th>Gegevens</th>
+      <th>Kan de relay van Budgero het zien?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Transacties, saldi, rekeningnamen, IBAN's</td>
+      <td>Nee. Ze zijn versleuteld tussen je browser en Enable Banking.</td>
+    </tr>
+    <tr>
+      <td>Welke bank je gebruikt en welke rekeningen je synchroniseert</td>
+      <td>Nee. Die zitten ook in de versleutelde sessie.</td>
+    </tr>
+    <tr>
+      <td>De privésleutel van je app en de ondertekende tokens</td>
+      <td>Nee. De sleutel verlaat je budget nooit; tokens worden versleuteld verstuurd.</td>
+    </tr>
+    <tr>
+      <td>Dat je verbinding hebt gemaakt met Enable Banking</td>
+      <td>Ja. De relay moet weten waar de bytes naartoe moeten.</td>
+    </tr>
+    <tr>
+      <td>Je IP-adres, wanneer je synchroniseert en ongeveer hoeveel gegevens er zijn verstuurd</td>
+      <td>Ja. Dat ziet elke relay.</td>
+    </tr>
+    <tr>
+      <td>Welk Budgero-account synchroniseert</td>
+      <td>Ja. De relay vereist dat je bent ingelogd, om misbruik te voorkomen.</td>
+    </tr>
+  </tbody>
+</table>
+
+Enable Banking zelf ziet je bankgegevens wel: het is de dienst met een vergunning die verbinding maakt met je bank, onder zijn eigen privacybeleid. Geïmporteerde transacties worden op je apparaat in je budget geschreven en versleuteld voordat ze worden gesynchroniseerd, net als al het andere in Budgero.
+
+Zoals bij elke end-to-end versleutelde webapp vertrouw je op de appcode die je browser uitvoert. Budgero is, inclusief de relay, [open source](https://github.com/tombadilo-bombadilo/budgero), en zelf gehoste servers draaien dezelfde relay.
+
+## Eerst uitproberen met een sandbox
+
+Wil je testen zonder je echte bank, registreer dan een tweede applicatie met **Sandbox** als Environment. Kies in Budgero de bank **Mock ASPSP**, de testbank van Enable Banking. In het onderdeel **Mock ASPSP** van het control panel kun je je eigen testtransacties en -saldi toevoegen. Sandbox-applicaties accepteren ook redirect-URL's met gewoon `http://`. Verbreek de verbinding met de sandbox in Budgero voordat je je Production-applicatie instelt.
+
+## Zelf hosten
+
+Zelf gehoste Budgero-servers bevatten de relay al, dus je hoeft niets te installeren of te configureren. Controleer twee dingen:
+
+- **HTTPS.** Enable Banking vereist een redirect-URL met `https://` voor Production-applicaties. Zorg dat Budgero via HTTPS bereikbaar is, bijvoorbeeld achter een reverse proxy of met Tailscale, en gebruik dat adres in stap 2.
+- **Uitgaande verbindingen.** Je server moet `api.enablebanking.com` op poort 443 kunnen bereiken.
+
+Je synchronisaties gebruiken de relay van je eigen server, nooit die van Budgero Cloud.
+
+## Een bank verwijderen of de verbinding verbreken
+
+- **Verwijderen** (het prullenbakpictogram naast een bank) stopt de synchronisatie van die bank en trekt de toegang bij Enable Banking in. Je koppelingen blijven bestaan, dus als je later opnieuw verbindt, gaat het verder waar je was gebleven.
+- **Verbreken** verwijdert de opgeslagen sleutel, de koppelingen en de openstaande controles uit je budget. Geïmporteerde transacties blijven staan.
+- Wil je alles intrekken, verwijder dan ook de applicatie in het Enable Banking control panel.
+
+## Problemen oplossen
+
+<table>
+  <thead>
+    <tr>
+      <th>Probleem</th>
+      <th>Wat te doen</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Een bank is verbonden maar toont geen rekeningen</td>
+      <td>Koppel die rekeningen in het control panel aan je applicatie (stap 3), en selecteer daarna <strong>Opnieuw koppelen</strong> of verwijder de bank en voeg hem opnieuw toe.</td>
+    </tr>
+    <tr>
+      <td>"heeft … niet als redirect-URL"</td>
+      <td>Voeg de exacte URL die Budgero toont toe aan de Allowed redirect URLs van je applicatie, en selecteer daarna opnieuw <strong>Verifiëren en opslaan</strong>.</td>
+    </tr>
+    <tr>
+      <td>"Dat bestand is geen RSA-privésleutel"</td>
+      <td>Upload het <code>.pem</code>-bestand dat je bij het registreren van de applicatie van Enable Banking hebt gedownload, geen certificaat of ander bestand.</td>
+    </tr>
+    <tr>
+      <td>"Enable Banking was niet bereikbaar via de Budgero-relay"</td>
+      <td>Controleer je verbinding. Controleer op een zelf gehoste server of die <code>api.enablebanking.com</code> op poort 443 kan bereiken.</td>
+    </tr>
+    <tr>
+      <td>"Toegang tot … is verlopen"</td>
+      <td>Selecteer <strong>Opnieuw koppelen</strong> naast de bank en log opnieuw in.</td>
+    </tr>
+    <tr>
+      <td>De inlogpagina van je bank weigert het verzoek</td>
+      <td>Controleer of je applicatie in de juiste Environment staat: Production voor echte banken, Sandbox voor Mock ASPSP.</td>
+    </tr>
+  </tbody>
+</table>

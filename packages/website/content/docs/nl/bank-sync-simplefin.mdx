@@ -1,0 +1,141 @@
+---
+title: "Banksync met SimpleFIN (VS & Canada)"
+summary: "Importeer transacties van banken in de VS en Canada via SimpleFIN Bridge, zonder dat je bankgegevens ooit langs de servers van Budgero gaan."
+section: accounts-and-imports
+topicId: bank-sync-simplefin
+takeaways:
+  - "Hoe je SimpleFIN Bridge verbindt en je bankrekeningen in een paar minuten koppelt."
+  - "Hoe synchronisatie, het herkennen van dubbele transacties en transacties in behandeling werken."
+  - "Waarom je bankgegevens rechtstreeks van SimpleFIN naar je browser gaan en Budgero nooit bereiken."
+---
+
+[SimpleFIN Bridge](https://beta-bridge.simplefin.org/) maakt verbinding met duizenden banken en credit unions in de Verenigde Staten en Canada. Budgero gebruikt het om je transacties en saldi automatisch te importeren. Je houdt je eigen SimpleFIN-abonnement, en Budgero communiceert er rechtstreeks mee vanaf je apparaat.
+
+Zit je bank in Europa? Gebruik dan [Enable Banking](/docs/bank-sync-enable-banking). Dat is gratis voor persoonlijk gebruik. Je kunt beide in hetzelfde budget verbinden.
+
+Banksync is in bèta. Geïmporteerde transacties zijn gewone Budgero-transacties, dus je kunt ze bewerken, categoriseren of verwijderen zoals elke andere transactie.
+
+## Voordat je begint
+
+- **Een SimpleFIN Bridge-abonnement.** SimpleFIN rekent een klein bedrag, op het moment van schrijven ongeveer $1,50 per maand of $15 per jaar. Budgero rekent daar niets bovenop.
+- **Ongeveer vijf minuten.**
+- **Budgero ontgrendeld op het apparaat waarop je het instelt.** De verbinding wordt opgeslagen in je versleutelde budget en synchroniseert dus automatisch naar je andere apparaten.
+
+## Stap 1: Je banken verbinden in SimpleFIN Bridge
+
+1. Ga naar [beta-bridge.simplefin.org](https://beta-bridge.simplefin.org/) en kies **Get Started**. Log in via de link die SimpleFIN je mailt.
+2. Voeg onder **Financial Institutions** een nieuwe verbinding toe voor elke bank die je wilt synchroniseren, en log in bij de bank wanneer daarom wordt gevraagd.
+3. Maak onder **Apps** een nieuwe app-koppeling aan en kopieer de **setup-token**: een lange reeks letters en cijfers.
+
+Een setup-token werkt maar één keer. Ben je de token kwijt of mislukt de verbinding, maak dan een nieuwe aan.
+
+## Stap 2: Budgero verbinden
+
+1. Open in Budgero **Instellingen › Banksync** en kies het tabblad **VS & Canada**.
+2. Plak de setup-token en selecteer **Verbinden**.
+
+Budgero wisselt de token in voor een privé-toegangssleutel en slaat die sleutel op in je budget. Het paneel toont daarna alle rekeningen die SimpleFIN kan zien.
+
+## Stap 3: Je rekeningen koppelen
+
+Selecteer **Koppelen** naast een bankrekening en kies waar de transacties naartoe moeten:
+
+- **Nieuwe rekening.** Budgero maakt de rekening aan en stelt het beginsaldo zo in dat de rekening vandaag overeenkomt met je bank. Kies hoe ver terug je wilt importeren. Standaard is dat 30 dagen.
+- **Bestaande rekening.** Kies een rekening die je tot nu toe handmatig bijhoudt. De import begint de dag na je laatste invoer, zodat niets dubbel wordt geïmporteerd. Lijkt een banktransactie op een transactie die je al hebt ingevoerd, dan vraagt Budgero je die na te kijken in plaats van een duplicaat toe te voegen.
+
+Selecteer **Koppelen en importeren**. Transacties verschijnen meteen en worden als bevestigd gemarkeerd, omdat de bank ze al heeft geboekt.
+
+Een rekening kan maar aan één bankfeed tegelijk gekoppeld zijn. **Ontkoppelen** stopt de synchronisatie, maar alle transacties die al zijn geïmporteerd blijven staan.
+
+## Hoe synchronisatie werkt
+
+- **Automatisch.** Budgero synchroniseert wanneer je de app opent of ernaar terugkeert, hooguit eens per 6 uur. Dat geldt over al je apparaten heen: heeft je telefoon een uur geleden gesynchroniseerd, dan synchroniseert je laptop niet opnieuw.
+- **Op verzoek.** Selecteer **Nu synchroniseren** in **Instellingen › Banksync**, of gebruik de synchronisatieknop op de pagina van een gekoppelde rekening.
+- **Overlap.** Elke synchronisatie kijkt terug tot een week vóór de vorige, om transacties op te vangen die de bank pas later heeft geboekt. Transacties die Budgero al heeft geïmporteerd worden overgeslagen, ook als je ze daarna hebt verwijderd. Een verwijderde banktransactie blijft verwijderd.
+- **Transacties in behandeling** worden overgeslagen totdat de bank ze boekt, zodat je nooit een regel in behandeling én een geboekte regel voor dezelfde aankoop krijgt.
+- **Opnieuw uitgegeven transacties.** Banken geven een transactie soms opnieuw uit onder een nieuwe ID. Budgero herkent die aan datum, bedrag en begunstigde en werkt de bestaande regel bij in plaats van een kopie toe te voegen.
+- **Saldi.** **Instellingen › Banksync** toont voor elke gekoppelde rekening het saldo bij je bank, en geeft een signaal wanneer je bevestigde saldo in Budgero daarvan afwijkt.
+
+SimpleFIN ververst de gegevens van de meeste banken ongeveer één keer per dag. Een transactie die je vanochtend hebt gedaan, verschijnt mogelijk pas morgen.
+
+## Mogelijke matches nakijken
+
+Heeft een banktransactie hetzelfde bedrag als een transactie die je zelf hebt ingevoerd, binnen vijf dagen ervan? Dan importeert Budgero die niet automatisch, maar toont het in plaats daarvan een melding met **Nakijken**:
+
+- **Matchen** koppelt de banktransactie aan jouw invoer en markeert die invoer als bevestigd.
+- **Als nieuw toevoegen** importeert de banktransactie als een aparte transactie.
+- **Overslaan** negeert de banktransactie definitief.
+
+## Hoe banksync via SimpleFIN zero-knowledge blijft
+
+Budgero is [end-to-end versleuteld](/docs/security): onze servers slaan je budget alleen op als versleutelde tekst die ze niet kunnen lezen. Banksync houdt die belofte, omdat de servers van Budgero helemaal geen deel uitmaken van de uitwisseling van je bankgegevens.
+
+1. **Je browser praat rechtstreeks met SimpleFIN.** SimpleFIN Bridge staat webapps toe om het vanuit de browser aan te roepen, dus Budgero stuurt het verzoek via HTTPS rechtstreeks van je apparaat naar SimpleFIN. Het antwoord, met je rekeningen, saldi en transacties, komt rechtstreeks terug naar je apparaat. Geen enkele server van Budgero stuurt het door, bewaart het in een cache of legt het vast in logs.
+2. **De toegangssleutel blijft in je versleutelde budget.** De sleutel die SimpleFIN uitgeeft, wordt in je budget opgeslagen, naast je transacties. Hij bereikt onze servers alleen binnen het versleutelde budget, nooit in leesbare vorm.
+3. **Geïmporteerde transacties worden versleuteld zoals al het andere.** Budgero schrijft ze op je apparaat in je budget, versleutelt ze en synchroniseert ze pas daarna.
+
+<table>
+  <thead>
+    <tr>
+      <th>Wie</th>
+      <th>Kan je bankgegevens zien?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Je apparaten</td>
+      <td>Ja. Ze ontsleutelen je budget.</td>
+    </tr>
+    <tr>
+      <td>SimpleFIN Bridge</td>
+      <td>Ja. Dat is de dienst die verbinding maakt met je bank, onder zijn eigen privacybeleid.</td>
+    </tr>
+    <tr>
+      <td>De servers van Budgero</td>
+      <td>Nee. Ze ontvangen nooit de verzoeken, de antwoorden of de toegangssleutel in leesbare vorm.</td>
+    </tr>
+    <tr>
+      <td>Mensen met wie je het budget deelt</td>
+      <td>Ja. De toegangssleutel staat in het budget, dus zij kunnen ook synchroniseren.</td>
+    </tr>
+  </tbody>
+</table>
+
+Zoals bij elke end-to-end versleutelde webapp hangt dit af van de appcode die je browser uitvoert. De code van Budgero is [open source](https://github.com/tombadilo-bombadilo/budgero), en je kunt Budgero ook [zelf hosten](/docs/self-hosting-guide).
+
+## De verbinding verbreken
+
+Selecteer **Verbreken** in **Instellingen › Banksync**. Budgero verwijdert de toegangssleutel, de koppelingen en de openstaande controles, en laat alle al geïmporteerde transacties staan. Wil je de toegang volledig intrekken, verwijder dan ook de app-koppeling in SimpleFIN Bridge.
+
+## Problemen oplossen
+
+<table>
+  <thead>
+    <tr>
+      <th>Melding</th>
+      <th>Wat te doen</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>"Deze setup-token is al gebruikt of ingetrokken"</td>
+      <td>Een setup-token werkt maar één keer. Maak een nieuwe aan in SimpleFIN Bridge.</td>
+    </tr>
+    <tr>
+      <td>"SimpleFIN heeft de toegang geweigerd"</td>
+      <td>De app-koppeling is verwijderd of ingetrokken. Verbreek de verbinding in Budgero en verbind daarna opnieuw met een nieuwe setup-token.</td>
+    </tr>
+    <tr>
+      <td>"Je SimpleFIN Bridge-abonnement vraagt om aandacht"</td>
+      <td>Controleer je betaalgegevens in SimpleFIN Bridge.</td>
+    </tr>
+    <tr>
+      <td>Een rekening meldt "… is niet teruggegeven door SimpleFIN"</td>
+      <td>De bankverbinding in SimpleFIN Bridge vraagt om aandacht; vaak moet je opnieuw inloggen bij de bank. Los het daar op en synchroniseer opnieuw.</td>
+    </tr>
+    <tr>
+      <td>Oudere transacties ontbreken</td>
+      <td>Hoe ver SimpleFIN terug kan gaan, hangt af van je bank. Budgero importeert alles wat SimpleFIN teruggeeft vanaf de startdatum die je hebt gekozen.</td>
+    </tr>
+  </tbody>
+</table>
