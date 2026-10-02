@@ -1,5 +1,6 @@
 import type { Libcurl } from 'libcurl.js';
 import { apiClient } from '@shared/api/api-client';
+import { getGlobalToken } from '@shared/lib/clerk-token-manager';
 
 /**
  * Opaque relay to Enable Banking.
@@ -25,8 +26,15 @@ export interface Tunnel {
 
 const TICKET_MARGIN_MS = 60_000;
 
+interface CachedTicket {
+  ticket: RelayTicket;
+  expiresAt: number;
+  userId: string | null;
+}
+
 let libcurlPromise: Promise<Libcurl> | null = null;
-let current: { ticket: RelayTicket; expiresAt: number } | null = null;
+let current: CachedTicket | null = null;
+let pending: Promise<CachedTicket> | null = null;
 
 /** Lazy, so the ~550 KB WASM only loads once someone uses EU bank sync. */
 function loadLibcurl(): Promise<Libcurl> {
@@ -64,15 +72,49 @@ export function isPublicIp(ip: string | undefined | null): ip is string {
   return Boolean(ip) && /^[0-9a-f:.]+$/i.test(ip!) && !PRIVATE_IP.test(ip!);
 }
 
+/** The signed-in user, from the session token, so a ticket never outlives a logout. */
+async function currentUserId(): Promise<string | null> {
+  try {
+    const token = await getGlobalToken();
+    const payload = token?.split('.')[1];
+    if (!payload) return null;
+    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    return (JSON.parse(json) as { sub?: string }).sub ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function ensureTicket(libcurl: Libcurl): Promise<CachedTicket> {
+  const userId = await currentUserId();
+  if (current && current.userId === userId && current.expiresAt - TICKET_MARGIN_MS > Date.now()) {
+    return current;
+  }
+  // Parallel callers share one ticket request instead of each opening a socket.
+  pending ??= (async () => {
+    const ticket = await apiClient.post<RelayTicket>('/bank-relay/ticket');
+    libcurl.set_websocket(relayUrl(ticket.ticket));
+    current = { ticket, userId, expiresAt: new Date(ticket.expires_at).getTime() };
+    return current;
+  })().finally(() => {
+    pending = null;
+  });
+  return pending;
+}
+
+/**
+ * Forgets the cached ticket. Called when a request through the relay fails:
+ * a restarted server no longer accepts tickets it issued before.
+ */
+export function resetTunnel(): void {
+  current = null;
+}
+
 export async function openTunnel(): Promise<Tunnel> {
   const libcurl = await loadLibcurl();
-  if (!current || current.expiresAt - TICKET_MARGIN_MS < Date.now()) {
-    const ticket = await apiClient.post<RelayTicket>('/bank-relay/ticket');
-    current = { ticket, expiresAt: new Date(ticket.expires_at).getTime() };
-    libcurl.set_websocket(relayUrl(ticket.ticket));
-  }
+  const { ticket } = await ensureTicket(libcurl);
   return {
     fetch: (url, init) => libcurl.fetch(url, init),
-    clientIp: isPublicIp(current.ticket.client_ip) ? current.ticket.client_ip : null,
+    clientIp: isPublicIp(ticket.client_ip) ? ticket.client_ip : null,
   };
 }

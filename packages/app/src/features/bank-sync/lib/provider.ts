@@ -32,6 +32,8 @@ export interface RemoteBankAccount {
   balance: number | null;
   /** ISO timestamp of `balance`. */
   balanceDate: string | null;
+  /** The bank's calendar day for `balance`, when it only gives a date. */
+  balanceDay?: string | null;
   transactions?: BankTransaction[];
 }
 
@@ -155,6 +157,7 @@ export async function fetchRemoteTransactions(
           currency: balance?.currency || account.currency,
           balance: balance?.amount ?? null,
           balanceDate: balance?.date ?? null,
+          balanceDay: balance?.day ?? null,
           transactions: toBankTransactions(rows),
         });
       } catch (error) {

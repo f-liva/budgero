@@ -4,6 +4,7 @@ import {
   isCryptoCurrency,
   type Account,
   type BankConnection,
+  type BankTransaction,
 } from '@budgero/core/browser';
 import { getAccountTypeDefinition } from '@entities/account/model/accountTypes';
 import { formatDateISO } from '@shared/lib/date-utils';
@@ -59,11 +60,16 @@ export function defaultImportFrom(latestTransactionDate: string | null | undefin
 /** Balance on the eve of `importFrom`, so the imported history lands on today's bank balance. */
 export function openingBalance(remote: RemoteBankAccount, importFrom: string): number {
   if (remote.balance === null) return 0;
-  const balanceDay = remote.balanceDate ? formatDateISO(new Date(remote.balanceDate)) : null;
+  const balanceTime = remote.balanceDate ? new Date(remote.balanceDate).getTime() : null;
+  // Counted in the balance: exact post time when the provider gives one
+  // (SimpleFIN), otherwise the bank's own balance day (Enable Banking).
+  const inBalance = (tx: BankTransaction) => {
+    if (tx.postedAt && balanceTime !== null) return new Date(tx.postedAt).getTime() <= balanceTime;
+    if (remote.balanceDay) return tx.date <= remote.balanceDay;
+    return true;
+  };
   const imported = (remote.transactions ?? [])
-    .filter(
-      (tx) => !tx.pending && tx.date >= importFrom && (balanceDay === null || tx.date <= balanceDay)
-    )
+    .filter((tx) => !tx.pending && tx.date >= importFrom && inBalance(tx))
     .reduce((sum, tx) => sum + tx.amount, 0);
   return remote.balance - imported;
 }
@@ -76,9 +82,9 @@ function dayBefore(date: string): string {
 export async function linkAccounts(
   runtime: AppRuntime,
   connection: BankConnection,
-  budgetId: number,
   requests: LinkRequest[]
 ): Promise<BankSyncResult> {
+  const budgetId = connection.BudgetID;
   const existing = runtime.services().bankSync.listLinks(budgetId, connection.Provider);
   const starts = [
     ...requests.map((r) => syncStart({ ImportFrom: r.importFrom, LastSyncAt: null })),
@@ -94,8 +100,18 @@ export async function linkAccounts(
   const fetched = new Map(set.accounts.map((account) => [account.id, account]));
   const missing = requests.filter((r) => !fetched.has(r.remote.id));
   if (connection.Provider === 'enablebanking' && missing.length) {
-    // Without the bank's balance the opening balance would be wrong; link nothing.
     throw new Error(set.errors.join('\n') || t`The bank didn't return ${missing[0].remote.name}.`);
+  }
+  // A new account's opening balance comes from the bank's balance; without one
+  // it would silently start at zero and never match the bank. Link nothing.
+  const noBalance = requests.find(
+    (r) => r.target.kind === 'new' && (fetched.get(r.remote.id) ?? r.remote).balance === null
+  );
+  if (noBalance) {
+    const { name } = noBalance.remote;
+    throw new Error(
+      t`The bank didn't send a balance for ${name}, so Budgero can't set its opening balance. Link it to an existing account, or try again later.`
+    );
   }
 
   for (const request of requests) {
@@ -152,5 +168,8 @@ export async function linkAccounts(
     });
   }
 
-  return runBankSync(runtime, budgetId, { provider: connection.Provider, set });
+  return runBankSync(runtime, budgetId, {
+    providers: [connection.Provider],
+    prefetched: { provider: connection.Provider, set },
+  });
 }

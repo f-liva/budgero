@@ -16222,6 +16222,10 @@ msgstr "La banque n'a pas autorisé l'accès : {description}"
 msgid "The bank didn't return {0}."
 msgstr "La banque n'a pas renvoyé {0}."
 
+#: src/features/bank-sync/model/link-accounts.ts
+msgid "The bank didn't send a balance for {name}, so Budgero can't set its opening balance. Link it to an existing account, or try again later."
+msgstr "La banque n'a pas envoyé de solde pour {name}, Budgero ne peut donc pas définir son solde initial. Liez-le à un compte existant ou réessayez plus tard."
+
 #: src/pages/settings/bank-sync/BankSyncCallbackPage.tsx
 msgid "The bank returned no accounts. Link them to your app in the Enable Banking control panel, then reconnect."
 msgstr "La banque n'a renvoyé aucun compte. Liez-les à votre application dans le panneau de contrôle Enable Banking, puis reconnectez-vous."

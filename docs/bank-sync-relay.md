@@ -50,7 +50,11 @@ A relay that swaps in its own certificate fails the in-browser handshake
 - Tickets are HMAC-signed with a key kept in memory and expire after 10 minutes.
   Each user gets 20 tickets, then one per minute, and 3 concurrent sockets.
 - Each socket allows 8 concurrent streams, 64 over its lifetime, 64 MiB of
-  traffic, 90 seconds idle and 15 minutes total.
+  traffic and 15 minutes in total. A socket with no open streams closes after
+  90 seconds of silence. An open stream may wait up to 5 minutes for the bank
+  to answer, because history fetches can be slow.
+- Flow control only advertises free queue space, so one stalled stream can't
+  block the socket's other streams.
 - Nothing is logged except counters (`Relay.Stats()`). Failed-request logs
   redact the ticket.
 - WebSocket origin checks are the same as `/api/v1/ws/sync`.

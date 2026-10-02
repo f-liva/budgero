@@ -54,21 +54,23 @@ export function BankAutoSync() {
   useEffect(() => {
     if (!enabled || !budgetId) return undefined;
     let cancelled = false;
-    // Due when any provider with linked accounts is due; one run syncs them all.
-    const due = () => {
+    // Providers with linked accounts whose last sync is old enough.
+    const dueProviders = () => {
       const { bankSync } = runtime.services();
       return bankSync
         .listConnections(budgetId)
-        .some(
+        .filter(
           (c) => bankSync.listLinks(budgetId, c.Provider).length > 0 && isSyncDue(c.LastSyncAt)
-        );
+        )
+        .map((c) => c.Provider);
     };
+    const due = () => dueProviders().length > 0;
     const maybeSync = async () => {
       if (document.visibilityState !== 'visible' || !navigator.onLine || !due()) return;
       const initial = await runtime.waitForInitialSync({ timeoutMs: 20_000 });
       if (cancelled || (initial.connected && !initial.synced) || !due()) return;
       try {
-        const result = await runBankSync(runtime, budgetId);
+        const result = await runBankSync(runtime, budgetId, { providers: dueProviders() });
         if (result.imported) {
           toast.success(
             plural(result.imported, {

@@ -28,21 +28,24 @@ export function BankSyncButton({ budgetId, accountId, currency }: BankSyncButton
 
   const syncedAgo = formatSyncedAgo(link.LastSyncAt);
   const onSync = () =>
-    sync.mutate(budgetId, {
-      onSuccess: (result) => {
-        if (result.errors.length) toast.warning(result.errors.join('\n'));
-        else if (result.imported) {
-          toast.success(
-            plural(result.imported, {
-              one: 'Imported # bank transaction',
-              other: 'Imported # bank transactions',
-            })
-          );
-        } else if (!result.reviews) toast.success(t`Up to date`);
-        if (result.reviews) setReviewOpen(true);
-      },
-      onError: (error) => toast.error(getErrorMessage(error, t`Bank sync failed`)),
-    });
+    sync.mutate(
+      { budgetId, providers: [link.Provider] },
+      {
+        onSuccess: (result) => {
+          if (result.errors.length) toast.warning(result.errors.join('\n'));
+          else if (result.imported) {
+            toast.success(
+              plural(result.imported, {
+                one: 'Imported # bank transaction',
+                other: 'Imported # bank transactions',
+              })
+            );
+          } else if (!result.reviews) toast.success(t`Up to date`);
+          if (result.reviews) setReviewOpen(true);
+        },
+        onError: (error) => toast.error(getErrorMessage(error, t`Bank sync failed`)),
+      }
+    );
 
   return (
     <div className="flex items-center gap-1">

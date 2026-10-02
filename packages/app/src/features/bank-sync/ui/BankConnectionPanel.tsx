@@ -66,14 +66,17 @@ export function BankConnectionPanel({ connection }: { connection: BankConnection
   const syncedAgo = formatSyncedAgo(connection.LastSyncAt);
 
   const onSync = () =>
-    sync.mutate(budgetId, {
-      onSuccess: (result) => {
-        if (result.errors.length) toast.warning(result.errors.join('\n'));
-        else toast.success(t`Bank sync finished`);
-        if (result.reviews) setReviewOpen(true);
-      },
-      onError: (error) => toast.error(getErrorMessage(error, t`Bank sync failed`)),
-    });
+    sync.mutate(
+      { budgetId, providers: [connection.Provider] },
+      {
+        onSuccess: (result) => {
+          if (result.errors.length) toast.warning(result.errors.join('\n'));
+          else toast.success(t`Bank sync finished`);
+          if (result.reviews) setReviewOpen(true);
+        },
+        onError: (error) => toast.error(getErrorMessage(error, t`Bank sync failed`)),
+      }
+    );
 
   return (
     <div className="space-y-4">

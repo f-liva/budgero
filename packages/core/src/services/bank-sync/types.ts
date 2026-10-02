@@ -51,6 +51,8 @@ export interface BankTransaction {
   memo: string;
   /** Pending rows are never imported; banks often re-key them once booked. */
   pending: boolean;
+  /** ISO timestamp the bank posted it, when the provider gives one (SimpleFIN). */
+  postedAt?: string;
 }
 
 /** One authorized Enable Banking session: a bank login good for ~180 days. */

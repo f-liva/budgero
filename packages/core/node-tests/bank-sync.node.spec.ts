@@ -235,9 +235,10 @@ describe('Enable Banking connections', () => {
       appId: 'app-1',
       privateKeyPem: 'PEM',
     });
-    services.bankSync.saveEnableBankingSession(budgetId, session('s1', 'Nordea'));
-    services.bankSync.saveEnableBankingSession(budgetId, session('s2', 'OP'));
-    services.bankSync.saveEnableBankingSession(budgetId, session('s3', 'Nordea'));
+    services.bankSync.saveEnableBankingSession(budgetId, session('s1', 'Nordea', 'HASH-1'));
+    services.bankSync.saveEnableBankingSession(budgetId, session('s2', 'OP', 'HASH-2'));
+    // Re-authorizing the Nordea login (same account) replaces s1.
+    services.bankSync.saveEnableBankingSession(budgetId, session('s3', 'Nordea', 'HASH-1'));
 
     const connection = services.bankSync.getConnection(budgetId, 'enablebanking')!;
     expect(connection.Provider).toBe('enablebanking');
@@ -255,6 +256,19 @@ describe('Enable Banking connections', () => {
     services.bankSync.removeEnableBankingSession(budgetId, 's2');
     config = parseEnableBankingConfig(services.bankSync.getConnection(budgetId, 'enablebanking'))!;
     expect(config.sessions.map((s) => s.sessionId)).toEqual(['s3']);
+
+    // A second login at the same bank (another person's accounts) keeps both.
+    services.bankSync.saveEnableBankingSession(budgetId, session('s4', 'Nordea', 'HASH-9'));
+    config = parseEnableBankingConfig(services.bankSync.getConnection(budgetId, 'enablebanking'))!;
+    expect(config.sessions.map((s) => s.sessionId)).toEqual(['s3', 's4']);
+
+    // A different application can't use the old app's sessions.
+    services.bankSync.saveEnableBankingConnection(budgetId, {
+      appId: 'other-app',
+      privateKeyPem: 'PEM',
+    });
+    config = parseEnableBankingConfig(services.bankSync.getConnection(budgetId, 'enablebanking'))!;
+    expect(config.sessions).toEqual([]);
   });
 
   it('keeps SimpleFIN and Enable Banking side by side, each with its own links', async () => {

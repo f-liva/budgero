@@ -34,10 +34,14 @@ type Options struct {
 	// MaxStreamOpens caps streams opened over a WebSocket's lifetime.
 	MaxStreamOpens int
 	// MaxBytes caps traffic (both directions) per WebSocket.
-	MaxBytes    int64
+	MaxBytes int64
+	// IdleTimeout closes a WebSocket that has no open streams and no traffic.
 	IdleTimeout time.Duration
-	MaxDuration time.Duration
-	TicketTTL   time.Duration
+	// StreamIdleTimeout closes a stream whose destination sends nothing for
+	// this long. It's generous because a bank can take minutes to answer.
+	StreamIdleTimeout time.Duration
+	MaxDuration       time.Duration
+	TicketTTL         time.Duration
 	// SessionsPerUser caps concurrent WebSockets per user.
 	SessionsPerUser int
 	// UserRate and UserBurst limit how often a user may get a ticket.
@@ -48,18 +52,19 @@ type Options struct {
 // DefaultOptions returns production settings: Enable Banking only.
 func DefaultOptions() Options {
 	return Options{
-		AllowedTargets:  []string{EnableBankingTarget},
-		Dial:            (&net.Dialer{Timeout: 10 * time.Second}).DialContext,
-		BufferSize:      128,
-		MaxStreams:      8,
-		MaxStreamOpens:  64,
-		MaxBytes:        64 << 20,
-		IdleTimeout:     90 * time.Second,
-		MaxDuration:     15 * time.Minute,
-		TicketTTL:       10 * time.Minute,
-		SessionsPerUser: 3,
-		UserRate:        rate.Every(time.Minute),
-		UserBurst:       20,
+		AllowedTargets:    []string{EnableBankingTarget},
+		Dial:              (&net.Dialer{Timeout: 10 * time.Second}).DialContext,
+		BufferSize:        128,
+		MaxStreams:        8,
+		MaxStreamOpens:    64,
+		MaxBytes:          64 << 20,
+		IdleTimeout:       90 * time.Second,
+		StreamIdleTimeout: 5 * time.Minute,
+		MaxDuration:       15 * time.Minute,
+		TicketTTL:         10 * time.Minute,
+		SessionsPerUser:   3,
+		UserRate:          rate.Every(time.Minute),
+		UserBurst:         20,
 	}
 }
 
@@ -87,6 +92,9 @@ func (o *Options) withDefaults() Options {
 	}
 	if o.IdleTimeout <= 0 {
 		o.IdleTimeout = d.IdleTimeout
+	}
+	if o.StreamIdleTimeout <= 0 {
+		o.StreamIdleTimeout = d.StreamIdleTimeout
 	}
 	if o.MaxDuration <= 0 {
 		o.MaxDuration = d.MaxDuration
@@ -245,17 +253,18 @@ func (r *Relay) Serve(ctx context.Context, ws *websocket.Conn) {
 		<-ctx.Done()
 		_ = ws.Close()
 	}()
+	go s.watchIdle()
 
 	ws.SetReadLimit(1 << 20)
 	if !s.write(continuePacket(0, r.opts.BufferSize)) {
 		return
 	}
 	for {
-		_ = ws.SetReadDeadline(time.Now().Add(r.opts.IdleTimeout))
 		kind, raw, err := ws.ReadMessage()
 		if err != nil {
 			return
 		}
+		s.touch()
 		if kind != websocket.BinaryMessage {
 			continue
 		}
@@ -290,12 +299,16 @@ type session struct {
 	streams map[uint32]*stream
 	opened  int
 	bytes   atomic.Int64
+	// lastActive is the unix-nano time of the last traffic in either direction.
+	lastActive atomic.Int64
 }
 
 type stream struct {
 	id   uint32
 	in   chan []byte
 	done chan struct{}
+	// received counts DATA packets from the client, for flow control.
+	received atomic.Uint32
 
 	mu     sync.Mutex
 	conn   net.Conn
@@ -311,7 +324,36 @@ func (s *session) write(frame []byte) bool {
 		s.cancel()
 		return false
 	}
+	s.touch()
 	return true
+}
+
+func (s *session) touch() {
+	s.lastActive.Store(time.Now().UnixNano())
+}
+
+// watchIdle ends the session once it has no open streams and no traffic for
+// IdleTimeout. Open streams are bounded by StreamIdleTimeout and MaxDuration
+// instead, so a slow bank answer never trips it.
+func (s *session) watchIdle() {
+	idle := s.relay.opts.IdleTimeout
+	tick := time.NewTicker(min(idle/4, time.Second))
+	defer tick.Stop()
+	s.touch()
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		case <-tick.C:
+			s.mu.Lock()
+			open := len(s.streams)
+			s.mu.Unlock()
+			if open == 0 && time.Since(time.Unix(0, s.lastActive.Load())) > idle {
+				s.cancel()
+				return
+			}
+		}
+	}
 }
 
 func (s *session) stream(id uint32) *stream {
@@ -376,6 +418,7 @@ func (s *session) data(p packet) bool {
 		return false
 	}
 	s.relay.bytesUp.Add(int64(len(p.payload)))
+	st.received.Add(1)
 	select {
 	case st.in <- p.payload:
 	case <-st.done:
@@ -404,8 +447,12 @@ func (s *session) run(ctx context.Context, st *stream, address string) {
 
 	go s.pumpDown(st, conn)
 
+	// Flow control: the client may send `advertised` packets after our last
+	// CONTINUE. Once fewer than half remain, advertise the free queue space.
+	// Clients reset their budget to the advertised value, so advertising more
+	// than is free would let the queue grow until it blocks the read loop.
 	window := s.relay.opts.BufferSize
-	var processed uint32
+	advertised, receivedAtAdvert := window, uint32(0)
 	for {
 		select {
 		case <-st.done:
@@ -414,15 +461,24 @@ func (s *session) run(ctx context.Context, st *stream, address string) {
 			s.finish(st, closeVoluntary)
 			return
 		case chunk := <-st.in:
-			_ = conn.SetWriteDeadline(time.Now().Add(s.relay.opts.IdleTimeout))
+			_ = conn.SetWriteDeadline(time.Now().Add(s.relay.opts.StreamIdleTimeout))
 			if _, err := conn.Write(chunk); err != nil {
 				s.finish(st, closeNetworkError)
 				return
 			}
-			processed++
-			if processed >= window/2 {
-				processed = 0
-				s.write(continuePacket(st.id, window))
+			s.touch()
+			received := st.received.Load()
+			remaining := int64(advertised) - int64(received-receivedAtAdvert)
+			if remaining < int64(window/2) {
+				queued := uint32(len(st.in)) //nolint:gosec // bounded by the channel capacity
+				free := uint32(0)
+				if queued < window {
+					free = window - queued
+				}
+				if int64(free) > remaining {
+					advertised, receivedAtAdvert = free, received
+					s.write(continuePacket(st.id, free))
+				}
 			}
 		}
 	}
@@ -432,9 +488,10 @@ func (s *session) run(ctx context.Context, st *stream, address string) {
 func (s *session) pumpDown(st *stream, conn net.Conn) {
 	buf := make([]byte, 32*1024)
 	for {
-		_ = conn.SetReadDeadline(time.Now().Add(s.relay.opts.IdleTimeout))
+		_ = conn.SetReadDeadline(time.Now().Add(s.relay.opts.StreamIdleTimeout))
 		n, err := conn.Read(buf)
 		if n > 0 {
+			s.touch()
 			if !s.count(n) {
 				s.cancel()
 				return

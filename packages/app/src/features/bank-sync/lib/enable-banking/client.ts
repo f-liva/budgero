@@ -8,7 +8,7 @@ import {
 } from '@budgero/core/browser';
 import { formatDateISO } from '@shared/lib/date-utils';
 import { signEnableBankingJwt, type EnableBankingCredentials } from './jwt';
-import { openTunnel } from './tunnel';
+import { openTunnel, resetTunnel } from './tunnel';
 
 export const ENABLE_BANKING_CONTROL_PANEL_URL = 'https://enablebanking.com/cp/applications';
 
@@ -119,7 +119,7 @@ export async function enableBankingRequest<T>(
   path: string,
   { method = 'GET', body, query, psu = false }: RequestOptions = {}
 ): Promise<T> {
-  const [tunnel, jwt] = await Promise.all([openTunnel(), signEnableBankingJwt(credentials)]);
+  const jwt = await signEnableBankingJwt(credentials);
   const url = new URL(path, ENABLE_BANKING_API_URL);
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value !== undefined) url.searchParams.set(key, value);
@@ -129,24 +129,30 @@ export async function enableBankingRequest<T>(
     Accept: 'application/json',
   };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
-  if (psu) {
-    headers['Psu-User-Agent'] = navigator.userAgent;
-    if (tunnel.clientIp) headers['Psu-Ip-Address'] = tunnel.clientIp;
-  }
 
-  let response: Response;
-  try {
-    response = await tunnel.fetch(url.toString(), {
-      method,
-      headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-  } catch (error) {
-    console.warn('[EnableBanking] Tunnel request failed', error);
-    throw new EnableBankingError(
-      t`Couldn't reach Enable Banking through the Budgero relay. Check your connection and try again.`,
-      0
-    );
+  let response: Response | undefined;
+  // One retry with a fresh ticket: a restarted server rejects the cached one.
+  for (let attempt = 0; !response; attempt++) {
+    try {
+      const tunnel = await openTunnel();
+      if (psu) {
+        headers['Psu-User-Agent'] = navigator.userAgent;
+        if (tunnel.clientIp) headers['Psu-Ip-Address'] = tunnel.clientIp;
+      }
+      response = await tunnel.fetch(url.toString(), {
+        method,
+        headers,
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+    } catch (error) {
+      resetTunnel();
+      if (attempt === 0) continue;
+      console.warn('[EnableBanking] Tunnel request failed', error);
+      throw new EnableBankingError(
+        t`Couldn't reach Enable Banking through the Budgero relay. Check your connection and try again.`,
+        0
+      );
+    }
   }
   const text = await response.text();
   let json: unknown;
@@ -244,7 +250,11 @@ export function deleteSession(credentials: EnableBankingCredentials, sessionId: 
   });
 }
 
-const BALANCE_PREFERENCE = ['CLBD', 'ITBD', 'XPCD', 'CLAV', 'ITAV', 'OPBD', 'PRCD', 'FWAV'];
+/**
+ * Interim booked (ITBD) includes today's bookings, which Budgero has already
+ * imported; closing booked (CLBD) is usually yesterday's and would lag.
+ */
+const BALANCE_PREFERENCE = ['ITBD', 'CLBD', 'XPCD', 'ITAV', 'CLAV', 'OPBD', 'PRCD', 'FWAV'];
 
 export function pickBalance(balances: EnableBankingBalance[]): EnableBankingBalance | null {
   for (const type of BALANCE_PREFERENCE) {
@@ -262,12 +272,13 @@ export async function getBalance(credentials: EnableBankingCredentials, uid: str
   );
   const balance = pickBalance(result.balances ?? []);
   if (!balance) return null;
+  const day = balance.reference_date ?? balance.last_change_date_time?.slice(0, 10) ?? null;
   return {
     amount: fromDecimalString(balance.balance_amount.amount.replace(/^\+/, '')),
     currency: balance.balance_amount.currency,
-    date:
-      balance.last_change_date_time ??
-      (balance.reference_date ? `${balance.reference_date}T00:00:00Z` : new Date().toISOString()),
+    date: balance.last_change_date_time ?? (day ? `${day}T12:00:00Z` : new Date().toISOString()),
+    /** The bank's own calendar day for the balance, free of timezone shifts. */
+    day,
   };
 }
 
@@ -346,7 +357,9 @@ export function toBankTransactions(rows: EnableBankingTransaction[]): BankTransa
     const payee = counterparty || remittance || fallback;
     const memo = counterparty ? remittance || fallback : remittance ? fallback : '';
 
-    let id = clean(row.entry_reference) || clean(row.transaction_id);
+    // entry_reference is stable across sessions. transaction_id isn't (Enable
+    // Banking may change it between fetches), so it's never used as an ID.
+    let id = clean(row.entry_reference);
     if (!id) {
       const base = fingerprint(JSON.stringify([date, amount, payee, memo, row.value_date ?? '']));
       const n = (seen.get(base) ?? 0) + 1;

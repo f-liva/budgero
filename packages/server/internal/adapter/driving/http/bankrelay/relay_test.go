@@ -184,26 +184,137 @@ func TestRelayRefusesOtherTargets(t *testing.T) {
 	}
 }
 
-func TestRelaySendsContinueAsWindowDrains(t *testing.T) {
-	relay, _ := newTestRelay(t, &Options{BufferSize: 4})
+// A client that honors Wisp flow control must never stall, and the relay must
+// never advertise more than it can queue.
+func TestRelayFlowControlNeverStallsAnHonestClient(t *testing.T) {
+	const window, total = 4, 300
+	relay, _ := newTestRelay(t, &Options{BufferSize: window})
 	ws := dialRelay(t, relay, relayServer(t, relay))
 	readPacket(t, ws)
 
-	send(t, ws, connectFrame(7, streamTCP, "bank.test", 443))
-	for range 4 {
-		send(t, ws, encodePacket(packetData, 7, []byte("x")))
+	continues := make(chan uint32, total)
+	echoed := make(chan int, total)
+	go func() {
+		for {
+			_ = ws.SetReadDeadline(time.Now().Add(10 * time.Second))
+			_, raw, err := ws.ReadMessage()
+			if err != nil {
+				close(continues)
+				return
+			}
+			p, _ := parsePacket(raw)
+			switch p.kind {
+			case packetContinue:
+				continues <- binary.LittleEndian.Uint32(p.payload)
+			case packetData:
+				echoed <- len(p.payload)
+			}
+		}
+	}()
+
+	send(t, ws, connectFrame(9, streamTCP, "bank.test", 443))
+	allowance := uint32(window)
+	for sent := 0; sent < total; {
+		if allowance == 0 {
+			select {
+			case value, ok := <-continues:
+				if !ok {
+					t.Fatal("relay closed the socket")
+				}
+				if value > window {
+					t.Fatalf("CONTINUE advertised %d, more than the %d window", value, window)
+				}
+				allowance = value
+			case <-time.After(5 * time.Second):
+				t.Fatalf("stalled after %d packets", sent)
+			}
+			continue
+		}
+		send(t, ws, encodePacket(packetData, 9, []byte("x")))
+		allowance--
+		sent++
 	}
-	deadline := time.Now().Add(5 * time.Second)
-	for time.Now().Before(deadline) {
+	got := 0
+	for got < total {
+		select {
+		case n := <-echoed:
+			got += n
+		case <-time.After(5 * time.Second):
+			t.Fatalf("only %d of %d bytes came back", got, total)
+		}
+	}
+}
+
+// slowBank answers each connection only after delay, like a bank fetching history.
+func slowBank(t *testing.T, delay time.Duration) string {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = ln.Close() })
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				defer func() { _ = conn.Close() }()
+				buf := make([]byte, 16)
+				n, _ := conn.Read(buf)
+				time.Sleep(delay)
+				_, _ = conn.Write(buf[:n])
+			}()
+		}
+	}()
+	return ln.Addr().String()
+}
+
+func TestRelayWaitsForASlowBankButClosesIdleSessions(t *testing.T) {
+	bank := slowBank(t, 600*time.Millisecond)
+	relay := New(&Options{
+		AllowedTargets: []string{testTarget},
+		IdleTimeout:    200 * time.Millisecond,
+		Dial: func(ctx context.Context, network, _ string) (net.Conn, error) {
+			return (&net.Dialer{}).DialContext(ctx, network, bank)
+		},
+	})
+	ws := dialRelay(t, relay, relayServer(t, relay))
+	readPacket(t, ws)
+
+	// Nothing moves for three idle timeouts while the bank thinks.
+	send(t, ws, connectFrame(1, streamTCP, "bank.test", 443))
+	send(t, ws, encodePacket(packetData, 1, []byte("history")))
+	for {
 		p := readPacket(t, ws)
-		if p.kind == packetContinue && p.streamID == 7 {
-			if binary.LittleEndian.Uint32(p.payload) != 4 {
-				t.Fatalf("CONTINUE window = %d", binary.LittleEndian.Uint32(p.payload))
+		if p.kind == packetData {
+			if string(p.payload) != "history" {
+				t.Fatalf("got %q", p.payload)
+			}
+			break
+		}
+		if p.kind == packetClose {
+			t.Fatalf("stream closed while waiting for the bank: %+v", p)
+		}
+	}
+
+	// The bank hangs up; with no streams left, the idle session ends.
+	for {
+		_ = ws.SetReadDeadline(time.Now().Add(3 * time.Second))
+		if _, _, err := ws.ReadMessage(); err != nil {
+			var closeErr *websocket.CloseError
+			if errors.As(err, &closeErr) || strings.Contains(err.Error(), "EOF") ||
+				strings.Contains(err.Error(), "reset") {
+				return
+			}
+			var netErr net.Error
+			if errors.As(err, &netErr) && netErr.Timeout() {
+				t.Fatal("idle session was not closed")
 			}
 			return
 		}
 	}
-	t.Fatal("no CONTINUE for stream 7")
 }
 
 func TestRelayClientCloseEndsStream(t *testing.T) {

@@ -6,7 +6,12 @@ import {
 } from '@budgero/core/browser';
 import type { AppRuntime } from '@shared/runtime/app-runtime';
 import { executeSpaceMutation } from '@shared/runtime/mutation-router';
-import { createSession, startAuthorization, type Aspsp } from '../lib/enable-banking/client';
+import {
+  createSession,
+  listAspsps,
+  startAuthorization,
+  type Aspsp,
+} from '../lib/enable-banking/client';
 
 const PENDING_KEY = 'budgero.bankSync.pendingAuth';
 const PENDING_TTL_MS = 60 * 60 * 1000;
@@ -60,8 +65,9 @@ export async function beginAuthorization(
   aspsp: Aspsp
 ): Promise<string> {
   const state = crypto.randomUUID();
-  const { url } = await startAuthorization(credentialsOf(connection), {
-    aspsp,
+  const credentials = credentialsOf(connection);
+  const { url } = await startAuthorization(credentials, {
+    aspsp: await withConsentLimit(credentials, aspsp),
     redirectUrl: bankRedirectUrl(),
     state,
   });
@@ -72,6 +78,23 @@ export async function beginAuthorization(
     createdAt: Date.now(),
   });
   return url;
+}
+
+/**
+ * Reconnecting only knows the bank's name and country. Look up its consent
+ * limit, so the request doesn't ask for longer than the bank allows.
+ */
+async function withConsentLimit(
+  credentials: ReturnType<typeof credentialsOf>,
+  aspsp: Aspsp
+): Promise<Aspsp> {
+  if (aspsp.maximum_consent_validity) return aspsp;
+  try {
+    const banks = await listAspsps(credentials, aspsp.country);
+    return banks.find((bank) => bank.name === aspsp.name) ?? aspsp;
+  } catch {
+    return aspsp;
+  }
 }
 
 export class AuthorizationError extends Error {

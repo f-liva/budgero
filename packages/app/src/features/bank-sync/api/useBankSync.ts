@@ -39,11 +39,11 @@ export function useBankConnections(budgetId: number | undefined) {
   });
 }
 
-export function useBankLinks(budgetId: number | undefined, provider?: BankProvider) {
+export function useBankLinks(budgetId: number | undefined) {
   return useSpaceQuery<BankLink[]>({
-    key: ['bankSync', 'links', budgetId ?? 0, provider ?? 'all'],
+    key: ['bankSync', 'links', budgetId ?? 0],
     enabled: Boolean(budgetId),
-    queryFn: (services) => services.bankSync.listLinks(budgetId!, provider),
+    queryFn: (services) => services.bankSync.listLinks(budgetId!),
   });
 }
 
@@ -95,7 +95,8 @@ export function useDisconnectBank() {
         payload: { budgetId, provider },
         meta: { label: 'bank-sync', skipUndo: true },
       }),
-    onSuccess: () => queryClient.removeQueries({ queryKey: ['bankRemoteAccounts'] }),
+    onSuccess: (_result, { provider }) =>
+      queryClient.removeQueries({ queryKey: ['bankRemoteAccounts', provider] }),
   });
 }
 
@@ -103,7 +104,8 @@ export function useRunBankSync() {
   const runtime = useRuntime();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (budgetId: number) => runBankSync(runtime, budgetId),
+    mutationFn: ({ budgetId, providers }: { budgetId: number; providers?: BankProvider[] }) =>
+      runBankSync(runtime, budgetId, { providers }),
     onSettled: () => invalidateAfterBankSync(queryClient),
   });
 }
@@ -113,7 +115,7 @@ export function useLinkBankAccounts() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: { connection: BankConnection; requests: LinkRequest[] }) =>
-      linkAccounts(runtime, input.connection, input.connection.BudgetID, input.requests),
+      linkAccounts(runtime, input.connection, input.requests),
     onSettled: () => invalidateAfterBankSync(queryClient),
   });
 }

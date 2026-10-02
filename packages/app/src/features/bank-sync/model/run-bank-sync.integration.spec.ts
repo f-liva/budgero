@@ -23,7 +23,7 @@ const state = vi.hoisted(() => ({
   failSimpleFIN: false,
   eb: {
     rows: [] as EnableBankingTransaction[],
-    balance: '0.00',
+    balance: '0.00' as string | null,
     calls: [] as { uid: string; dateFrom: string; longest: boolean }[],
   },
 }));
@@ -49,11 +49,15 @@ vi.mock('../lib/simplefin-client', () => ({
 
 vi.mock('../lib/enable-banking/client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/enable-banking/client')>()),
-  getBalance: async () => ({
-    amount: Math.round(Number(state.eb.balance) * 1000),
-    currency: 'EUR',
-    date: '2026-09-10T12:00:00Z',
-  }),
+  getBalance: async () =>
+    state.eb.balance === null
+      ? null
+      : {
+          amount: Math.round(Number(state.eb.balance) * 1000),
+          currency: 'EUR',
+          date: '2026-09-10T12:00:00Z',
+          day: '2026-09-10',
+        },
   getTransactions: async (
     _credentials: unknown,
     uid: string,
@@ -105,6 +109,7 @@ describe('bank sync engine', () => {
     state.applied.clear();
     state.fetches = 0;
     state.failSimpleFIN = false;
+    state.eb = { rows: [], balance: '0.00', calls: [] };
     budgetId = await services.budgets.createBudget({
       name: 'Bank sync',
       display_currency: 'USD',
@@ -242,7 +247,7 @@ describe('bank sync engine', () => {
     );
     state.remote = { errors: [], accounts: [remote] };
     const connection = services.bankSync.getConnection(budgetId, 'simplefin')!;
-    const result = await linkAccounts(runtime, connection, budgetId, [
+    const result = await linkAccounts(runtime, connection, [
       {
         remote: fromSimpleFINAccount(remote),
         importFrom: '2026-09-01',
@@ -368,6 +373,50 @@ describe('bank sync engine', () => {
         'SimpleFIN is down'
       );
       expect(services.bankSync.getConnection(budgetId, 'enablebanking')?.LastError).toBeNull();
+    });
+
+    const newEnableBankingAccount = () => {
+      services.bankSync.saveEnableBankingConnection(budgetId, {
+        appId: 'app',
+        privateKeyPem: 'PEM',
+      });
+      services.bankSync.saveEnableBankingSession(budgetId, session('s1', 'uid-1'));
+      const connection = services.bankSync.getConnection(budgetId, 'enablebanking')!;
+      return linkAccounts(runtime, connection, [
+        {
+          remote: {
+            id: 'HASH-1',
+            name: 'Käyttötili',
+            orgName: 'Nordea',
+            currency: 'EUR',
+            balance: null,
+            balanceDate: null,
+          },
+          importFrom: '2026-09-01',
+          target: { kind: 'new', name: 'Käyttötili', type: 'Checking' as never },
+        },
+      ]);
+    };
+
+    it("opens a new account from the bank's balance day, not the device's timezone", async () => {
+      state.eb.balance = '100.00';
+      // Booked on the balance day: already in the balance. The day after: not yet.
+      state.eb.rows = [ebRow('e1', '2026-09-10', '25.50'), ebRow('e2', '2026-09-11', '4.00')];
+      await newEnableBankingAccount();
+      const [link] = services.bankSync.listLinks(budgetId, 'enablebanking');
+      const rows = services.transactions.getTransactionsByAccount(link.AccountID);
+      const opening = rows.find((row) => row.Date === '2026-08-31')!;
+      expect(opening.InflowNative).toBe(125500);
+      expect(rows.every((row) => Boolean(row.Cleared))).toBe(true);
+    });
+
+    it('refuses to open a new account when the bank sends no balance', async () => {
+      state.eb.balance = null;
+      state.eb.rows = [ebRow('e1', '2026-09-02', '25.50')];
+      const before = services.accounts.listAccounts(budgetId).length;
+      await expect(newEnableBankingAccount()).rejects.toThrow(/didn't send a balance/);
+      expect(services.accounts.listAccounts(budgetId)).toHaveLength(before);
+      expect(services.bankSync.listLinks(budgetId, 'enablebanking')).toEqual([]);
     });
 
     it('reports an expired consent without calling the bank', async () => {

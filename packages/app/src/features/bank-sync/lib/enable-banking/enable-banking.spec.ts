@@ -132,6 +132,21 @@ describe('Enable Banking transactions', () => {
     });
   });
 
+  it('never uses transaction_id, which can change between fetches', () => {
+    const row = {
+      transaction_id: 'session-scoped-1',
+      transaction_amount: { amount: '9.00', currency: 'EUR' },
+      credit_debit_indicator: 'DBIT' as const,
+      status: 'BOOK',
+      booking_date: '2026-09-05',
+      creditor: { name: 'Shop' },
+    };
+    const [first] = toBankTransactions([row]);
+    const [again] = toBankTransactions([{ ...row, transaction_id: 'session-scoped-2' }]);
+    expect(first.id).toMatch(/^fp:/);
+    expect(again.id).toBe(first.id);
+  });
+
   it('gives reference-less twins distinct, repeatable IDs', () => {
     const coffee = {
       transaction_amount: { amount: '4.00', currency: 'EUR' },
@@ -146,7 +161,7 @@ describe('Enable Banking transactions', () => {
     expect(again).toEqual(first);
   });
 
-  it('prefers the booked closing balance', () => {
+  it('prefers the booked balance, interim before closing', () => {
     const balance = (type: string, amount: string) => ({
       balance_type: type,
       balance_amount: { amount, currency: 'EUR' },
@@ -154,6 +169,7 @@ describe('Enable Banking transactions', () => {
     expect(pickBalance([balance('ITAV', '5'), balance('CLBD', '4')])?.balance_amount.amount).toBe(
       '4'
     );
+    expect(pickBalance([balance('CLBD', '4'), balance('ITBD', '3')])?.balance_type).toBe('ITBD');
     expect(pickBalance([balance('XYZ', '1')])?.balance_type).toBe('XYZ');
     expect(pickBalance([])).toBeNull();
   });

@@ -71,6 +71,9 @@ export function fromSimpleFINTransaction(transaction: SimpleFINTransaction): Ban
     payee,
     memo: transaction.memo?.trim() || (payee === description ? '' : description),
     pending: !isPostedSimpleFINTransaction(transaction),
+    ...(transaction.posted > 0
+      ? { postedAt: new Date(transaction.posted * 1000).toISOString() }
+      : {}),
   };
 }
 
@@ -113,24 +116,32 @@ export class BankSyncService {
     return this.queries.getConnection(budgetId, 'simplefin')!;
   }
 
-  /** Saves the app credentials; keeps authorized sessions when only the key changes. */
+  /**
+   * Saves the app credentials. Sessions belong to an application, so they're
+   * kept only when the application ID stays the same (e.g. a re-uploaded key).
+   */
   saveEnableBankingConnection(
     budgetId: number,
     config: Omit<EnableBankingConfig, 'sessions'>
   ): BankConnection {
-    const sessions = this.enableBankingConfig(budgetId)?.sessions ?? [];
+    const existing = this.enableBankingConfig(budgetId);
+    const sessions = existing?.appId === config.appId ? existing.sessions : [];
     this.writeEnableBankingConfig(budgetId, { ...config, sessions });
     return this.queries.getConnection(budgetId, 'enablebanking')!;
   }
 
-  /** Adds a session, replacing any earlier one for the same bank (re-authorization). */
+  /**
+   * Adds a session. An earlier session that shares an account is a previous
+   * authorization of the same login, so it's replaced; other logins at the
+   * same bank (say, two partners at one bank) stay side by side.
+   */
   saveEnableBankingSession(budgetId: number, session: EnableBankingSession): void {
     const config = this.enableBankingConfig(budgetId);
     if (!config) throw new Error('Enable Banking is not connected for this budget');
+    const hashes = new Set(session.accounts.map((account) => account.hash));
     const sessions = config.sessions.filter(
       (s) =>
-        s.sessionId !== session.sessionId &&
-        !(s.aspsp.name === session.aspsp.name && s.aspsp.country === session.aspsp.country)
+        s.sessionId !== session.sessionId && !s.accounts.some((account) => hashes.has(account.hash))
     );
     this.writeEnableBankingConfig(budgetId, { ...config, sessions: [...sessions, session] });
   }

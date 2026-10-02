@@ -51,38 +51,57 @@ export async function bankIdempotencyKey(operationId: string): Promise<string> {
   return `bank_${hex.slice(0, 32)}`;
 }
 
-const inFlight = new Map<number, Promise<BankSyncResult>>();
-
 /** Data a caller already fetched for one provider, so it isn't fetched twice. */
 export interface PrefetchedSet {
   provider: BankProvider;
   set: RemoteAccountSet;
 }
 
+export interface RunBankSyncOptions {
+  /** Only these providers; every connected one when omitted. Each sync spends provider quota. */
+  providers?: BankProvider[];
+  prefetched?: PrefetchedSet;
+}
+
+const inFlight = new Map<number, { scope: string; promise: Promise<BankSyncResult> }>();
+
+/**
+ * Runs one sync per budget at a time. A request for the same scope joins the
+ * running one; anything else waits for it, so two runs never import the
+ * same rows concurrently.
+ */
 export function runBankSync(
   runtime: AppRuntime,
   budgetId: number,
-  prefetched?: PrefetchedSet
+  options: RunBankSyncOptions = {}
 ): Promise<BankSyncResult> {
+  const scope = options.providers ? [...options.providers].sort().join(',') : '*';
   const running = inFlight.get(budgetId);
-  if (running) return running;
-  const promise = syncBudget(runtime, budgetId, prefetched).finally(() =>
-    inFlight.delete(budgetId)
-  );
-  inFlight.set(budgetId, promise);
+  if (running && running.scope === scope && !options.prefetched) return running.promise;
+  const previous = running?.promise.catch(() => undefined) ?? Promise.resolve();
+  const promise: Promise<BankSyncResult> = previous
+    .then(() => syncBudget(runtime, budgetId, options))
+    .finally(() => {
+      if (inFlight.get(budgetId)?.promise === promise) inFlight.delete(budgetId);
+    });
+  inFlight.set(budgetId, { scope, promise });
   return promise;
 }
 
-/** Syncs every connected provider; one failing provider doesn't stop the others. */
+/** Syncs the requested providers; one failing provider doesn't stop the others. */
 async function syncBudget(
   runtime: AppRuntime,
   budgetId: number,
-  prefetched?: PrefetchedSet
+  { providers, prefetched }: RunBankSyncOptions
 ): Promise<BankSyncResult> {
   const result: BankSyncResult = { imported: 0, reviews: 0, errors: [] };
   const failures: unknown[] = [];
   let attempted = 0;
-  for (const connection of runtime.services().bankSync.listConnections(budgetId)) {
+  const connections = runtime
+    .services()
+    .bankSync.listConnections(budgetId)
+    .filter((connection) => !providers || providers.includes(connection.Provider));
+  for (const connection of connections) {
     const links = runtime.services().bankSync.listLinks(budgetId, connection.Provider);
     if (!links.length) continue;
     attempted++;
