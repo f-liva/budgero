@@ -21,7 +21,7 @@ export const BANK_CALLBACK_PATH = '/bank-sync/callback';
 export interface PendingAuthorization {
   state: string;
   budgetId: number;
-  aspsp: { name: string; country: string };
+  aspsp: { name: string; country: string; logo?: string };
   /** A popup hands the bank's answer back to the window that opened it. */
   mode: 'popup' | 'redirect';
   createdAt: number;
@@ -69,15 +69,20 @@ export async function beginAuthorization(
 ): Promise<{ url: string; state: string }> {
   const state = crypto.randomUUID();
   const credentials = credentialsOf(connection);
+  const bank = await withConsentLimit(credentials, aspsp);
   const { url } = await startAuthorization(credentials, {
-    aspsp: await withConsentLimit(credentials, aspsp),
+    aspsp: bank,
     redirectUrl: bankRedirectUrl(),
     state,
   });
   writePending({
     state,
     budgetId: connection.BudgetID,
-    aspsp: { name: aspsp.name, country: aspsp.country },
+    aspsp: {
+      name: bank.name,
+      country: bank.country,
+      ...(bank.logo ? { logo: bank.logo } : {}),
+    },
     mode,
     createdAt: Date.now(),
   });
@@ -129,7 +134,9 @@ export async function completeAuthorization(
     );
   }
   const connection = runtime.services().bankSync.getConnection(pending.budgetId, 'enablebanking');
-  const session = await createSession(credentialsOf(connection), code);
+  const created = await createSession(credentialsOf(connection), code);
+  const { logo } = pending.aspsp;
+  const session = logo ? { ...created, aspsp: { ...created.aspsp, logo } } : created;
   await executeSpaceMutation(runtime, {
     op: 'bankSync.saveEnableBankingSession',
     payload: { budgetId: pending.budgetId, session },

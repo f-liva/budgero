@@ -826,12 +826,12 @@ msgstr "{count, plural, one {# transactie verwijderd} other {# transacties verwi
 #: src/features/transactions/api/useClearedShortcut.ts
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "{count, plural, one {# transaction marked cleared} other {# transactions marked cleared}}"
-msgstr "{count, plural, one {# transactie als verwerkt gemarkeerd} other {# transacties als verwerkt gemarkeerd}}"
+msgstr "{count, plural, one {# transactie als bevestigd gemarkeerd} other {# transacties als bevestigd gemarkeerd}}"
 
 #: src/features/transactions/api/useClearedShortcut.ts
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "{count, plural, one {# transaction marked uncleared} other {# transactions marked uncleared}}"
-msgstr "{count, plural, one {# transactie als niet verwerkt gemarkeerd} other {# transacties als niet verwerkt gemarkeerd}}"
+msgstr "{count, plural, one {# transactie als niet bevestigd gemarkeerd} other {# transacties als niet bevestigd gemarkeerd}}"
 
 #: src/pages/settings/CurrencySettingsPage.tsx
 msgid "{count, plural, one {# transaction recalculated using fallback rates.} other {# transactions recalculated using fallback rates.}}"
@@ -4021,6 +4021,7 @@ msgid "Best for documents (~6GB)"
 msgstr "Ideaal voor documenten (~6GB)"
 
 #: src/app/layout/desktop-shell/SidebarNav.tsx
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
 #: src/pages/settings/bank-sync/BankSyncPage.tsx
 msgid "Beta"
 msgstr "Beta"
@@ -5021,6 +5022,10 @@ msgstr "Kies waar je “{0}” wilt opslaan."
 msgid "Choose your bank"
 msgstr "Kies je bank"
 
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Choose your country"
+msgstr "Kies je land"
+
 #: src/pages/settings/AppearancePage.tsx
 msgid "Choose your preferred color scheme"
 msgstr "Kies je kleurenschema"
@@ -5074,11 +5079,11 @@ msgstr "Selectie wissen"
 #: src/pages/accounts/components/AccountSummaryCards.tsx
 #: src/shared/lib/search-query-parser.ts
 msgid "Cleared"
-msgstr "Verwerkt"
+msgstr "Bevestigd"
 
 #: src/features/transactions/ui/ClearedToggle.tsx
 msgid "Cleared — mark as uncleared"
-msgstr "Verwerkt – markeren als niet verwerkt"
+msgstr "Bevestigd – markeren als niet bevestigd"
 
 #. placeholder {0}: formatBankAmount(cleared, local.Currency)
 #: src/features/bank-sync/ui/BankConnectionPanel.tsx
@@ -5087,15 +5092,15 @@ msgstr "Bevestigd {0}"
 
 #: src/features/account-management/ui/ReconcileAccountDialog.tsx
 msgid "Cleared Balance"
-msgstr "Verwerkt saldo"
+msgstr "Bevestigd saldo"
 
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "Cleared status"
-msgstr "Verwerkingsstatus"
+msgstr "Bevestigingsstatus"
 
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "Cleared status (press {CLEARED_SHORTCUT_KEY})"
-msgstr "Verwerkingsstatus (toets {CLEARED_SHORTCUT_KEY})"
+msgstr "Bevestigingsstatus (toets {CLEARED_SHORTCUT_KEY})"
 
 #. placeholder {0}: actionDialog.user.email
 #: src/pages/admin/admin-users/useAdminUsersState.ts
@@ -5680,7 +5685,7 @@ msgstr "Kon de query niet opslaan."
 #: src/features/transactions/ui/ClearedToggle.tsx
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "Could not update cleared status"
-msgstr "Verwerkingsstatus kon niet worden bijgewerkt"
+msgstr "Bevestigingsstatus kon niet worden bijgewerkt"
 
 #: src/pages/settings/components/GoalFundingSettingsCard.tsx
 msgid "Could not update goal funding settings"
@@ -7261,7 +7266,7 @@ msgstr "Voer rapportnaam in..."
 
 #: src/features/account-management/ui/ReconcileAccountDialog.tsx
 msgid "Enter the balance your bank shows. It is compared with your cleared balance; cleared transactions are then locked, and uncleared ones stay open."
-msgstr "Voer het saldo in dat je bank toont. Het wordt vergeleken met je verwerkte saldo; verwerkte transacties worden daarna vergrendeld, niet-verwerkte blijven open."
+msgstr "Voer het saldo in dat je bank toont. Het wordt vergeleken met je bevestigde saldo; bevestigde transacties worden daarna vergrendeld, niet-bevestigde blijven open."
 
 #: src/features/budget-sharing/ui/RedeemInviteDialog.tsx
 msgid "Enter the invite secret first."
@@ -10106,7 +10111,7 @@ msgstr "“{0}” markeren als klaar?"
 
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "Mark cleared"
-msgstr "Markeren als verwerkt"
+msgstr "Markeren als bevestigd"
 
 #: src/features/rules/ui/rule-editor/RuleMetadataForm.tsx
 msgid "Mark complete after the first retroactive run."
@@ -10123,7 +10128,7 @@ msgstr "Klaar markeren"
 
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "Mark uncleared"
-msgstr "Markeren als niet verwerkt"
+msgstr "Markeren als niet bevestigd"
 
 #: src/app/startup/screens.tsx
 #: src/features/budget-sharing/ui/RedeemInviteDialog.tsx
@@ -10988,6 +10993,10 @@ msgstr "Er wordt niets automatisch afgeschreven wanneer je proefperiode eindigt.
 msgid "No backups yet"
 msgstr "Nog geen back-ups"
 
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "No bank found."
+msgstr "Geen bank gevonden."
+
 #. placeholder {0}: args.query
 #: src/features/ai/lib/tools/query-docs.ts
 msgid "No Budgero docs matched \"{0}\". Available docs: {titles}. You can answer from general knowledge but say it's not from the official docs."
@@ -11095,6 +11104,10 @@ msgstr "Geen kolommetadata"
 #: src/features/chat/ui/chat-panel/ChatConversationList.tsx
 msgid "No conversations yet"
 msgstr "Nog geen gesprekken"
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "No country found."
+msgstr "Geen land gevonden."
 
 #: src/pages/auth/AuthPage.tsx
 msgid "No credit card required."
@@ -14510,6 +14523,10 @@ msgstr "Rekeningen zoeken…"
 msgid "Search and commands"
 msgstr "Zoeken en opdrachten"
 
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Search banks…"
+msgstr "Banken zoeken…"
+
 #: src/pages/admin/admin-users/UserSearchCard.tsx
 msgid "Search by ID, email, or name..."
 msgstr "Zoeken op ID, e-mail of naam..."
@@ -14533,6 +14550,10 @@ msgstr "Categorieën zoeken…"
 #: src/features/category-management/ui/SearchableCategorySelect.tsx
 msgid "Search category..."
 msgstr "Categorie zoeken..."
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Search countries…"
+msgstr "Landen zoeken…"
 
 #: src/features/currencies/ui/CurrencySelector.tsx
 msgid "Search currencies..."
@@ -16479,7 +16500,7 @@ msgstr "Deze datums kunnen op twee manieren worden gelezen. Selecteer de datumno
 
 #: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
 msgid "They arrive uncleared and are updated once your bank books them. Pending transactions your bank drops, like a released card hold, are removed."
-msgstr "Ze komen binnen als niet verwerkt en worden bijgewerkt zodra je bank ze boekt. Transacties in behandeling die je bank laat vallen, zoals een vrijgegeven kaartreservering, worden verwijderd."
+msgstr "Ze komen binnen als niet bevestigd en worden bijgewerkt zodra je bank ze boekt. Transacties in behandeling die je bank laat vallen, zoals een vrijgegeven kaartreservering, worden verwijderd."
 
 #: src/pages/settings/PayeesPage.tsx
 msgid "They have been cleared from existing transactions."
@@ -16670,7 +16691,7 @@ msgstr "Deze gedeelde werkruimte is vergrendeld totdat de eigenaar zijn of haar 
 
 #: src/features/transactions/ui/StatusIndicatorPopover.tsx
 msgid "This transaction has been reconciled and is locked as cleared."
-msgstr "Deze transactie is afgestemd en vergrendeld als verwerkt."
+msgstr "Deze transactie is afgestemd en vergrendeld als bevestigd."
 
 #: src/features/transactions/ui/StatusIndicatorPopover.tsx
 #~ msgid "This transaction has been reconciled."
@@ -16858,7 +16879,7 @@ msgstr "Vandaag"
 
 #: src/app/layout/desktop-shell/KeyboardShortcutsDialog.tsx
 msgid "Toggle cleared on selected rows"
-msgstr "Verwerkt wisselen voor geselecteerde rijen"
+msgstr "Bevestigd wisselen voor geselecteerde rijen"
 
 #: src/shared/ui/theme-switch.tsx
 msgid "Toggle color mode"
@@ -17469,11 +17490,11 @@ msgstr "Niet-gecategoriseerd ({uncategorizedCount})"
 #: src/features/transactions/ui/ClearedToggle.tsx
 #: src/shared/lib/search-query-parser.ts
 msgid "Uncleared"
-msgstr "Niet verwerkt"
+msgstr "Niet bevestigd"
 
 #: src/features/transactions/ui/ClearedToggle.tsx
 msgid "Uncleared — mark as cleared"
-msgstr "Niet verwerkt – markeren als verwerkt"
+msgstr "Niet bevestigd – markeren als bevestigd"
 
 #: src/features/transactions/ui/TransactionsToolbar.tsx
 msgid "Uncleared ({unclearedCount})"

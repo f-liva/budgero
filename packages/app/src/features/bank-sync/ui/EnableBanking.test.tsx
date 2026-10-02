@@ -18,7 +18,17 @@ vi.mock('@shared/runtime/mutation-router', () => ({
 vi.mock('../lib/enable-banking/client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/enable-banking/client')>()),
   getApplication: (...args: unknown[]) => mock.application(...args),
-  listAspsps: async () => [{ name: 'Nordea', country: 'FI' }],
+  listAspsps: async (_credentials: unknown, country: string) =>
+    country === 'DE'
+      ? [
+          {
+            name: 'Deutsche Bank',
+            country: 'DE',
+            logo: 'https://enablebanking.com/brands/DE/Deutsche_Bank/',
+          },
+          { name: 'N26', country: 'DE', beta: true },
+        ]
+      : [{ name: 'Nordea', country: 'FI', logo: 'https://enablebanking.com/brands/FI/Nordea/' }],
 }));
 
 const APP_ID = '8a1b2c3d-1111-2222-3333-444455556666';
@@ -27,6 +37,18 @@ const pem = generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey.expor
   format: 'pem',
 }) as string;
 const callback = `${window.location.origin}/bank-sync/callback`;
+
+beforeAll(() => {
+  HTMLElement.prototype.hasPointerCapture = () => false;
+  HTMLElement.prototype.scrollIntoView = () => {};
+  globalThis.ResizeObserver ??= class {
+    observe() {}
+
+    unobserve() {}
+
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+});
 
 const wrapper = ({ children }: PropsWithChildren) => (
   <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
@@ -133,5 +155,39 @@ describe('Enable Banking banks', () => {
     expect(screen.getByText('Expired')).toBeInTheDocument();
     expect(screen.getByText(/returned no accounts/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Add bank/ })).toBeInTheDocument();
+  });
+
+  it('searches countries and banks, and shows bank logos', async () => {
+    const user = userEvent.setup();
+    render(<EnableBankingBanksCard connection={connection([])} />, { wrapper });
+
+    await user.click(screen.getByRole('combobox', { name: 'Country' }));
+    await user.type(screen.getByPlaceholderText('Search countries…'), 'germ');
+    expect(screen.queryByRole('option', { name: /Finland/ })).toBeNull();
+    await user.click(await screen.findByRole('option', { name: /Germany/ }));
+
+    const bankPicker = screen.getByRole('combobox', { name: 'Bank' });
+    await waitFor(() => expect(bankPicker).toBeEnabled());
+    await user.click(bankPicker);
+    await user.type(screen.getByPlaceholderText('Search banks…'), 'deut');
+    const option = await screen.findByRole('option', { name: /Deutsche Bank/ });
+    expect(option.querySelector('img')?.getAttribute('src')).toBe(
+      'https://enablebanking.com/brands/DE/Deutsche_Bank/'
+    );
+    await user.click(option);
+    expect(screen.getByRole('button', { name: /Continue to bank login/ })).toBeEnabled();
+  });
+
+  it('shows the saved logo next to a connected bank', () => {
+    const withLogo = {
+      ...session('a', 'Nordea', 120),
+      aspsp: { name: 'Nordea', country: 'FI', logo: 'https://enablebanking.com/brands/FI/Nordea/' },
+    };
+    const { container } = render(<EnableBankingBanksCard connection={connection([withLogo])} />, {
+      wrapper,
+    });
+    expect(
+      container.querySelector('img[src="https://enablebanking.com/brands/FI/Nordea/"]')
+    ).not.toBeNull();
   });
 });

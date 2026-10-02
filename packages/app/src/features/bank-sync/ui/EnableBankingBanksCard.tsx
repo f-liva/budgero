@@ -15,12 +15,12 @@ import { Button } from '@shared/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/ui/card';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { Label } from '@shared/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui/select';
 import { useAspsps, useRemoveBankSession, useStartBankAuthorization } from '../api/useBankSync';
 import type { Aspsp } from '../lib/enable-banking/client';
 import { isSessionExpired, sessionExpiresSoon } from '../lib/provider';
 import { AuthorizationCancelled, openBankLoginPopup } from '../model/bank-auth-popup';
 import { ENABLE_BANKING_CONTROL_PANEL_URL } from '../lib/enable-banking/client';
+import { BankLogo, CountryFlag, SearchPicker, type SearchPickerOption } from './SearchPicker';
 
 /** Countries Enable Banking covers (EEA and the UK). */
 const COUNTRIES = [
@@ -62,13 +62,15 @@ function guessCountry(): string {
   return region && COUNTRIES.includes(region) ? region : 'FI';
 }
 
-function countryName(code: string): string {
+function countryName(code: string, locale = getLocaleTag()): string {
   try {
-    return new Intl.DisplayNames([getLocaleTag()], { type: 'region' }).of(code) ?? code;
+    return new Intl.DisplayNames([locale], { type: 'region' }).of(code) ?? code;
   } catch {
     return code;
   }
 }
+
+const englishCountryName = (code: string) => countryName(code, 'en');
 
 /** Bank login in a popup, falling back to a full redirect when popups can't open. */
 function useBankLogin(onConnected?: () => void) {
@@ -113,60 +115,68 @@ function AddBankForm({
   const [bankName, setBankName] = useState('');
   const aspsps = useAspsps(connection, country);
   const bankLogin = useBankLogin(onConnected);
-  const countries = useMemo(
+  const countryOptions = useMemo<SearchPickerOption[]>(
     () =>
-      COUNTRIES.map((code) => ({ code, name: countryName(code) })).sort((a, b) =>
-        a.name.localeCompare(b.name)
-      ),
+      COUNTRIES.map((code) => ({
+        value: code,
+        label: countryName(code),
+        // Match the English name and the code too, whatever the UI language.
+        keywords: [code, englishCountryName(code)],
+        icon: <CountryFlag code={code} />,
+      })).sort((a, b) => a.label.localeCompare(b.label)),
     []
+  );
+  const bankOptions = useMemo<SearchPickerOption[]>(
+    () =>
+      (aspsps.data ?? []).map((aspsp) => ({
+        value: aspsp.name,
+        label: aspsp.name,
+        icon: <BankLogo src={aspsp.logo} />,
+        hint: aspsp.beta ? (
+          <Badge variant="outline" className="ml-auto text-[10px]">
+            <Trans>Beta</Trans>
+          </Badge>
+        ) : undefined,
+      })),
+    [aspsps.data]
   );
   const bank = aspsps.data?.find((aspsp) => aspsp.name === bankName);
 
   return (
     <div className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,10rem)_minmax(0,1fr)]">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]">
         <div className="space-y-1.5">
           <Label>
             <Trans>Country</Trans>
           </Label>
-          <Select
+          <SearchPicker
+            ariaLabel={t`Country`}
+            options={countryOptions}
             value={country}
-            onValueChange={(value) => {
+            onChange={(value) => {
               setCountry(value);
               setBankName('');
             }}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {countries.map(({ code, name }) => (
-                <SelectItem key={code} value={code}>
-                  {name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            placeholder={t`Choose your country`}
+            searchPlaceholder={t`Search countries…`}
+            emptyText={t`No country found.`}
+          />
         </div>
         <div className="space-y-1.5">
           <Label>
             <Trans>Bank</Trans>
           </Label>
-          <Select value={bankName} onValueChange={setBankName} disabled={!aspsps.data?.length}>
-            <SelectTrigger>
-              <SelectValue
-                placeholder={aspsps.isLoading ? t`Loading banks…` : t`Choose your bank`}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {aspsps.data?.map((aspsp) => (
-                <SelectItem key={aspsp.name} value={aspsp.name}>
-                  {aspsp.name}
-                  {aspsp.beta ? ' (beta)' : ''}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchPicker
+            ariaLabel={t`Bank`}
+            options={bankOptions}
+            value={bankName}
+            onChange={setBankName}
+            disabled={!aspsps.data?.length}
+            loading={aspsps.isLoading}
+            placeholder={aspsps.isLoading ? t`Loading banks…` : t`Choose your bank`}
+            searchPlaceholder={t`Search banks…`}
+            emptyText={t`No bank found.`}
+          />
         </div>
       </div>
       {aspsps.error && (
@@ -218,7 +228,11 @@ export function EnableBankingBanksCard({ connection }: { connection: BankConnect
   const showForm = adding || sessions.length === 0;
 
   const reconnect = (session: EnableBankingSession) =>
-    bankLogin.login(connection, { name: session.aspsp.name, country: session.aspsp.country });
+    bankLogin.login(connection, {
+      name: session.aspsp.name,
+      country: session.aspsp.country,
+      logo: session.aspsp.logo,
+    });
 
   return (
     <Card>
@@ -247,6 +261,7 @@ export function EnableBankingBanksCard({ connection }: { connection: BankConnect
               const until = formatRelativeToNow(new Date(session.validUntil), { addSuffix: true });
               return (
                 <li key={session.sessionId} className="flex items-center gap-3 px-3 py-2.5">
+                  <BankLogo src={session.aspsp.logo} className="h-7 w-7" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 text-sm font-medium">
                       <span className="truncate">{session.aspsp.name}</span>

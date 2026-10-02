@@ -826,12 +826,12 @@ msgstr "{count, plural, one {# transacción eliminada} other {# transacciones el
 #: src/features/transactions/api/useClearedShortcut.ts
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "{count, plural, one {# transaction marked cleared} other {# transactions marked cleared}}"
-msgstr "{count, plural, one {# transacción marcada como liquidada} other {# transacciones marcadas como liquidadas}}"
+msgstr "{count, plural, one {# transacción marcada como confirmada} other {# transacciones marcadas como confirmadas}}"
 
 #: src/features/transactions/api/useClearedShortcut.ts
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "{count, plural, one {# transaction marked uncleared} other {# transactions marked uncleared}}"
-msgstr "{count, plural, one {# transacción marcada como no liquidada} other {# transacciones marcadas como no liquidadas}}"
+msgstr "{count, plural, one {# transacción marcada como sin confirmar} other {# transacciones marcadas como sin confirmar}}"
 
 #: src/pages/settings/CurrencySettingsPage.tsx
 msgid "{count, plural, one {# transaction recalculated using fallback rates.} other {# transactions recalculated using fallback rates.}}"
@@ -4021,6 +4021,7 @@ msgid "Best for documents (~6GB)"
 msgstr "Ideal para documentos (~6GB)"
 
 #: src/app/layout/desktop-shell/SidebarNav.tsx
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
 #: src/pages/settings/bank-sync/BankSyncPage.tsx
 msgid "Beta"
 msgstr "Beta"
@@ -5021,6 +5022,10 @@ msgstr "Elige dónde archivar «{0}»."
 msgid "Choose your bank"
 msgstr "Elige tu banco"
 
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Choose your country"
+msgstr "Elige tu país"
+
 #: src/pages/settings/AppearancePage.tsx
 msgid "Choose your preferred color scheme"
 msgstr "Elige tu esquema de colores preferido"
@@ -5074,11 +5079,11 @@ msgstr "Limpiar selección"
 #: src/pages/accounts/components/AccountSummaryCards.tsx
 #: src/shared/lib/search-query-parser.ts
 msgid "Cleared"
-msgstr "Liquidado"
+msgstr "Confirmado"
 
 #: src/features/transactions/ui/ClearedToggle.tsx
 msgid "Cleared — mark as uncleared"
-msgstr "Liquidada: marcar como no liquidada"
+msgstr "Confirmada: marcar como sin confirmar"
 
 #. placeholder {0}: formatBankAmount(cleared, local.Currency)
 #: src/features/bank-sync/ui/BankConnectionPanel.tsx
@@ -5087,15 +5092,15 @@ msgstr "Confirmado {0}"
 
 #: src/features/account-management/ui/ReconcileAccountDialog.tsx
 msgid "Cleared Balance"
-msgstr "Saldo liquidado"
+msgstr "Saldo confirmado"
 
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "Cleared status"
-msgstr "Estado de liquidación"
+msgstr "Estado de confirmación"
 
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "Cleared status (press {CLEARED_SHORTCUT_KEY})"
-msgstr "Estado de liquidación (tecla {CLEARED_SHORTCUT_KEY})"
+msgstr "Estado de confirmación (tecla {CLEARED_SHORTCUT_KEY})"
 
 #. placeholder {0}: actionDialog.user.email
 #: src/pages/admin/admin-users/useAdminUsersState.ts
@@ -5680,7 +5685,7 @@ msgstr "No se ha podido guardar la consulta."
 #: src/features/transactions/ui/ClearedToggle.tsx
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "Could not update cleared status"
-msgstr "No se pudo actualizar el estado de liquidación"
+msgstr "No se pudo actualizar el estado de confirmación"
 
 #: src/pages/settings/components/GoalFundingSettingsCard.tsx
 msgid "Could not update goal funding settings"
@@ -7261,7 +7266,7 @@ msgstr "Introduce el nombre del informe..."
 
 #: src/features/account-management/ui/ReconcileAccountDialog.tsx
 msgid "Enter the balance your bank shows. It is compared with your cleared balance; cleared transactions are then locked, and uncleared ones stay open."
-msgstr "Introduce el saldo que muestra tu banco. Se compara con tu saldo liquidado; las transacciones liquidadas se bloquean y las no liquidadas quedan abiertas."
+msgstr "Introduce el saldo que muestra tu banco. Se compara con tu saldo confirmado; las transacciones confirmadas se bloquean y las sin confirmar quedan abiertas."
 
 #: src/features/budget-sharing/ui/RedeemInviteDialog.tsx
 msgid "Enter the invite secret first."
@@ -10106,7 +10111,7 @@ msgstr "¿Marcar “{0}” como listo?"
 
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "Mark cleared"
-msgstr "Marcar como liquidada"
+msgstr "Marcar como confirmada"
 
 #: src/features/rules/ui/rule-editor/RuleMetadataForm.tsx
 msgid "Mark complete after the first retroactive run."
@@ -10123,7 +10128,7 @@ msgstr "Marcar como listo"
 
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "Mark uncleared"
-msgstr "Marcar como no liquidada"
+msgstr "Marcar como sin confirmar"
 
 #: src/app/startup/screens.tsx
 #: src/features/budget-sharing/ui/RedeemInviteDialog.tsx
@@ -10988,6 +10993,10 @@ msgstr "No hay cargos automáticos al terminar tu prueba. Elige un plan solo si 
 msgid "No backups yet"
 msgstr "Aún no hay copias de seguridad"
 
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "No bank found."
+msgstr "No se encontró ningún banco."
+
 #. placeholder {0}: args.query
 #: src/features/ai/lib/tools/query-docs.ts
 msgid "No Budgero docs matched \"{0}\". Available docs: {titles}. You can answer from general knowledge but say it's not from the official docs."
@@ -11095,6 +11104,10 @@ msgstr "Sin metadatos de columna"
 #: src/features/chat/ui/chat-panel/ChatConversationList.tsx
 msgid "No conversations yet"
 msgstr "Aún no hay conversaciones"
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "No country found."
+msgstr "No se encontró ningún país."
 
 #: src/pages/auth/AuthPage.tsx
 msgid "No credit card required."
@@ -14510,6 +14523,10 @@ msgstr "Buscar cuentas…"
 msgid "Search and commands"
 msgstr "Búsqueda y comandos"
 
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Search banks…"
+msgstr "Buscar bancos…"
+
 #: src/pages/admin/admin-users/UserSearchCard.tsx
 msgid "Search by ID, email, or name..."
 msgstr "Buscar por ID, correo o nombre..."
@@ -14533,6 +14550,10 @@ msgstr "Buscar categorías…"
 #: src/features/category-management/ui/SearchableCategorySelect.tsx
 msgid "Search category..."
 msgstr "Buscar categoría..."
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Search countries…"
+msgstr "Buscar países…"
 
 #: src/features/currencies/ui/CurrencySelector.tsx
 msgid "Search currencies..."
@@ -16479,7 +16500,7 @@ msgstr "Estas fechas pueden interpretarse de dos maneras. Selecciona el formato 
 
 #: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
 msgid "They arrive uncleared and are updated once your bank books them. Pending transactions your bank drops, like a released card hold, are removed."
-msgstr "Llegan como no liquidadas y se actualizan cuando tu banco las contabiliza. Las transacciones pendientes que tu banco descarta, como una retención de tarjeta liberada, se eliminan."
+msgstr "Llegan sin confirmar y se actualizan cuando tu banco las contabiliza. Las transacciones pendientes que tu banco descarta, como una retención de tarjeta liberada, se eliminan."
 
 #: src/pages/settings/PayeesPage.tsx
 msgid "They have been cleared from existing transactions."
@@ -16670,7 +16691,7 @@ msgstr "Este espacio de trabajo compartido está bloqueado hasta que el propieta
 
 #: src/features/transactions/ui/StatusIndicatorPopover.tsx
 msgid "This transaction has been reconciled and is locked as cleared."
-msgstr "Esta transacción está conciliada y bloqueada como liquidada."
+msgstr "Esta transacción está conciliada y bloqueada como confirmada."
 
 #: src/features/transactions/ui/StatusIndicatorPopover.tsx
 #~ msgid "This transaction has been reconciled."
@@ -16858,7 +16879,7 @@ msgstr "Hoy"
 
 #: src/app/layout/desktop-shell/KeyboardShortcutsDialog.tsx
 msgid "Toggle cleared on selected rows"
-msgstr "Alternar liquidado en las filas seleccionadas"
+msgstr "Alternar confirmado en las filas seleccionadas"
 
 #: src/shared/ui/theme-switch.tsx
 msgid "Toggle color mode"
@@ -17469,11 +17490,11 @@ msgstr "Sin categorizar ({uncategorizedCount})"
 #: src/features/transactions/ui/ClearedToggle.tsx
 #: src/shared/lib/search-query-parser.ts
 msgid "Uncleared"
-msgstr "No liquidado"
+msgstr "Sin confirmar"
 
 #: src/features/transactions/ui/ClearedToggle.tsx
 msgid "Uncleared — mark as cleared"
-msgstr "No liquidada: marcar como liquidada"
+msgstr "Sin confirmar: marcar como confirmada"
 
 #: src/features/transactions/ui/TransactionsToolbar.tsx
 msgid "Uncleared ({unclearedCount})"

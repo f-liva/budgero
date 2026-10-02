@@ -4021,6 +4021,7 @@ msgid "Best for documents (~6GB)"
 msgstr "Idéal pour les documents (~6 Go)"
 
 #: src/app/layout/desktop-shell/SidebarNav.tsx
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
 #: src/pages/settings/bank-sync/BankSyncPage.tsx
 msgid "Beta"
 msgstr "Bêta"
@@ -5020,6 +5021,10 @@ msgstr "Choisir où classer « {0} »."
 #: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
 msgid "Choose your bank"
 msgstr "Choisissez votre banque"
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Choose your country"
+msgstr "Choisissez votre pays"
 
 #: src/pages/settings/AppearancePage.tsx
 msgid "Choose your preferred color scheme"
@@ -10988,6 +10993,10 @@ msgstr "Aucun prélèvement automatique à la fin de votre essai. Choisissez une
 msgid "No backups yet"
 msgstr "Aucune sauvegarde pour le moment"
 
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "No bank found."
+msgstr "Aucune banque trouvée."
+
 #. placeholder {0}: args.query
 #: src/features/ai/lib/tools/query-docs.ts
 msgid "No Budgero docs matched \"{0}\". Available docs: {titles}. You can answer from general knowledge but say it's not from the official docs."
@@ -11095,6 +11104,10 @@ msgstr "Aucune métadonnée de colonne"
 #: src/features/chat/ui/chat-panel/ChatConversationList.tsx
 msgid "No conversations yet"
 msgstr "Aucune conversation pour le moment"
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "No country found."
+msgstr "Aucun pays trouvé."
 
 #: src/pages/auth/AuthPage.tsx
 msgid "No credit card required."
@@ -14510,6 +14523,10 @@ msgstr "Rechercher des comptes…"
 msgid "Search and commands"
 msgstr "Recherche et commandes"
 
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Search banks…"
+msgstr "Rechercher une banque…"
+
 #: src/pages/admin/admin-users/UserSearchCard.tsx
 msgid "Search by ID, email, or name..."
 msgstr "Rechercher par ID, e-mail ou nom…"
@@ -14533,6 +14550,10 @@ msgstr "Rechercher des catégories…"
 #: src/features/category-management/ui/SearchableCategorySelect.tsx
 msgid "Search category..."
 msgstr "Rechercher une catégorie..."
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Search countries…"
+msgstr "Rechercher un pays…"
 
 #: src/features/currencies/ui/CurrencySelector.tsx
 msgid "Search currencies..."

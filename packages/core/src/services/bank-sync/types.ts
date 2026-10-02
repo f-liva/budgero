@@ -89,7 +89,8 @@ export interface BankFeedSettings {
 /** One authorized Enable Banking session: a bank login good for ~180 days. */
 export interface EnableBankingSession {
   sessionId: string;
-  aspsp: { name: string; country: string };
+  /** `logo` is Enable Banking's official logo URL, when the bank list had one. */
+  aspsp: { name: string; country: string; logo?: string };
   /** ISO timestamp the consent expires. */
   validUntil: string;
   accounts: EnableBankingSessionAccount[];
