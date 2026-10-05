@@ -21,10 +21,42 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    version: 'v1.16.0',
+    date: 'October 5, 2026',
+    summary:
+      'Adds EU bank sync (beta) through your own Enable Banking connection, a Sync status page, and fixes the month label being cut off with wide theme fonts.',
+    isLatest: true,
+    items: [
+      {
+        type: 'new',
+        title: 'EU bank sync (beta)',
+        description:
+          'Connect European banks through your own Enable Banking account. Bank traffic passes through Budgero only as encrypted data it cannot read. SimpleFIN and Enable Banking can be connected side by side.',
+      },
+      {
+        type: 'improved',
+        title: 'Bank sync feed settings',
+        description:
+          'For each linked account, choose whether pending transactions import as uncleared, and which fields become the date, payee and memo. Country and bank pickers are searchable and show bank logos.',
+      },
+      {
+        type: 'new',
+        title: 'Sync status page',
+        description:
+          'Settings → Sync status shows pending changes and the server’s change log, and can download your budget again.',
+      },
+      {
+        type: 'fixed',
+        title: 'Month label truncation',
+        description: 'The month picker label no longer gets cut off with wide theme fonts.',
+      },
+    ],
+  },
+  {
     version: 'v1.15.1',
     date: 'October 2, 2026',
     summary: 'Fixes the Bank sync settings page opening blank.',
-    isLatest: true,
+    isLatest: false,
     items: [
       {
         type: 'fixed',
