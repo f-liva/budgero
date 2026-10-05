@@ -50,6 +50,10 @@ Eerlijke zero-knowledge-beweringen vereisen dat je beide kanten hardop uitspreek
       <td>De grootte en frequentie van versleutelde blobs</td>
       <td>Je hoofdwachtwoord of enige afgeleide sleutel</td>
     </tr>
+    <tr>
+      <td>Dat je verkeer doorstuurt naar Enable Banking, en de timing en grootte daarvan</td>
+      <td>Bankgegevens, bankinloggegevens en sleutels van je banksyncprovider</td>
+    </tr>
   </tbody>
 </table>
 
@@ -64,6 +68,16 @@ Budgero Cloud wordt gehost in **Finland, onder EU-jurisdictie** — en de app st
 ## Delen zonder het model te verzwakken
 
 Gedeelde budgetten behouden dezelfde garanties: sleutels voor gedeelde leden worden uitgewisseld via geheimen in uitnodigingslinks die in URL-fragmenten worden meegedragen (nooit naar de server gestuurd) en opnieuw worden ingepakt onder elk lids eigen hoofdwachtwoord. De server weet dat twee rekeningen een werkruimte delen — nooit wat erin zit. Details in [Budgetten delen](/docs/sharing).
+
+## Banksync zonder zero-knowledge op te geven
+
+[Banksync](/docs/bank-sync-enable-banking) is optioneel en houdt dezelfde belofte: Budgero's servers zien nooit je bankgegevens, bankinloggegevens of providersleutels.
+
+- **SimpleFIN** (VS en Canada) wordt rechtstreeks vanuit je browser aangeroepen. Budgero's servers zijn er helemaal niet bij betrokken. Details in [Banksync met SimpleFIN](/docs/bank-sync-simplefin).
+- **Enable Banking** (Europa) kan niet rechtstreeks vanuit een browser worden aangeroepen, dus opent je browser een eigen TLS 1.3-sessie, end-to-end naar Enable Banking, en stuurt Budgero's server alleen de versleutelde bytes door. Die server heeft geen sleutels en kan die bytes niet lezen. Details in [Banksync met Enable Banking](/docs/bank-sync-enable-banking).
+- Je providersleutels en verbindingsgegevens worden opgeslagen in je versleutelde budget, net als al het andere. Je logt in bij je bank op de site van je bank (Enable Banking) of binnen SimpleFIN Bridge, nooit in Budgero.
+
+Eén partij ziet je bankgegevens wel: de provider die je hebt gekozen. SimpleFIN of Enable Banking maakt verbinding met je bank en leest je transacties onder zijn eigen privacybeleid. Dat hoort bij elke bankverbinding. Wil je geen enkele derde partij erbij betrekken, laat banksync dan uit; handmatige invoer en [bestandsimport](/docs/csv-import) werken precies zoals voorheen.
 
 ## Een apparaat verliezen
 

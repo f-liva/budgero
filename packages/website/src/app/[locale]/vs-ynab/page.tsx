@@ -97,8 +97,8 @@ const comparisonData = (copy: CopyTranslator) => [
   },
   {
     feature: copy('u_0fe68e5b1c82'),
-    cloud: false,
-    selfHost: false,
+    cloud: true,
+    selfHost: true,
     ynab: true,
     cloudNote: copy('u_a1051ed81723'),
     ynabNote: copy('u_22df1744fe78'),

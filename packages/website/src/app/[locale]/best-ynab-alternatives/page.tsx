@@ -64,7 +64,8 @@ const summaryData = (copy: CopyTranslator) => [
     zeroBased: true,
     multiCurrency: true,
     encryption: copy('u_e38163aa3fd2'),
-    bankSync: false,
+    bankSync: true,
+    bankSyncNote: copy('u_6e7d19eaf95d'),
   },
   {
     app: 'Monarch Money',

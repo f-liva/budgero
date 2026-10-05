@@ -9,7 +9,7 @@ takeaways:
   - "Rückwirkende Ausführungen, Ausführungsverlauf und das Sicherheitsnetz zum Rückgängigmachen mit einem Klick."
 ---
 
-Manuelles Budgetieren muss nicht repetitiv sein. Das Regelwerk überwacht Transaktionen, sobald sie eintreffen — aus Importen, manueller Eingabe oder der [Push API](/docs/push-api) — und wendet die Bereinigung an, die du sonst von Hand vornehmen würdest: Empfängernamen korrigieren, Kategorien zuweisen, Memos entrümpeln. Du definierst das Muster einmal; Budgero wendet es für immer an.
+Budgetieren von Hand muss nicht repetitiv sein, und Bankfeeds müssen nicht unordentlich sein. Das Regelwerk überwacht Transaktionen, sobald sie eintreffen — aus Importen, [Banksync](/docs/bank-sync-enable-banking), manueller Eingabe oder der [Push API](/docs/push-api) — und wendet die Bereinigung an, die du sonst von Hand vornehmen würdest: Empfängernamen korrigieren, Kategorien zuweisen, Memos entrümpeln. Du definierst das Muster einmal; Budgero wendet es für immer an.
 
 Regeln findest du unter **Einstellungen → Regeln**.
 
@@ -44,7 +44,7 @@ Jede Regel läuft in einem von drei Modi:
   </tbody>
 </table>
 
-Fortlaufende Regeln werden bei jedem Eingabeweg ausgelöst — CSV/PDF-Importe, manuelle Eingabe, Push API. Einmalige Regeln markieren sich nach ihrem Durchlauf als verbraucht und werden erst nach einem Reset erneut ausgelöst. Auto-Ausfüllen-Regeln ändern nie etwas von selbst; sie füllen Felder im Eingabeformular als Vorschläge vor, einmal pro Formularsitzung.
+Fortlaufende Regeln werden bei jedem Eingabeweg ausgelöst — CSV/PDF-Importe, Banksync, manuelle Eingabe, Push API. Einmalige Regeln markieren sich nach ihrem Durchlauf als verbraucht und werden erst nach einem Reset erneut ausgelöst. Auto-Ausfüllen-Regeln ändern nie etwas von selbst; sie füllen Felder im Eingabeformular als Vorschläge vor, einmal pro Formularsitzung.
 
 ## Bedingungen: Worauf eine Regel zutrifft
 

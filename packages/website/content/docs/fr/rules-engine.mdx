@@ -9,7 +9,7 @@ takeaways:
   - "Exécutions rétroactives, historique d'exécution et filet de sécurité d'annulation en un clic."
 ---
 
-Une approche budgétaire axée d'abord sur la saisie manuelle n'a pas à être répétitive. Le Moteur de règles surveille les transactions au fur et à mesure de leur arrivée — qu'elles proviennent d'imports, d'une saisie manuelle ou de la [Push API](/docs/push-api) — et applique le nettoyage que vous feriez autrement à la main : corriger les noms des bénéficiaires, affecter les catégories, nettoyer les mémos. Vous définissez le modèle une fois ; Budgero l'applique pour toujours.
+Tenir son budget à la main n'a pas à être répétitif, et les flux bancaires n'ont pas à être désordonnés. Le Moteur de règles surveille les transactions au fur et à mesure de leur arrivée — qu'elles proviennent d'imports, de la [synchronisation bancaire](/docs/bank-sync-enable-banking), d'une saisie manuelle ou de la [Push API](/docs/push-api) — et applique le nettoyage que vous feriez autrement à la main : corriger les noms des bénéficiaires, affecter les catégories, nettoyer les mémos. Vous définissez le modèle une fois ; Budgero l'applique pour toujours.
 
 Les règles se trouvent dans **Paramètres → Règles**.
 
@@ -44,7 +44,7 @@ Chaque règle s'exécute dans l'un des trois modes suivants :
   </tbody>
 </table>
 
-Les règles continues se déclenchent sur chaque canal de saisie — imports CSV/PDF, saisie manuelle, Push API. Les règles uniques se marquent comme consommées après leur exécution et ne se redéclenchent pas tant qu'elles n'ont pas été réinitialisées. Les règles de saisie automatique ne modifient jamais quoi que ce soit par elles-mêmes ; elles pré-remplissent les champs sous forme de suggestions dans le formulaire de saisie, une fois par session de formulaire.
+Les règles continues se déclenchent sur chaque canal de saisie — imports CSV/PDF, synchronisation bancaire, saisie manuelle, Push API. Les règles uniques se marquent comme consommées après leur exécution et ne se redéclenchent pas tant qu'elles n'ont pas été réinitialisées. Les règles de saisie automatique ne modifient jamais quoi que ce soit par elles-mêmes ; elles pré-remplissent les champs sous forme de suggestions dans le formulaire de saisie, une fois par session de formulaire.
 
 ## Conditions : ce qu'une règle cible
 

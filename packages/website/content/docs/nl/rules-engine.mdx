@@ -9,7 +9,7 @@ takeaways:
   - "Retro-uitvoeringen, uitvoeringsgeschiedenis en het vangnet om met één klik ongedaan te maken."
 ---
 
-Handmatig budgetteren hoeft niet repetitief te zijn. De Regel-engine houdt transacties in de gaten zodra ze binnenkomen — via imports, handmatige invoer of de [Push API](/docs/push-api) — en voert de opschoning uit die je anders met de hand zou doen: begunstigdenamen corrigeren, categorieën toewijzen, notities opschonen. Jij definieert het patroon één keer; Budgero past het voor altijd toe.
+Handmatig budgetteren hoeft niet repetitief te zijn, en bankfeeds hoeven niet rommelig te zijn. De Regel-engine houdt transacties in de gaten zodra ze binnenkomen — via imports, [banksync](/docs/bank-sync-enable-banking), handmatige invoer of de [Push API](/docs/push-api) — en voert de opschoning uit die je anders met de hand zou doen: begunstigdenamen corrigeren, categorieën toewijzen, notities opschonen. Jij definieert het patroon één keer; Budgero past het voor altijd toe.
 
 Regels vind je onder **Instellingen → Regels**.
 
@@ -44,7 +44,7 @@ Elke regel draait in een van drie modi:
   </tbody>
 </table>
 
-Continue regels worden geactiveerd op elk invoerpad — CSV/PDF-imports, handmatige invoer, Push API. Eenmalige regels markeren zichzelf als verbruikt na hun uitvoering en worden niet opnieuw geactiveerd tot ze worden gereset. Regels voor automatisch invullen wijzigen nooit zelf iets; ze vullen velden vooraf als suggesties in het invoerformulier, één keer per formuliersessie.
+Continue regels worden geactiveerd op elk invoerpad — CSV/PDF-imports, banksync, handmatige invoer, Push API. Eenmalige regels markeren zichzelf als verbruikt na hun uitvoering en worden niet opnieuw geactiveerd tot ze worden gereset. Regels voor automatisch invullen wijzigen nooit zelf iets; ze vullen velden vooraf als suggesties in het invoerformulier, één keer per formuliersessie.
 
 ## Voorwaarden: waar een regel op matcht
 
