@@ -12,6 +12,8 @@ export interface ImportIdentity {
   payee: string;
   memo: string;
   currency: string;
+  /** Imported from a bank while still pending; settled once the bank books it. */
+  pending?: boolean;
 }
 export interface DuplicateInput extends ImportIdentity {
   index: number;

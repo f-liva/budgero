@@ -28,8 +28,8 @@ Two warnings from people who learned the hard way: export *all dates*, not the d
 
 Where you should go depends on why you're leaving:
 
-- **Leaving over price, privacy, or because you've moved abroad** → [Budgero](/monarch-money-alternative). Zero-based budgeting, 168 currencies, end-to-end encryption, works in any country, at roughly a third of Monarch's price — or free if you [self-host](/self-hostable). The trade-off: no automatic bank sync, by design.
-- **Leaving because Plaid keeps breaking, but you still want sync** → another sync-based app will inherit the same plumbing. Simplifi uses its own Quicken connections and PocketSmith offers feeds in many countries; both still hold your data server-side.
+- **Leaving over price, privacy, or because you've moved abroad** → [Budgero](/monarch-money-alternative). Zero-based budgeting, 168 currencies, end-to-end encryption, works in any country, at roughly a third of Monarch's price — or free if you [self-host](/self-hostable). Bank sync is optional (beta) and zero-knowledge: bring your own [SimpleFIN](/docs/bank-sync-simplefin) or [Enable Banking](/docs/bank-sync-enable-banking) connection, or skip it and import files.
+- **Leaving because Plaid keeps breaking, but you still want sync** → another Plaid-based app will inherit the same plumbing. Simplifi uses its own Quicken connections and PocketSmith offers feeds in many countries; both still hold your data server-side. Budgero's optional bank sync skips Plaid: it runs on a SimpleFIN or Enable Banking connection you own, and Budgero's servers never see the bank data.
 - **Leaving for multi-currency reasons specifically** → your shortlist is Budgero, PocketSmith, or Lunch Money. We compare all of them in the [9-app comparison](/best-ynab-alternatives).
 - **Just want free** → EveryDollar's manual tier, Actual Budget (self-hosted), or Budgero Self-Host.
 
@@ -56,7 +56,7 @@ Your transaction history — years of it — survives the move. Recurring rules 
 
 Switching has real costs, and pretending otherwise helps nobody:
 
-- **Automatic bank sync.** If you go to Budgero or Actual, transactions are entered manually or via CSV import. Many people find this *improves* their awareness of spending — it's the original YNAB thesis — but it is a habit change.
+- **Zero-setup bank sync.** Monarch's feeds work as soon as you sign in to your bank. Budgero's bank sync is optional, in beta, and bring-your-own-key: in the US and Canada you keep your own SimpleFIN subscription (a small fee paid to SimpleFIN), and in Europe you register a free Enable Banking application, which takes about 15 minutes once. You can also skip it and enter transactions manually or via CSV import. Many people find that *improves* their awareness of spending — it's the original YNAB thesis — but it is a habit change.
 - **Investment tracking.** Monarch's portfolio view is genuinely good. Budgero tracks account balances, not holdings. If daily portfolio analytics matter to you, keep a brokerage app for that job.
 - **The polish of a US-funded product.** Monarch ships fast and looks great. Smaller alternatives trade some of that for privacy, price, or geography.
 

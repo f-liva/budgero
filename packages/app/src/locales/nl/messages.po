@@ -138,6 +138,10 @@ msgstr "\"{0}\" bijgewerkt naar \"{1}\"."
 msgid "\"{0}\" was removed and cleared from transactions."
 msgstr "\"{0}\" is verwijderd en gewist uit transacties."
 
+#: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
+msgid "\"K-MARKET KAMPPI\" becomes \"K-Market Kamppi\". Names with lowercase letters stay as they are."
+msgstr "\"K-MARKET KAMPPI\" wordt \"K-Market Kamppi\". Namen met kleine letters blijven zoals ze zijn."
+
 #. placeholder {0}: formatMaskedMilli(accountLocalizer, value, privacyMaskNumbers)
 #: src/features/transactions/ui/SecondaryAmount.tsx
 msgid "({0} original)"
@@ -409,6 +413,11 @@ msgstr "{0}• {1} regel"
 msgid "{0} | Eligible {1} | Already sent {2}{3}"
 msgstr "{0}| In aanmerking {1}| Al verzonden {2}{3}"
 
+#. placeholder {0}: session.accounts.length
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "{0} accounts"
+msgstr "{0} rekeningen"
+
 #. placeholder {0}: rule.actions.length
 #: src/pages/settings/AutomationRulesPage.tsx
 #~ msgid "{0} action(s)"
@@ -467,6 +476,12 @@ msgstr "{0}diagram{1}"
 #: src/pages/settings/AutomationRulesPage.tsx
 #~ msgid "{0} condition(s)"
 #~ msgstr "{0} voorwaarde(n)"
+
+#. placeholder {0}: session.aspsp.name
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+#: src/pages/settings/bank-sync/BankSyncCallbackPage.tsx
+msgid "{0} connected"
+msgstr "{0} gekoppeld"
 
 #. placeholder {0}: run.summary.duplicatesSkipped ?? 0
 #. placeholder {1}: run.summary.userSkipped ?? 0
@@ -669,8 +684,13 @@ msgstr "{0} is toegevoegd aan je register."
 
 #. placeholder {0}: link.ExternalName
 #: src/features/bank-sync/model/run-bank-sync.ts
-msgid "{0} wasn't returned by SimpleFIN."
-msgstr "{0} is niet door SimpleFIN teruggegeven."
+msgid "{0} wasn't returned by {provider}."
+msgstr "{0} is niet teruggegeven door {provider}."
+
+#. placeholder {0}: link.ExternalName
+#: src/features/bank-sync/model/run-bank-sync.ts
+#~ msgid "{0} wasn't returned by SimpleFIN."
+#~ msgstr "{0} is niet door SimpleFIN teruggegeven."
 
 #. placeholder {0}: budget.Name
 #: src/features/budget-management/ui/WorkspaceBudgetList.tsx
@@ -806,12 +826,12 @@ msgstr "{count, plural, one {# transactie verwijderd} other {# transacties verwi
 #: src/features/transactions/api/useClearedShortcut.ts
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "{count, plural, one {# transaction marked cleared} other {# transactions marked cleared}}"
-msgstr "{count, plural, one {# transactie als verwerkt gemarkeerd} other {# transacties als verwerkt gemarkeerd}}"
+msgstr "{count, plural, one {# transactie als bevestigd gemarkeerd} other {# transacties als bevestigd gemarkeerd}}"
 
 #: src/features/transactions/api/useClearedShortcut.ts
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "{count, plural, one {# transaction marked uncleared} other {# transactions marked uncleared}}"
-msgstr "{count, plural, one {# transactie als niet verwerkt gemarkeerd} other {# transacties als niet verwerkt gemarkeerd}}"
+msgstr "{count, plural, one {# transactie als niet bevestigd gemarkeerd} other {# transacties als niet bevestigd gemarkeerd}}"
 
 #: src/pages/settings/CurrencySettingsPage.tsx
 msgid "{count, plural, one {# transaction recalculated using fallback rates.} other {# transactions recalculated using fallback rates.}}"
@@ -962,6 +982,10 @@ msgstr "{normalized, plural, one {Hoofdwachtwoord wordt # dag onthouden op dit a
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "{numSelected} selected"
 msgstr "{numSelected} geselecteerd"
+
+#: src/features/bank-sync/lib/provider.ts
+msgid "{org} needs attention in SimpleFIN Bridge. Sign in there and fix the connection, then sync again."
+msgstr "{org} heeft aandacht nodig in SimpleFIN Bridge. Log daar in, herstel de koppeling en synchroniseer opnieuw."
 
 #: src/pages/accounts/components/AccountGroupSection.tsx
 #: src/pages/accounts/components/NetWorthCard.tsx
@@ -2496,6 +2520,10 @@ msgstr "90 dagen"
 msgid "A {0} to {budgetCurrency} rate is required to save the received amount."
 msgstr "Een wisselkoers van {0} naar {budgetCurrency} is nodig om het ontvangen bedrag op te slaan."
 
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "A bank returned no accounts. In the <0>control panel</0>, link those accounts to your app, then reconnect the bank."
+msgstr "Een bank gaf geen rekeningen terug. Koppel die rekeningen in het <0>control panel</0> aan je app en koppel de bank daarna opnieuw."
+
 #: src/pages/settings/subscription/CancelDialog.tsx
 msgid "A brief description helps us understand the issue."
 msgstr "Een korte beschrijving helpt ons het probleem te begrijpen."
@@ -2561,9 +2589,30 @@ msgstr "Alles accepteren"
 msgid "Access blocked"
 msgstr "Toegang geblokkeerd"
 
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Access ended {until}. Reconnect to keep syncing."
+msgstr "Toegang verlopen {until}. Koppel opnieuw om te blijven synchroniseren."
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Access expires {until}"
+msgstr "Toegang verloopt {until}"
+
 #: src/features/subscription/ui/SharedWorkspaceAccessRequired.tsx
 msgid "Access Required"
 msgstr "Toegang vereist"
+
+#. placeholder {0}: session.aspsp.name
+#: src/features/bank-sync/lib/provider.ts
+msgid "Access to {0} expired. Reconnect it in Settings › Bank sync."
+msgstr "Toegang tot {0} is verlopen. Koppel opnieuw via Instellingen › Banksync."
+
+#: src/features/bank-sync/ui/BankAutoSync.tsx
+msgid "Access to {bank} expired. Reconnect it in Settings › Bank sync."
+msgstr "Toegang tot {bank} is verlopen. Koppel opnieuw via Instellingen › Banksync."
+
+#: src/features/bank-sync/ui/BankAutoSync.tsx
+msgid "Access to {bank} expires soon. Reconnect it in Settings › Bank sync."
+msgstr "Toegang tot {bank} verloopt binnenkort. Koppel opnieuw via Instellingen › Banksync."
 
 #: src/pages/settings/subscription/SubscriptionStatusCard.tsx
 msgid "Access Type:"
@@ -2838,6 +2887,10 @@ msgstr "Voeg ten minste één actie toe die Budgero moet uitvoeren."
 #: src/features/rules/ui/rule-editor/rule-editor.utils.ts
 msgid "Add at least one condition to control when the rule runs."
 msgstr "Voeg ten minste één voorwaarde toe om te bepalen wanneer de regel wordt uitgevoerd."
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Add bank"
+msgstr "Bank toevoegen"
 
 #: src/features/budgeting/ui/BudgetContextPanel.tsx
 msgid "Add budget categories to view context insights."
@@ -3238,6 +3291,14 @@ msgstr "Al gepland"
 msgid "Also add the reverse rate{0}"
 msgstr "Ook de omgekeerde wisselkoers toevoegen{0}"
 
+#: src/features/bank-sync/ui/ConnectBankCard.tsx
+msgid "Also connect European banks (Enable Banking)"
+msgstr "Ook Europese banken koppelen (Enable Banking)"
+
+#: src/features/bank-sync/ui/ConnectBankCard.tsx
+msgid "Also connect US & Canada banks (SimpleFIN)"
+msgstr "Ook banken uit de VS & Canada koppelen (SimpleFIN)"
+
 #: src/shared/lib/analytics/klaro-config.ts
 msgid "Always on"
 msgstr "Altijd aan"
@@ -3410,6 +3471,10 @@ msgstr "Weergave"
 #: src/pages/settings/AboutPage.tsx
 msgid "Application Details"
 msgstr "App-details"
+
+#: src/features/bank-sync/ui/EnableBankingSetupCard.tsx
+msgid "Application ID"
+msgstr "Applicatie-ID"
 
 #. placeholder {0}: toApply.length
 #: src/features/ai/ui/AICategorizeDialog.tsx
@@ -3685,6 +3750,10 @@ msgstr "Automatisch categoriseren"
 msgid "Autofill"
 msgstr "Automatisch invullen"
 
+#: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
+msgid "Automatic"
+msgstr "Automatisch"
+
 #: src/pages/settings/ai/AISettingsPage.tsx
 msgid "Automatically categorize uncategorized transactions using AI analysis of payee names and memos."
 msgstr "Categoriseer automatisch niet-gecategoriseerde transacties met behulp van AI-analyse van begunstigdenamen en memo's."
@@ -3799,6 +3868,10 @@ msgstr "Terug"
 msgid "Back to App"
 msgstr "Terug naar app"
 
+#: src/pages/settings/bank-sync/BankSyncCallbackPage.tsx
+msgid "Back to bank sync"
+msgstr "Terug naar banksync"
+
 #: src/pages/JoinWorkspacePage.tsx
 msgid "Back to Budgero"
 msgstr "Terug naar Budgero"
@@ -3854,6 +3927,7 @@ msgid "Balances match - reconciliation will mark transactions as reconciled"
 msgstr "Saldo's komen overeen - afstemming markeert transacties als afgestemd"
 
 #: src/features/bank-sync/ui/BankReviewDialog.tsx
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
 msgid "Bank"
 msgstr "Bank"
 
@@ -3865,6 +3939,19 @@ msgstr "Bankrekeningen"
 #: src/features/bank-sync/ui/BankSyncButton.tsx
 msgid "Bank balance {0}"
 msgstr "Banksaldo {0}"
+
+#: src/features/bank-sync/model/bank-auth-popup.ts
+msgid "Bank connected. You can close this window."
+msgstr "Bank gekoppeld. Je kunt dit venster sluiten."
+
+#: src/features/bank-sync/ui/BankConnectionPanel.tsx
+#: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
+msgid "Bank feed settings"
+msgstr "Instellingen bankfeed"
+
+#: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
+msgid "Bank feed settings saved"
+msgstr "Instellingen bankfeed opgeslagen"
 
 #: src/pages/settings/bank-sync/BankSyncPage.tsx
 #: src/shared/model/nav-registry.ts
@@ -3881,7 +3968,7 @@ msgstr "Banksync mislukt"
 msgid "Bank sync finished"
 msgstr "Banksync voltooid"
 
-#: src/features/bank-sync/ui/ConnectBankCard.tsx
+#: src/features/bank-sync/ui/ConnectSimpleFINCard.tsx
 msgid "Bank sync uses your own SimpleFIN Bridge subscription. Budgero talks to SimpleFIN directly from this device; our servers never see your bank data."
 msgstr "Banksync gebruikt je eigen SimpleFIN Bridge-abonnement. Budgero praat rechtstreeks vanaf dit apparaat met SimpleFIN; onze servers zien je bankgegevens nooit."
 
@@ -3892,6 +3979,10 @@ msgstr "Bank gesynchroniseerd {syncedAgo}"
 #: src/features/import/lib/import-display-text.ts
 msgid "Bank transaction ID was already imported"
 msgstr "Banktransactie-ID is al geïmporteerd"
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Banks"
+msgstr "Banken"
 
 #: src/features/transactions/ui/form/DuplicateTransactionHint.tsx
 msgid "Banks often list a pending charge and the settled one on different dates. This flags transactions in the same account with a similar amount (within {tolerance}) up to {days} days apart."
@@ -3930,6 +4021,7 @@ msgid "Best for documents (~6GB)"
 msgstr "Ideaal voor documenten (~6GB)"
 
 #: src/app/layout/desktop-shell/SidebarNav.tsx
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
 #: src/pages/settings/bank-sync/BankSyncPage.tsx
 msgid "Beta"
 msgstr "Beta"
@@ -3998,6 +4090,10 @@ msgstr "Blog of artikel"
 #: src/pages/settings/AppearancePage.tsx
 msgid "Blur behind dialogs"
 msgstr "Achtergrond van dialoogvensters vervagen"
+
+#: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
+msgid "Booking date (when the bank recorded it)"
+msgstr "Boekingsdatum (wanneer de bank het verwerkte)"
 
 #: src/features/transactions/ui/transfer-rate/TransferRateDialog.tsx
 msgid "Both accounts use the same currency, so this transfer has no conversion rate."
@@ -4143,6 +4239,10 @@ msgstr "Budgero Beheer"
 #: src/features/budget-sharing/ui/WorkspaceSharingPanel.tsx
 msgid "Budgero never sees this secret — but whatever channel you share through will. For the strongest privacy, hand it over in person or via an end-to-end encrypted app (Signal, iMessage, WhatsApp). We can’t show this code again, so capture it now."
 msgstr "Budgero ziet dit geheim nooit — maar het kanaal waar je het doorheen deelt wel. Voor de sterkste privacy, geef het persoonlijk of via een end-to-end-versleutelde app door (Signal, iMessage, WhatsApp). We kunnen deze code niet opnieuw tonen, dus sla hem nu op."
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Budgero stops syncing this bank and revokes its access at Enable Banking. Links stay, so reconnecting the bank later picks up where it left off. Imported transactions stay."
+msgstr "Budgero stopt met het synchroniseren van deze bank en trekt de toegang bij Enable Banking in. Koppelingen blijven bestaan, dus als je de bank later opnieuw koppelt, gaat het verder waar het gebleven was. Geïmporteerde transacties blijven staan."
 
 #: src/pages/settings/SecurityPage.tsx
 msgid "Budgero stores your master password in this browser's IndexedDB until it expires."
@@ -4393,6 +4493,8 @@ msgstr "Canadese dollar"
 #: src/features/account-management/ui/ReconcileAccountDialog.tsx
 #: src/features/ai/ui/AICategorizeDialog.tsx
 #: src/features/ai/ui/receipt-scanner/ScanActions.tsx
+#: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
 #: src/features/bank-sync/ui/LinkAccountDialog.tsx
 #: src/features/budget-planning/ui/budget-table/BudgetModals.tsx
 #: src/features/budget-planning/ui/category-row/CCPaymentCoverPopover.tsx
@@ -4669,6 +4771,10 @@ msgstr "Wijzig je hoofdwachtwoord (gebruikt om je lokale database te versleutele
 msgid "Changelog"
 msgstr "Wijzigingslog"
 
+#: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
+msgid "Changes apply to transactions imported from now on. If a field you pick is missing for a transaction, Budgero uses the automatic choice."
+msgstr "Wijzigingen gelden voor transacties die vanaf nu worden geïmporteerd. Ontbreekt het gekozen veld bij een transactie, dan gebruikt Budgero de automatische keuze."
+
 #: src/pages/admin/sql-explorer/useSqlExplorerState.ts
 msgid "Changes have been applied to the database."
 msgstr "Wijzigingen zijn toegepast op de database."
@@ -4879,6 +4985,10 @@ msgstr "Kies de database die je als Budgero-back-up hebt geëxporteerd. We impor
 msgid "Choose the first day of the week for calendars, weekly reports, and “this week” and “last week” searches in this workspace."
 msgstr "Kies de eerste dag van de week voor kalenders, weekrapporten en zoekopdrachten naar ‘deze week’ en ‘vorige week’ in deze werkruimte."
 
+#: src/features/bank-sync/ui/EnableBankingSetupCard.tsx
+msgid "Choose the key file"
+msgstr "Kies het sleutelbestand"
+
 #: src/pages/settings/AppearancePage.tsx
 msgid "Choose the language Budgero uses on this device"
 msgstr "Kies de taal die Budgero op dit apparaat gebruikt"
@@ -4907,6 +5017,14 @@ msgstr "Kies wat je toestaat"
 #: src/features/category-management/ui/CreateCategoryDialog.tsx
 msgid "Choose where to file “{0}”."
 msgstr "Kies waar je “{0}” wilt opslaan."
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Choose your bank"
+msgstr "Kies je bank"
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Choose your country"
+msgstr "Kies je land"
 
 #: src/pages/settings/AppearancePage.tsx
 msgid "Choose your preferred color scheme"
@@ -4961,11 +5079,11 @@ msgstr "Selectie wissen"
 #: src/pages/accounts/components/AccountSummaryCards.tsx
 #: src/shared/lib/search-query-parser.ts
 msgid "Cleared"
-msgstr "Verwerkt"
+msgstr "Bevestigd"
 
 #: src/features/transactions/ui/ClearedToggle.tsx
 msgid "Cleared — mark as uncleared"
-msgstr "Verwerkt – markeren als niet verwerkt"
+msgstr "Bevestigd – markeren als niet bevestigd"
 
 #. placeholder {0}: formatBankAmount(cleared, local.Currency)
 #: src/features/bank-sync/ui/BankConnectionPanel.tsx
@@ -4974,15 +5092,15 @@ msgstr "Bevestigd {0}"
 
 #: src/features/account-management/ui/ReconcileAccountDialog.tsx
 msgid "Cleared Balance"
-msgstr "Verwerkt saldo"
+msgstr "Bevestigd saldo"
 
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "Cleared status"
-msgstr "Verwerkingsstatus"
+msgstr "Bevestigingsstatus"
 
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "Cleared status (press {CLEARED_SHORTCUT_KEY})"
-msgstr "Verwerkingsstatus (toets {CLEARED_SHORTCUT_KEY})"
+msgstr "Bevestigingsstatus (toets {CLEARED_SHORTCUT_KEY})"
 
 #. placeholder {0}: actionDialog.user.email
 #: src/pages/admin/admin-users/useAdminUsersState.ts
@@ -5253,7 +5371,7 @@ msgstr "Retro-run bevestigen"
 msgid "Confirm your master password"
 msgstr "Bevestig jouw hoofdwachtwoord"
 
-#: src/features/bank-sync/ui/ConnectBankCard.tsx
+#: src/features/bank-sync/ui/ConnectSimpleFINCard.tsx
 #: src/features/budget-management/ui/create-budget-form/YnabImportTab.tsx
 msgid "Connect"
 msgstr "Verbinden"
@@ -5262,7 +5380,11 @@ msgstr "Verbinden"
 msgid "CONNECT DIRECTLY"
 msgstr "RECHTSTREEKS VERBINDEN"
 
-#: src/features/bank-sync/ui/ConnectBankCard.tsx
+#: src/features/bank-sync/ui/EnableBankingSetupCard.tsx
+msgid "Connect European banks with Enable Banking"
+msgstr "Europese banken koppelen met Enable Banking"
+
+#: src/features/bank-sync/ui/ConnectSimpleFINCard.tsx
 msgid "Connect SimpleFIN Bridge"
 msgstr "SimpleFIN Bridge koppelen"
 
@@ -5304,10 +5426,14 @@ msgstr "Verbonden via de YNAB-API · "
 
 #. placeholder {0}: describeAccessUrl(connection.AccessURL)
 #: src/features/bank-sync/ui/BankConnectionPanel.tsx
-msgid "Connected to {0}"
-msgstr "Gekoppeld met {0}"
+#~ msgid "Connected to {0}"
+#~ msgstr "Gekoppeld met {0}"
 
-#: src/features/bank-sync/ui/ConnectBankCard.tsx
+#: src/features/bank-sync/ui/BankConnectionPanel.tsx
+msgid "Connected to {connectedTo}"
+msgstr "Gekoppeld aan {connectedTo}"
+
+#: src/features/bank-sync/ui/ConnectSimpleFINCard.tsx
 msgid "Connected to SimpleFIN"
 msgstr "Gekoppeld met SimpleFIN"
 
@@ -5369,6 +5495,10 @@ msgstr "Context: {0} / {1} tokens ({2}%)"
 msgid "Continue allocating {monthlyTarget} each month to reach your goal"
 msgstr "Blijf elke maand {monthlyTarget} toewijzen om je doel te bereiken"
 
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Continue to bank login"
+msgstr "Verder naar inloggen bij de bank"
+
 #: src/features/rules/ui/rule-editor/RuleMetadataForm.tsx
 #: src/features/rules/ui/RuleHistoryDrawer.tsx
 #: src/pages/settings/automation-rules/RuleRow.tsx
@@ -5416,6 +5546,7 @@ msgstr "Pad gekopieerd"
 msgid "Copied!"
 msgstr "Gekopieerd!"
 
+#: src/features/bank-sync/ui/EnableBankingSetupCard.tsx
 #: src/pages/admin/SelfHostAdminDashboard.tsx
 msgid "Copy"
 msgstr "Kopiëren"
@@ -5554,13 +5685,13 @@ msgstr "Kon de query niet opslaan."
 #: src/features/transactions/ui/ClearedToggle.tsx
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "Could not update cleared status"
-msgstr "Verwerkingsstatus kon niet worden bijgewerkt"
+msgstr "Bevestigingsstatus kon niet worden bijgewerkt"
 
 #: src/pages/settings/components/GoalFundingSettingsCard.tsx
 msgid "Could not update goal funding settings"
 msgstr "De instellingen voor doelfinanciering konden niet worden bijgewerkt"
 
-#: src/features/bank-sync/ui/ConnectBankCard.tsx
+#: src/features/bank-sync/ui/ConnectSimpleFINCard.tsx
 msgid "Couldn't connect to SimpleFIN"
 msgstr "Kon niet koppelen met SimpleFIN"
 
@@ -5572,17 +5703,34 @@ msgstr "Kon niet naar het klembord kopiëren"
 msgid "Couldn't download from the server"
 msgstr "Kon niet downloaden van de server"
 
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+#: src/pages/settings/bank-sync/BankSyncCallbackPage.tsx
+msgid "Couldn't finish connecting the bank"
+msgstr "Het koppelen van de bank kon niet worden afgerond"
+
 #: src/features/bank-sync/ui/LinkAccountDialog.tsx
 msgid "Couldn't link this account"
 msgstr "Kon deze rekening niet koppelen"
 
 #: src/features/bank-sync/ui/BankConnectionPanel.tsx
-msgid "Couldn't load accounts from SimpleFIN"
-msgstr "Kon rekeningen niet laden van SimpleFIN"
+msgid "Couldn't load accounts from {provider}"
+msgstr "Rekeningen konden niet worden geladen van {provider}"
+
+#: src/features/bank-sync/ui/BankConnectionPanel.tsx
+#~ msgid "Couldn't load accounts from SimpleFIN"
+#~ msgstr "Kon rekeningen niet laden van SimpleFIN"
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Couldn't load banks from Enable Banking"
+msgstr "Banken konden niet worden geladen van Enable Banking"
 
 #: src/features/sync-diagnostics/ui/MutationLogCard.tsx
 msgid "Couldn't load the mutation log"
 msgstr "Kon het wijzigingslogboek niet laden"
+
+#: src/features/bank-sync/lib/enable-banking/client.ts
+msgid "Couldn't reach Enable Banking through the Budgero relay. Check your connection and try again."
+msgstr "Enable Banking was niet bereikbaar via de Budgero-relay. Controleer je verbinding en probeer het opnieuw."
 
 #: src/features/bank-sync/lib/simplefin-client.ts
 msgid "Couldn't reach SimpleFIN. Check your connection and try again."
@@ -5592,11 +5740,27 @@ msgstr "SimpleFIN is niet bereikbaar. Controleer je verbinding en probeer het op
 msgid "Couldn't resolve this match"
 msgstr "Kon deze match niet verwerken"
 
+#: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
+msgid "Couldn't save the settings"
+msgstr "De instellingen konden niet worden opgeslagen"
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+#~ msgid "Couldn't start the bank login"
+#~ msgstr "Inloggen bij de bank kon niet worden gestart"
+
+#: src/features/bank-sync/ui/EnableBankingSetupCard.tsx
+msgid "Couldn't verify the app with Enable Banking"
+msgstr "De app kon niet worden geverifieerd bij Enable Banking"
+
 #: src/features/reports/ui/SaveReportDialog.tsx
 #: src/pages/admin/admin-users/user-details/MutationsTab.tsx
 #: src/pages/custom-dashboards/components/EditWidgetChartDialog.tsx
 msgid "Count"
 msgstr "Aantal"
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Country"
+msgstr "Land"
 
 #: src/features/budget-planning/ui/category-row/CoverOverspendingPopover.tsx
 msgid "Cover"
@@ -5664,11 +5828,15 @@ msgstr "“Mijn dashboard” aanmaken"
 msgid "Create a dashboard first to pin charts."
 msgstr "Maak eerst een dashboard aan om grafieken vast te pinnen."
 
+#: src/features/bank-sync/ui/EnableBankingSetupCard.tsx
+msgid "Create a free account in the <0>Enable Banking control panel</0>."
+msgstr "Maak een gratis account aan in het <0>Enable Banking control panel</0>."
+
 #: src/features/goal-management/lib/core-goal-text.ts
 msgid "Create a goal to track your financial progress"
 msgstr "Maak een doel aan om je financiële voortgang bij te houden"
 
-#: src/features/bank-sync/ui/ConnectBankCard.tsx
+#: src/features/bank-sync/ui/ConnectSimpleFINCard.tsx
 msgid "Create a new app connection and copy its setup token."
 msgstr "Maak een nieuwe app-koppeling aan en kopieer de setup-token."
 
@@ -6125,6 +6293,7 @@ msgstr "Databasestatistieken"
 
 #: src/features/account-management/ui/ArchiveAccountDialog.tsx
 #: src/features/ai/ui/receipt-scanner/LineItemsTable.tsx
+#: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
 #: src/features/debt/ui/PayoffPlanSheet.tsx
 #: src/pages/admin/admin-users/user-details/BillingTab.tsx
 #: src/pages/settings/subscription/InvoicesTable.tsx
@@ -6414,6 +6583,7 @@ msgstr "Implementatiedetails voor deze binary."
 msgid "Describe the conditions and actions you want Budgero to apply automatically."
 msgstr "Beschrijf de voorwaarden en acties die je wilt dat Budgero automatisch toepast."
 
+#: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
 #: src/features/reports/ui/SaveReportDialog.tsx
 #: src/features/rules/ui/rule-editor/RuleMetadataForm.tsx
 msgid "Description"
@@ -6883,6 +7053,28 @@ msgstr "Lege zoekopdracht."
 msgid "Enable AI features"
 msgstr "AI-functies inschakelen"
 
+#. placeholder {0}: application.name
+#: src/features/bank-sync/ui/EnableBankingSetupCard.tsx
+msgid "Enable Banking app \"{0}\" connected"
+msgstr "Enable Banking-app ‘{0}’ gekoppeld"
+
+#: src/features/bank-sync/lib/provider.ts
+msgid "Enable Banking credentials are missing. Reconnect bank sync."
+msgstr "De Enable Banking-gegevens ontbreken. Koppel banksync opnieuw."
+
+#: src/features/bank-sync/model/enable-banking-auth.ts
+msgid "Enable Banking credentials are missing. Set them up again."
+msgstr "De Enable Banking-gegevens ontbreken. Stel ze opnieuw in."
+
+#: src/features/bank-sync/ui/EnableBankingSetupCard.tsx
+msgid "Enable Banking is free for personal use with your own accounts. You register your own app with them once; Budgero signs requests with its key on this device."
+msgstr "Enable Banking is gratis voor persoonlijk gebruik met je eigen rekeningen. Je registreert daar eenmalig je eigen app; Budgero ondertekent verzoeken met de sleutel ervan op dit apparaat."
+
+#. placeholder {0}: response.status
+#: src/features/bank-sync/lib/enable-banking/client.ts
+msgid "Enable Banking request failed ({0})."
+msgstr "Enable Banking-verzoek mislukt ({0})."
+
 #: src/pages/settings/recurring/RecurringTransactionsSection.tsx
 msgid "Enable notifications"
 msgstr "Meldingen inschakelen"
@@ -7074,7 +7266,7 @@ msgstr "Voer rapportnaam in..."
 
 #: src/features/account-management/ui/ReconcileAccountDialog.tsx
 msgid "Enter the balance your bank shows. It is compared with your cleared balance; cleared transactions are then locked, and uncleared ones stay open."
-msgstr "Voer het saldo in dat je bank toont. Het wordt vergeleken met je verwerkte saldo; verwerkte transacties worden daarna vergrendeld, niet-verwerkte blijven open."
+msgstr "Voer het saldo in dat je bank toont. Het wordt vergeleken met je bevestigde saldo; bevestigde transacties worden daarna vergrendeld, niet-bevestigde blijven open."
 
 #: src/features/budget-sharing/ui/RedeemInviteDialog.tsx
 msgid "Enter the invite secret first."
@@ -7143,6 +7335,10 @@ msgstr "Geschatte maanden"
 #: src/pages/onboarding/onboarding-data.ts
 msgid "Euro"
 msgstr "Euro"
+
+#: src/features/bank-sync/ui/ConnectBankCard.tsx
+msgid "Europe"
+msgstr "Europa"
 
 #: src/pages/onboarding/onboarding-data.ts
 msgid "Europe trip"
@@ -7306,6 +7502,7 @@ msgstr "Uitgave"
 #~ msgid "Experimental Feature"
 #~ msgstr "Experimentele functie"
 
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
 #: src/pages/warranties/components/StatusBadge.tsx
 #: src/pages/warranties/WarrantiesPage.tsx
 msgid "Expired"
@@ -7887,6 +8084,10 @@ msgstr "Voltooien"
 msgid "Finish line"
 msgstr "Finishlijn"
 
+#: src/pages/settings/bank-sync/BankSyncCallbackPage.tsx
+msgid "Finishing bank connection…"
+msgstr "Bankkoppeling afronden…"
+
 #: src/app/startup/StartupController.tsx
 msgid "Finishing initial sync…"
 msgstr "Eerste synchronisatie afronden…"
@@ -7934,6 +8135,10 @@ msgstr "Eenvoudig gemiddelde"
 #: src/pages/analytics/reports/FlowReport.tsx
 msgid "Flow"
 msgstr "Geldstroom"
+
+#: src/features/bank-sync/ui/EnableBankingSetupCard.tsx
+msgid "For a Production app, use \"Activate by linking accounts\" and link every account you want to sync. Accounts you don't link there come back empty."
+msgstr "Gebruik bij een Production-app ‘Activate by linking accounts’ en koppel elke rekening die je wilt synchroniseren. Rekeningen die je daar niet koppelt, blijven leeg."
 
 #: src/pages/settings/ai/ModelSelectionSection.tsx
 msgid "For categorization and analysis"
@@ -8687,6 +8892,10 @@ msgstr "Importbeperkingen"
 msgid "Import my budget →"
 msgstr "Mijn budget importeren →"
 
+#: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
+msgid "Import pending transactions"
+msgstr "Transacties in behandeling importeren"
+
 #: src/features/import/ui/steps/CompleteStep.tsx
 msgid "Import Summary"
 msgstr "Importsamenvatting"
@@ -8712,8 +8921,12 @@ msgid "Import transactions from {SUPPORTED_IMPORT_FORMATS_LABEL} files and manag
 msgstr "Importeer transacties uit {SUPPORTED_IMPORT_FORMATS_LABEL}-bestanden en beheer eerdere imports."
 
 #: src/pages/settings/bank-sync/BankSyncPage.tsx
-msgid "Import transactions from your banks through SimpleFIN Bridge (US and Canada)."
-msgstr "Importeer transacties van je banken via SimpleFIN Bridge (VS en Canada)."
+msgid "Import transactions from your banks through SimpleFIN Bridge (US and Canada) or Enable Banking (Europe)."
+msgstr "Importeer transacties van je banken via SimpleFIN Bridge (VS en Canada) of Enable Banking (Europa)."
+
+#: src/pages/settings/bank-sync/BankSyncPage.tsx
+#~ msgid "Import transactions from your banks through SimpleFIN Bridge (US and Canada)."
+#~ msgstr "Importeer transacties van je banken via SimpleFIN Bridge (VS en Canada)."
 
 #: src/pages/settings/ImportsPage.tsx
 msgid "Import undone"
@@ -9409,6 +9622,10 @@ msgstr "laat leeg om het gecachte wachtwoord te gebruiken"
 msgid "Leave blank to use chart title"
 msgstr "Laat leeg om de grafiektitel te gebruiken"
 
+#: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
+msgid "Leave empty"
+msgstr "Leeg laten"
+
 #: src/pages/settings/ai/ConnectionTestPanel.tsx
 msgid "Leave empty for local servers (Ollama, LM Studio). Sent as a <0>Bearer</0>token to your chosen provider."
 msgstr "Laat leeg voor lokale servers (Ollama, LM Studio). Verzonden als een <0>Bearer</0>-token naar je gekozen provider."
@@ -9518,6 +9735,11 @@ msgstr "{0} koppelen"
 msgid "Link and import"
 msgstr "Koppelen en importeren"
 
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+#: src/pages/settings/bank-sync/BankSyncCallbackPage.tsx
+msgid "Link its accounts to start importing."
+msgstr "Koppel de rekeningen om te beginnen met importeren."
+
 #: src/pages/warranties/components/WarrantyFormDialog.tsx
 msgid "Link to Transaction"
 msgstr "Koppelen aan transactie"
@@ -9534,6 +9756,10 @@ msgstr "Koppelen…"
 #: src/features/bank-sync/ui/BankConnectionPanel.tsx
 msgid "Links and pending reviews are removed. Imported transactions stay. To fully revoke access, also delete the app connection in SimpleFIN Bridge."
 msgstr "Koppelingen en openstaande controles worden verwijderd. Geïmporteerde transacties blijven bestaan. Verwijder ook de app-koppeling in SimpleFIN Bridge om de toegang volledig in te trekken."
+
+#: src/features/bank-sync/ui/BankConnectionPanel.tsx
+msgid "Links, pending reviews and the stored Enable Banking key are removed. Imported transactions stay. To fully revoke access, also delete the application in the Enable Banking control panel."
+msgstr "Koppelingen, openstaande controles en de opgeslagen Enable Banking-sleutel worden verwijderd. Geïmporteerde transacties blijven staan. Verwijder ook de applicatie in het Enable Banking control panel om de toegang volledig in te trekken."
 
 #: src/pages/admin/sql-explorer/constants.ts
 #: src/pages/explorer-page/sql-utils.ts
@@ -9590,8 +9816,12 @@ msgid "Loading account information..."
 msgstr "Rekeninginformatie laden..."
 
 #: src/features/bank-sync/ui/BankConnectionPanel.tsx
-msgid "Loading accounts from SimpleFIN…"
-msgstr "Rekeningen laden van SimpleFIN…"
+msgid "Loading accounts from {provider}…"
+msgstr "Rekeningen laden van {provider}…"
+
+#: src/features/bank-sync/ui/BankConnectionPanel.tsx
+#~ msgid "Loading accounts from SimpleFIN…"
+#~ msgstr "Rekeningen laden van SimpleFIN…"
 
 #: src/features/analytics/ui/IncomeExpenseByGroupChart.tsx
 #: src/features/transactions/ui/form/AccountSelect.tsx
@@ -9605,6 +9835,10 @@ msgstr "Beheerpaneel laden..."
 #: src/pages/settings/AuditLogPage.tsx
 msgid "Loading audit log..."
 msgstr "Auditlog laden..."
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Loading banks…"
+msgstr "Banken laden…"
 
 #: src/app/startup/reducer.ts
 msgid "Loading Budgero…"
@@ -9877,7 +10111,7 @@ msgstr "“{0}” markeren als klaar?"
 
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "Mark cleared"
-msgstr "Markeren als verwerkt"
+msgstr "Markeren als bevestigd"
 
 #: src/features/rules/ui/rule-editor/RuleMetadataForm.tsx
 msgid "Mark complete after the first retroactive run."
@@ -9894,7 +10128,7 @@ msgstr "Klaar markeren"
 
 #: src/features/transactions/ui/TransactionsBatchToolbar.tsx
 msgid "Mark uncleared"
-msgstr "Markeren als niet verwerkt"
+msgstr "Markeren als niet bevestigd"
 
 #: src/app/startup/screens.tsx
 #: src/features/budget-sharing/ui/RedeemInviteDialog.tsx
@@ -10015,6 +10249,7 @@ msgstr "Lidmaatschapsgegevens"
 
 #: src/features/account-management/ui/ArchiveAccountDialog.tsx
 #: src/features/ai/ui/receipt-scanner/LineItemsTable.tsx
+#: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
 #: src/features/rules/ui/rule-editor/RuleActionRow.tsx
 #: src/features/rules/ui/rule-editor/RuleConditionRow.tsx
 #: src/features/rules/ui/RuleSummary.tsx
@@ -10035,6 +10270,10 @@ msgstr "Memo:"
 #: src/features/transactions/ui/desktop-table/TransactionTableHeader.tsx
 msgid "Memo<0/>"
 msgstr "Memo<0/>"
+
+#: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
+msgid "Merchant or counterparty name"
+msgstr "Naam van winkel of tegenpartij"
 
 #: src/pages/onboarding/onboarding-data.ts
 #: src/shared/lib/theme/presets.ts
@@ -10703,6 +10942,10 @@ msgid "No accounts to reorder yet."
 msgstr "Nog geen rekeningen om te herschikken."
 
 #: src/features/bank-sync/ui/BankConnectionPanel.tsx
+msgid "No accounts yet. Connect a bank above."
+msgstr "Nog geen rekeningen. Koppel hierboven een bank."
+
+#: src/features/bank-sync/ui/BankConnectionPanel.tsx
 msgid "No accounts yet. Connect a bank in SimpleFIN Bridge, then come back."
 msgstr "Nog geen rekeningen. Koppel een bank in SimpleFIN Bridge en kom dan terug."
 
@@ -10749,6 +10992,10 @@ msgstr "Er wordt niets automatisch afgeschreven wanneer je proefperiode eindigt.
 #: src/pages/settings/DataManagementPage.tsx
 msgid "No backups yet"
 msgstr "Nog geen back-ups"
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "No bank found."
+msgstr "Geen bank gevonden."
 
 #. placeholder {0}: args.query
 #: src/features/ai/lib/tools/query-docs.ts
@@ -10857,6 +11104,10 @@ msgstr "Geen kolommetadata"
 #: src/features/chat/ui/chat-panel/ChatConversationList.tsx
 msgid "No conversations yet"
 msgstr "Nog geen gesprekken"
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "No country found."
+msgstr "Geen land gevonden."
 
 #: src/pages/auth/AuthPage.tsx
 msgid "No credit card required."
@@ -11442,8 +11693,12 @@ msgid "OK"
 msgstr "REDELIJK"
 
 #: src/features/bank-sync/ui/LinkAccountDialog.tsx
-msgid "Older dates only return what your bank shares with SimpleFIN."
-msgstr "Oudere datums geven alleen terug wat je bank met SimpleFIN deelt."
+msgid "Older dates only return what your bank shares with {provider}."
+msgstr "Oudere datums geven alleen wat je bank met {provider} deelt."
+
+#: src/features/bank-sync/ui/LinkAccountDialog.tsx
+#~ msgid "Older dates only return what your bank shares with SimpleFIN."
+#~ msgstr "Oudere datums geven alleen terug wat je bank met SimpleFIN deelt."
 
 #: src/pages/settings/CurrencySettingsPage.tsx
 msgid "Older rates are pruned and refetched on demand. Longer retention means fewer refetches for historical edits, but a larger budget file — which can slow app load and sync."
@@ -11647,6 +11902,10 @@ msgstr "Beginsaldo voor deze rekening."
 #: src/pages/settings/subscription/PlanSelection.tsx
 msgid "Opening checkout..."
 msgstr "Checkout openen..."
+
+#: src/features/bank-sync/model/bank-auth-popup.ts
+msgid "Opening your bank…"
+msgstr "Je bank wordt geopend…"
 
 #: src/app/startup/StartupController.tsx
 msgid "Opening your budget…"
@@ -11980,7 +12239,7 @@ msgstr "Wachtwoorden komen overeen"
 msgid "paste secret here"
 msgstr "plak hier het geheim"
 
-#: src/features/bank-sync/ui/ConnectBankCard.tsx
+#: src/features/bank-sync/ui/ConnectSimpleFINCard.tsx
 msgid "Paste the token below."
 msgstr "Plak de token hieronder."
 
@@ -12014,6 +12273,7 @@ msgid "Pay"
 msgstr "Betalen"
 
 #: src/features/ai/ui/receipt-scanner/LineItemsTable.tsx
+#: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
 #: src/features/rules/ui/rule-editor/RuleActionRow.tsx
 #: src/features/rules/ui/rule-editor/RuleConditionRow.tsx
 #: src/features/rules/ui/RuleSummary.tsx
@@ -12656,6 +12916,10 @@ msgstr "Privacymodus"
 msgid "Privacy-First AI"
 msgstr "Privacy-first AI"
 
+#: src/features/bank-sync/ui/EnableBankingSetupCard.tsx
+msgid "Private key (.pem)"
+msgstr "Privésleutel (.pem)"
+
 #: src/features/budget-planning/ui/FutureOverspendingWarning.tsx
 msgid "Proceed anyway"
 msgstr "Toch doorgaan"
@@ -12778,6 +13042,10 @@ msgstr "Openbare registratie ingeschakeld"
 #: src/features/budget-management/model/icon-options.ts
 msgid "Public Transit"
 msgstr "Openbaar vervoer"
+
+#: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
+msgid "Purchase date (when you paid)"
+msgstr "Aankoopdatum (wanneer je betaalde)"
 
 #: src/shared/lib/analytics/klaro-config.ts
 msgid "Purpose"
@@ -13080,6 +13348,10 @@ msgstr "Afgestemde transactie"
 msgid "Reconciling..."
 msgstr "Bezig met afstemmen..."
 
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Reconnect"
+msgstr "Opnieuw koppelen"
+
 #: src/pages/settings/recurring/RecurringTransactionsSection.tsx
 msgid "Recorded in {accountName}. You can review it in the Transactions view."
 msgstr "Opgenomen in {accountName}. Je kunt het bekijken in de Transacties-weergave."
@@ -13272,6 +13544,10 @@ msgstr "Token opnieuw genereren"
 msgid "Regex match"
 msgstr "Regex-overeenkomst"
 
+#: src/features/bank-sync/ui/EnableBankingSetupCard.tsx
+msgid "Register a new application (Production for your real banks, Sandbox to try a mock bank). Use this redirect URL and choose to generate the private key in the browser:"
+msgstr "Registreer een nieuwe applicatie (Production voor je echte banken, Sandbox om een testbank te proberen). Gebruik deze redirect-URL en kies ervoor de privésleutel in de browser te genereren:"
+
 #: src/pages/admin/components/RegistrationSettings.tsx
 msgid "Registration"
 msgstr "Registratie"
@@ -13340,15 +13616,26 @@ msgstr "Herinneringen zijn gepauzeerd tot je ze weer inschakelt."
 msgid "Remote change (synced from another device)"
 msgstr "Externe wijziging (gesynchroniseerd vanaf een ander apparaat)"
 
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
 #: src/features/settings/directory-manager/DirectoryManagerPage.tsx
 #: src/features/transactions/ui/mobile-transaction-card/TransactionCardDetails.tsx
 msgid "Remove"
 msgstr "Verwijderen"
 
+#. placeholder {0}: session.aspsp.name
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Remove {0}"
+msgstr "{0} verwijderen"
+
 #. placeholder {0}: getTokenLabel(token)
 #: src/features/transactions/ui/SearchActiveFilters.tsx
 msgid "Remove {0} filter"
 msgstr "{0}-filter verwijderen"
+
+#. placeholder {0}: removing?.aspsp.name ?? ''
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Remove {0}?"
+msgstr "{0} verwijderen?"
 
 #: src/features/rules/ui/rule-editor/RuleActionRow.tsx
 msgid "Remove action"
@@ -13963,6 +14250,7 @@ msgid "Same date and amount in this account"
 msgstr "Dezelfde datum en hetzelfde bedrag op deze rekening"
 
 #: src/app/layout/desktop-shell/KeyboardShortcutsDialog.tsx
+#: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
 #: src/features/budget-planning/ui/GroupNameEditPopover.tsx
 #: src/features/currencies/ui/ManualRatePrompt.tsx
 #: src/features/settings/directory-manager/DirectoryTable.tsx
@@ -14235,6 +14523,10 @@ msgstr "Rekeningen zoeken…"
 msgid "Search and commands"
 msgstr "Zoeken en opdrachten"
 
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Search banks…"
+msgstr "Banken zoeken…"
+
 #: src/pages/admin/admin-users/UserSearchCard.tsx
 msgid "Search by ID, email, or name..."
 msgstr "Zoeken op ID, e-mail of naam..."
@@ -14258,6 +14550,10 @@ msgstr "Categorieën zoeken…"
 #: src/features/category-management/ui/SearchableCategorySelect.tsx
 msgid "Search category..."
 msgstr "Categorie zoeken..."
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Search countries…"
+msgstr "Landen zoeken…"
 
 #: src/features/currencies/ui/CurrencySelector.tsx
 msgid "Search currencies..."
@@ -14835,7 +15131,7 @@ msgstr "Installatie mislukt"
 msgid "Setup failed. Try again or contact support."
 msgstr "Instellen mislukt. Probeer het opnieuw of neem contact op met ondersteuning."
 
-#: src/features/bank-sync/ui/ConnectBankCard.tsx
+#: src/features/bank-sync/ui/ConnectSimpleFINCard.tsx
 msgid "Setup token"
 msgstr "Setup-token"
 
@@ -15078,7 +15374,7 @@ msgstr "Uitloggen"
 msgid "SIGN OUT"
 msgstr "UITLOGGEN"
 
-#: src/features/bank-sync/ui/ConnectBankCard.tsx
+#: src/features/bank-sync/ui/ConnectSimpleFINCard.tsx
 msgid "Sign up at <0>SimpleFIN Bridge<1/></0> and connect your banks there."
 msgstr "Meld je aan bij <0>SimpleFIN Bridge<1/></0> en koppel daar je banken."
 
@@ -15778,6 +16074,7 @@ msgstr "Clerk-gebruikers synchroniseren"
 msgid "Sync data format"
 msgstr "Synchronisatie-gegevensformaat"
 
+#: src/features/bank-sync/lib/provider.ts
 #: src/features/bank-sync/model/run-bank-sync.ts
 msgid "Sync failed"
 msgstr "Synchronisatie mislukt"
@@ -15962,7 +16259,15 @@ msgstr "Tekst om te matchen"
 msgid "That doesn't look like a SimpleFIN setup token."
 msgstr "Dat lijkt geen SimpleFIN-setup-token."
 
-#: src/features/bank-sync/ui/ConnectBankCard.tsx
+#: src/features/bank-sync/ui/EnableBankingSetupCard.tsx
+msgid "That file isn't a private key."
+msgstr "Dat bestand is geen privésleutel."
+
+#: src/features/bank-sync/lib/enable-banking/jwt.ts
+msgid "That file isn't an RSA private key. Upload the .pem Enable Banking gave you."
+msgstr "Dat bestand is geen RSA-privésleutel. Upload het .pem-bestand dat je van Enable Banking hebt gekregen."
+
+#: src/features/bank-sync/ui/ConnectSimpleFINCard.tsx
 msgid "The access key is stored encrypted inside this budget and syncs to your devices. Anyone you share this budget with can sync it too."
 msgstr "De toegangssleutel wordt versleuteld in dit budget opgeslagen en naar je apparaten gesynchroniseerd. Iedereen met wie je dit budget deelt, kan ook synchroniseren."
 
@@ -15978,6 +16283,11 @@ msgstr "Het bedrag dat aan het einde van elke cyclus beschikbaar moet zijn."
 msgid "The amount you need available in this category by the target date."
 msgstr "Het bedrag dat beschikbaar moet zijn in deze categorie op de streefdatum."
 
+#. placeholder {0}: application.name
+#: src/features/bank-sync/ui/EnableBankingSetupCard.tsx
+msgid "The app \"{0}\" doesn't list {redirectUrl} as a redirect URL. Add it in the Enable Banking control panel, then try again."
+msgstr "De app ‘{0}’ heeft {redirectUrl} niet als redirect-URL. Voeg die toe in het Enable Banking control panel en probeer het opnieuw."
+
 #: src/pages/settings/ai/AISettingsPage.tsx
 msgid "The assistant will ask for confirmation before making changes like adding transactions."
 msgstr "De assistent vraagt om bevestiging voordat wijzigingen worden aangebracht, zoals het toevoegen van transacties."
@@ -15989,6 +16299,32 @@ msgstr "De assistent voert acties automatisch uit zonder om bevestiging te vrage
 #: src/features/goal-management/ui/GoalForm.tsx
 msgid "The available balance you want in this category each month."
 msgstr "Het beschikbare saldo dat je elke maand in deze categorie wilt hebben."
+
+#: src/features/bank-sync/model/enable-banking-auth.ts
+msgid "The bank didn't authorize access: {description}"
+msgstr "De bank heeft geen toegang verleend: {description}"
+
+#. placeholder {0}: missing[0].remote.name
+#: src/features/bank-sync/model/link-accounts.ts
+msgid "The bank didn't return {0}."
+msgstr "De bank gaf {0} niet terug."
+
+#: src/features/bank-sync/model/link-accounts.ts
+msgid "The bank didn't send a balance for {name}, so Budgero can't set its opening balance. Link it to an existing account, or try again later."
+msgstr "De bank heeft geen saldo voor {name} gestuurd, dus Budgero kan het beginsaldo niet instellen. Koppel het aan een bestaande rekening of probeer het later opnieuw."
+
+#: src/features/bank-sync/model/bank-auth-popup.ts
+msgid "The bank login was closed before it finished."
+msgstr "Het inloggen bij de bank werd gesloten voordat het klaar was."
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+#: src/pages/settings/bank-sync/BankSyncCallbackPage.tsx
+msgid "The bank returned no accounts. Link them to your app in the Enable Banking control panel, then reconnect."
+msgstr "De bank gaf geen rekeningen terug. Koppel ze in het Enable Banking control panel aan je app en koppel daarna opnieuw."
+
+#: src/features/bank-sync/model/enable-banking-auth.ts
+msgid "The bank's reply is missing its code."
+msgstr "In het antwoord van de bank ontbreekt de code."
 
 #: src/features/budget-management/ui/create-budget-form/ManualBudgetTab.tsx
 #: src/features/budget-management/ui/create-budget-form/YnabImportTab.tsx
@@ -16037,6 +16373,10 @@ msgstr "De afgeleide wisselkoers wordt bij deze overboeking opgeslagen."
 #: src/features/budget-sharing/ui/WorkspaceSharingPanel.tsx
 msgid "The invite has been revoked."
 msgstr "De uitnodiging is ingetrokken."
+
+#: src/features/bank-sync/ui/EnableBankingSetupCard.tsx
+msgid "The key is stored encrypted inside this budget and is never sent anywhere else. Requests are encrypted from this browser all the way to Enable Banking; Budgero's relay only forwards traffic it can't read. Anyone you share this budget with can sync it too."
+msgstr "De sleutel wordt versleuteld in dit budget opgeslagen en nergens anders naartoe gestuurd. Verzoeken zijn versleuteld van deze browser tot aan Enable Banking; de Budgero-relay stuurt alleen verkeer door dat hij niet kan lezen. Iedereen met wie je dit budget deelt, kan het ook synchroniseren."
 
 #: src/pages/settings/push-api/RegenerateDialog.tsx
 msgid "The key will auto-hide after 60 seconds"
@@ -16158,6 +16498,10 @@ msgstr "Deze banktransacties lijken op transacties die je al hebt ingevoerd. Mat
 msgid "These dates can be read two ways. Select the date format used in YNAB."
 msgstr "Deze datums kunnen op twee manieren worden gelezen. Selecteer de datumnotatie die in YNAB wordt gebruikt."
 
+#: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
+msgid "They arrive uncleared and are updated once your bank books them. Pending transactions your bank drops, like a released card hold, are removed."
+msgstr "Ze komen binnen als niet bevestigd en worden bijgewerkt zodra je bank ze boekt. Transacties in behandeling die je bank laat vallen, zoals een vrijgegeven kaartreservering, worden verwijderd."
+
 #: src/pages/settings/PayeesPage.tsx
 msgid "They have been cleared from existing transactions."
 msgstr "Ze zijn gewist uit bestaande transacties."
@@ -16207,6 +16551,10 @@ msgstr "Deze app"
 #: src/features/budget-planning/ui/budget-table/useCategoryOperations.ts
 msgid "This assignment would exceed your ready-to-assign amount by {0}."
 msgstr "Deze toewijzing overschrijdt jouw Te verdelen bedrag met {0}."
+
+#: src/features/bank-sync/model/enable-banking-auth.ts
+msgid "This bank authorization wasn't started here, or it expired. Start it again from Settings › Bank sync."
+msgstr "Deze bankautorisatie is hier niet gestart of is verlopen. Start hem opnieuw via Instellingen › Banksync."
 
 #: src/shared/hooks/usePWA.ts
 msgid "This browser does not support the automatic install prompt.\n"
@@ -16343,7 +16691,7 @@ msgstr "Deze gedeelde werkruimte is vergrendeld totdat de eigenaar zijn of haar 
 
 #: src/features/transactions/ui/StatusIndicatorPopover.tsx
 msgid "This transaction has been reconciled and is locked as cleared."
-msgstr "Deze transactie is afgestemd en vergrendeld als verwerkt."
+msgstr "Deze transactie is afgestemd en vergrendeld als bevestigd."
 
 #: src/features/transactions/ui/StatusIndicatorPopover.tsx
 #~ msgid "This transaction has been reconciled."
@@ -16462,6 +16810,10 @@ msgstr "Drie<0/>huisregels."
 msgid "through this month"
 msgstr "tot en met deze maand"
 
+#: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
+msgid "Tidy ALL-CAPS payee names"
+msgstr "Namen van begunstigden in HOOFDLETTERS opschonen"
+
 #: src/pages/onboarding/onboarding-data.ts
 msgid "TikTok"
 msgstr "TikTok"
@@ -16527,7 +16879,7 @@ msgstr "Vandaag"
 
 #: src/app/layout/desktop-shell/KeyboardShortcutsDialog.tsx
 msgid "Toggle cleared on selected rows"
-msgstr "Verwerkt wisselen voor geselecteerde rijen"
+msgstr "Bevestigd wisselen voor geselecteerde rijen"
 
 #: src/shared/ui/theme-switch.tsx
 msgid "Toggle color mode"
@@ -17138,11 +17490,11 @@ msgstr "Niet-gecategoriseerd ({uncategorizedCount})"
 #: src/features/transactions/ui/ClearedToggle.tsx
 #: src/shared/lib/search-query-parser.ts
 msgid "Uncleared"
-msgstr "Niet verwerkt"
+msgstr "Niet bevestigd"
 
 #: src/features/transactions/ui/ClearedToggle.tsx
 msgid "Uncleared — mark as cleared"
-msgstr "Niet verwerkt – markeren als verwerkt"
+msgstr "Niet bevestigd – markeren als bevestigd"
 
 #: src/features/transactions/ui/TransactionsToolbar.tsx
 msgid "Uncleared ({unclearedCount})"
@@ -17443,9 +17795,17 @@ msgstr "Upload een Budgero-databasebestand om je gegevens te herstellen."
 msgid "Upload a receipt or bank statement image to extract transactions"
 msgstr "Upload een afbeelding van een bon of bankafschrift om transacties uit te lezen"
 
+#: src/features/bank-sync/ui/EnableBankingSetupCard.tsx
+msgid "Upload the downloaded .pem key and enter the application ID."
+msgstr "Upload de gedownloade .pem-sleutel en vul de applicatie-ID in."
+
 #: src/features/budget-management/ui/create-budget-form/YnabExportGuide.tsx
 msgid "Upload the ZIP file above"
 msgstr "Upload het ZIP-bestand hierboven"
+
+#: src/features/bank-sync/ui/ConnectBankCard.tsx
+msgid "US & Canada"
+msgstr "VS & Canada"
 
 #: src/pages/onboarding/onboarding-data.ts
 msgid "US Dollar"
@@ -17597,6 +17957,10 @@ msgstr "Details van waardeverandering"
 msgid "Value changes are journaled once per day — history builds up as rates move."
 msgstr "Waardeveranderingen worden één keer per dag geregistreerd — de geschiedenis bouwt zich op naarmate koersen veranderen."
 
+#: src/features/bank-sync/ui/BankFeedSettingsDialog.tsx
+msgid "Value date (when the money moved)"
+msgstr "Valutadatum (wanneer het geld werd verplaatst)"
+
 #: src/pages/custom-dashboards/components/EditWidgetChartDialog.tsx
 msgid "Values"
 msgstr "Waarden"
@@ -17612,6 +17976,10 @@ msgstr "Voertuigen, verzamelobjecten en andere waardevolle bezittingen"
 #: src/features/budget-management/ui/create-budget-form/YnabImportStatus.tsx
 msgid "Verify account balances"
 msgstr "Rekeningsaldi controleren"
+
+#: src/features/bank-sync/ui/EnableBankingSetupCard.tsx
+msgid "Verify and save"
+msgstr "Verifiëren en opslaan"
 
 #: src/features/budget-management/ui/create-budget-form/YnabImportStatus.tsx
 msgid "Verify category history"
@@ -17699,6 +18067,10 @@ msgstr "vergeleken met {0}"
 #: src/features/sync-diagnostics/ui/SyncOverviewCards.tsx
 msgid "Waiting"
 msgstr "Wachtend"
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "Waiting for your bank…"
+msgstr "Wachten op je bank…"
 
 #: src/features/budget-management/ui/CreateBudgetForm.tsx
 #: src/pages/onboarding/apply-onboarding.ts
@@ -18485,6 +18857,14 @@ msgstr "Je hebt nog steeds een lidmaatschap van een gedeelde werkruimte, maar di
 msgid "You'll continue to have access until {0}. You can reactivate anytime before then."
 msgstr "Je behoudt toegang tot {0}. Je kunt op elk moment daarvoor opnieuw activeren."
 
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+msgid "You'll log in at your bank and come back here. Banks grant access for up to 180 days, and Budgero reminds you a week before that access expires."
+msgstr "Je logt in bij je bank en komt hier terug. Banken geven tot 180 dagen toegang, en Budgero herinnert je er een week voordat die toegang verloopt aan."
+
+#: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
+#~ msgid "You'll log in at your bank and come back here. Banks grant access for up to 180 days; Budgero reminds you before it runs out."
+#~ msgstr "Je logt in bij je bank en komt hier terug. Banken geven tot 180 dagen toegang; Budgero herinnert je eraan voordat die verloopt."
+
 #: src/features/category-management/ui/CreateCategoryDialog.tsx
 msgid "You’ll need at least one category group before creating categories."
 msgstr "Je hebt minimaal één categoriegroep nodig voordat je categorieën kunt aanmaken."
@@ -18516,6 +18896,10 @@ msgstr "Je API-token"
 #: src/pages/settings/AutomationRulesPage.tsx
 msgid "Your automation rule is ready to run."
 msgstr "Je automatisatieregel is klaar om uit te voeren."
+
+#: src/features/bank-sync/lib/enable-banking/client.ts
+msgid "Your bank limits how often its data can be read. Try again in a few hours."
+msgstr "Je bank beperkt hoe vaak de gegevens gelezen kunnen worden. Probeer het over een paar uur opnieuw."
 
 #: src/app/startup/StartupController.tsx
 msgid "Your browser blocked the encryption features Budgero needs. Serve Budgero over HTTPS or install a trusted certificate."

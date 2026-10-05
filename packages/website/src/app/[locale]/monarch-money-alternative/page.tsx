@@ -112,9 +112,9 @@ const makeComparisonData = (
   },
   {
     feature: t('comparisonData_bank_sync'),
-    budgero: t('comparisonData_push_api'),
+    budgero: true,
     monarch: true,
-    budgeroNote: t('comparisonData_diy_with_encrypted_python_sdk'),
+    budgeroNote: copy('u_6e7d19eaf95d'),
     monarchNote: t('comparisonData_us_canada_banks_only'),
   },
   {

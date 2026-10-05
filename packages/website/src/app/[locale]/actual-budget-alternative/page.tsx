@@ -40,7 +40,8 @@ const comparison = [
   {
     feature: 'Bank connections',
     actual: 'Optional integrations through supported providers, with a server and provider setup.',
-    budgero: 'No built-in bank connection. Enter transactions or import statement files.',
+    budgero:
+      'Optional bank sync (beta) through your own SimpleFIN (US & Canada) or Enable Banking (Europe) account; Budgero never sees your bank data. Manual entry and statement imports also work.',
   },
   {
     feature: 'Hosting',
@@ -70,8 +71,8 @@ export default async function ActualBudgetAlternativePage({
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
             Budgero is an Actual Budget alternative for households with accounts in different
             currencies, or people who want a managed Cloud service with encrypted budget sync. You
-            can also self-host it. The important trade-off: Budgero uses manual entry and file
-            imports, without a built-in bank connection.
+            can also self-host it. Bank sync is optional (beta): bring your own SimpleFIN or Enable
+            Banking connection, and Budgero's servers never see your bank data.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg">

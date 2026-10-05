@@ -111,6 +111,8 @@ Manual entry has a second benefit that's well-documented in the budgeting commun
 
 You can still use manual entry efficiently. Receipt scanning with AI, quick-entry shortcuts, and rule-based categorization can reduce the per-transaction time to a few seconds.
 
+If you do want automatic imports, the question becomes who can read the data on its way in. Budgero's optional bank sync is bring-your-own-key: you connect your own [SimpleFIN](/docs/bank-sync-simplefin) account (US and Canada) or [Enable Banking](/docs/bank-sync-enable-banking) application (Europe), and Budgero's servers never see your bank data or credentials. The provider you choose does see your transactions, so this is a smaller trust footprint than a typical aggregator-backed app, not zero.
+
 ---
 
 <TrialCta
@@ -209,7 +211,7 @@ The privacy-first budgeting space has grown significantly. Here's how the main o
   </tbody>
 </table>
 
-Each of these takes a fundamentally different approach than the mainstream apps. None of them require bank connections. None of them route your data through aggregators. The differences come down to features, polish, and how they handle sync.
+Each of these takes a fundamentally different approach than the mainstream apps. None of them require bank connections. Where bank sync exists, it's optional: Budgero's (in beta) uses a provider you connect yourself and keeps your bank data unreadable to Budgero's servers. The differences come down to features, polish, and how they handle sync.
 
 [Budgero](/) and Actual Budget both support zero-knowledge encryption with cloud sync, meaning you can use them across multiple devices without sacrificing privacy. The key differences come down to multi-currency support (168 currencies in Budgero vs basic in Actual), AI features, and polish. GnuCash keeps data local, which is maximally private but means you need to manage your own sync solution if you want multi-device access.
 

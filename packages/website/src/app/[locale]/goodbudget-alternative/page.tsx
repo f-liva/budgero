@@ -78,9 +78,9 @@ const makeComparisonData = (
   },
   {
     feature: t('comparisonData_bank_sync'),
-    budgero: false,
+    budgero: true,
     goodbudget: true,
-    budgeroNote: copy('u_2b34fa8f0fdf'),
+    budgeroNote: copy('u_6e7d19eaf95d'),
     goodbudgetNote: copy('u_0fdadc3a8cb3'),
   },
   {

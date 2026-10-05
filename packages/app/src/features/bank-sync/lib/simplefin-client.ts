@@ -82,23 +82,27 @@ export function fetchBalances(accessUrl: string): Promise<SimpleFINAccountSet> {
   return requestAccounts(accessUrl, new URLSearchParams({ 'balances-only': '1' }));
 }
 
-/** Fetches posted transactions in windows the Bridge accepts, merged per account. */
+/**
+ * Fetches transactions in windows the Bridge accepts, merged per account.
+ * Pass `accountIds` to ask only about linked accounts.
+ */
 export async function fetchTransactions(
   accessUrl: string,
   start: Date,
-  end = new Date()
+  end = new Date(),
+  accountIds?: string[]
 ): Promise<SimpleFINAccountSet> {
   const accounts = new Map<string, SimpleFINAccount>();
   const errors = new Set<string>();
   for (let from = start.getTime(); from < end.getTime(); from += MAX_WINDOW_DAYS * DAY_MS) {
     const to = Math.min(from + MAX_WINDOW_DAYS * DAY_MS, end.getTime());
-    const set = await requestAccounts(
-      accessUrl,
-      new URLSearchParams({
-        'start-date': String(Math.floor(from / 1000)),
-        'end-date': String(Math.ceil(to / 1000)),
-      })
-    );
+    const params = new URLSearchParams({
+      'start-date': String(Math.floor(from / 1000)),
+      'end-date': String(Math.ceil(to / 1000)),
+      pending: '1',
+    });
+    for (const id of accountIds ?? []) params.append('account', id);
+    const set = await requestAccounts(accessUrl, params);
     set.errors?.forEach((error) => errors.add(error));
     for (const account of set.accounts ?? []) {
       const previous = accounts.get(account.id);

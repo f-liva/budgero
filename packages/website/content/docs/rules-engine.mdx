@@ -9,7 +9,7 @@ takeaways:
   - Retro runs, run history, and the one-click undo safety net.
 ---
 
-Manual-first budgeting doesn't have to mean repetitive. The Rules Engine watches transactions as they arrive — from imports, manual entry, or the [Push API](/docs/push-api) — and applies the cleanup you'd otherwise do by hand: fixing payee names, assigning categories, trimming memo noise. You define the pattern once; Budgero applies it forever.
+Budgeting by hand doesn't have to mean repetitive, and bank feeds don't have to mean messy. The Rules Engine watches transactions as they arrive — from imports, [bank sync](/docs/bank-sync-enable-banking), manual entry, or the [Push API](/docs/push-api) — and applies the cleanup you'd otherwise do by hand: fixing payee names, assigning categories, trimming memo noise. You define the pattern once; Budgero applies it forever.
 
 Rules live in **Settings → Rules**.
 
@@ -44,7 +44,7 @@ Every rule runs in one of three modes:
   </tbody>
 </table>
 
-Continuous rules fire on every entry path — CSV/PDF imports, manual entry, Push API. One Time rules mark themselves consumed after their run and won't fire again until reset. Autofill rules never modify anything on their own; they pre-fill fields as suggestions in the entry form, once per form session.
+Continuous rules fire on every entry path — CSV/PDF imports, bank sync, manual entry, Push API. One Time rules mark themselves consumed after their run and won't fire again until reset. Autofill rules never modify anything on their own; they pre-fill fields as suggestions in the entry form, once per form session.
 
 ## Conditions: what a rule matches
 

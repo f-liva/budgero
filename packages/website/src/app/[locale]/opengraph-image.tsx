@@ -7,7 +7,7 @@ import { ImageResponse } from 'next/og';
 // `openGraph.images` explicitly in that page's metadata).
 
 export const runtime = 'edge';
-export const alt = 'Budgero — Private budgeting without bank connections.';
+export const alt = 'Budgero — Private budgeting, with optional bank sync.';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 

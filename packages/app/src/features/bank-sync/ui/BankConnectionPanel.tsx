@@ -1,11 +1,11 @@
 import { Trans, useLingui } from '@lingui/react/macro';
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Link2, Loader2, RefreshCw, Unplug } from 'lucide-react';
+import { AlertTriangle, Link2, Loader2, RefreshCw, Settings2, Unplug } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  fromDecimalString,
+  parseEnableBankingConfig,
   type BankConnection,
-  type SimpleFINAccount,
+  type BankLink,
 } from '@budgero/core/browser';
 import { useAccounts } from '@entities/account/api/useAccounts';
 import { getErrorMessage } from '@shared/lib/errors';
@@ -24,8 +24,11 @@ import {
   useUnlinkBankAccount,
 } from '../api/useBankSync';
 import { formatBankAmount, formatSyncedAgo } from '../lib/format';
+import { providerName, type RemoteBankAccount } from '../lib/provider';
 import { describeAccessUrl } from '../lib/simplefin-client';
+import { BankFeedSettingsDialog } from './BankFeedSettingsDialog';
 import { BankReviewDialog } from './BankReviewDialog';
+import { EnableBankingBanksCard } from './EnableBankingBanksCard';
 import { LinkAccountDialog } from './LinkAccountDialog';
 
 const ONE_CENT_MILLI = 10;
@@ -33,40 +36,62 @@ const ONE_CENT_MILLI = 10;
 export function BankConnectionPanel({ connection }: { connection: BankConnection }) {
   const { t } = useLingui();
   const budgetId = connection.BudgetID;
-  const { data: links = [] } = useBankLinks(budgetId);
-  const { data: reviews = [] } = useBankReviews(budgetId);
+  const { data: allLinks = [] } = useBankLinks(budgetId);
+  const { data: allReviews = [] } = useBankReviews(budgetId);
   const { data: accounts = [] } = useAccounts(budgetId);
-  const remote = useRemoteBankAccounts(connection.AccessURL);
+  const remote = useRemoteBankAccounts(connection);
+  const isEnableBanking = connection.Provider === 'enablebanking';
+  const ebConfig = parseEnableBankingConfig(connection);
+  const provider = providerName(connection);
+  const connectedTo = isEnableBanking
+    ? [ebConfig?.appName || 'Enable Banking', ebConfig?.environment === 'SANDBOX' ? 'sandbox' : '']
+        .filter(Boolean)
+        .join(' · ')
+    : describeAccessUrl(connection.AccessURL);
   const sync = useRunBankSync();
   const disconnect = useDisconnectBank();
   const unlink = useUnlinkBankAccount();
-  const [linking, setLinking] = useState<SimpleFINAccount | null>(null);
+  const [linking, setLinking] = useState<RemoteBankAccount | null>(null);
+  const [configuring, setConfiguring] = useState<BankLink | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
 
   const accountsById = useMemo(() => new Map(accounts.map((a) => [a.ID, a])), [accounts]);
+  // Each provider gets its own panel; an account can still only be linked once overall.
+  const links = useMemo(
+    () => allLinks.filter((l) => l.Provider === connection.Provider),
+    [allLinks, connection.Provider]
+  );
+  const reviews = useMemo(() => {
+    const ids = new Set(links.map((l) => l.AccountID));
+    return allReviews.filter((r) => ids.has(r.AccountID));
+  }, [allReviews, links]);
   const linksByRemote = useMemo(() => new Map(links.map((l) => [l.ExternalAccountID, l])), [links]);
-  const linkedAccountIds = useMemo(() => new Set(links.map((l) => l.AccountID)), [links]);
+  const linkedAccountIds = useMemo(() => new Set(allLinks.map((l) => l.AccountID)), [allLinks]);
   const remoteAccounts = remote.data?.accounts ?? [];
   const syncedAgo = formatSyncedAgo(connection.LastSyncAt);
 
   const onSync = () =>
-    sync.mutate(budgetId, {
-      onSuccess: (result) => {
-        if (result.errors.length) toast.warning(result.errors.join('\n'));
-        else toast.success(t`Bank sync finished`);
-        if (result.reviews) setReviewOpen(true);
-      },
-      onError: (error) => toast.error(getErrorMessage(error, t`Bank sync failed`)),
-    });
+    sync.mutate(
+      { budgetId, providers: [connection.Provider] },
+      {
+        onSuccess: (result) => {
+          if (result.errors.length) toast.warning(result.errors.join('\n'));
+          else toast.success(t`Bank sync finished`);
+          if (result.reviews) setReviewOpen(true);
+        },
+        onError: (error) => toast.error(getErrorMessage(error, t`Bank sync failed`)),
+      }
+    );
 
   return (
     <div className="space-y-4">
       <Card>
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div className="text-sm">
-            <div className="font-medium">
-              <Trans>Connected to {describeAccessUrl(connection.AccessURL)}</Trans>
+            <div className="font-medium">{provider}</div>
+            <div className="text-xs text-muted-foreground">
+              <Trans>Connected to {connectedTo}</Trans>
             </div>
             <div className="text-xs text-muted-foreground">
               {syncedAgo ? (
@@ -117,6 +142,8 @@ export function BankConnectionPanel({ connection }: { connection: BankConnection
         </Alert>
       )}
 
+      {isEnableBanking && <EnableBankingBanksCard connection={connection} />}
+
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">
@@ -125,30 +152,41 @@ export function BankConnectionPanel({ connection }: { connection: BankConnection
         </CardHeader>
         <CardContent className="p-0">
           {remote.isLoading ? (
-            <InlineLoadingRow label={t`Loading accounts from SimpleFIN…`} />
+            <InlineLoadingRow label={t`Loading accounts from ${provider}…`} />
           ) : remote.error ? (
             <p className="px-4 pb-4 text-sm text-destructive">
-              {getErrorMessage(remote.error, t`Couldn't load accounts from SimpleFIN`)}
+              {getErrorMessage(remote.error, t`Couldn't load accounts from ${provider}`)}
             </p>
           ) : remoteAccounts.length === 0 ? (
             <p className="px-4 pb-4 text-sm text-muted-foreground">
-              <Trans>No accounts yet. Connect a bank in SimpleFIN Bridge, then come back.</Trans>
+              {isEnableBanking ? (
+                <Trans>No accounts yet. Connect a bank above.</Trans>
+              ) : (
+                <Trans>No accounts yet. Connect a bank in SimpleFIN Bridge, then come back.</Trans>
+              )}
             </p>
           ) : (
             <ul className="divide-y">
               {remoteAccounts.map((account) => {
                 const link = linksByRemote.get(account.id);
                 const local = link ? accountsById.get(link.AccountID) : undefined;
-                const bankBalance = fromDecimalString(account.balance.replace(/^\+/, ''));
+                const bankBalance = account.balance ?? link?.LastBalance ?? null;
                 const cleared = local ? local.BalanceNative - (local.UnclearedNative ?? 0) : null;
-                const drift = cleared === null ? 0 : Math.abs(bankBalance - cleared);
+                const drift =
+                  cleared === null || bankBalance === null ? 0 : Math.abs(bankBalance - cleared);
                 return (
                   <li key={account.id} className="flex items-center gap-3 px-4 py-2.5">
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-medium">{account.name}</div>
                       <div className="truncate text-xs text-muted-foreground">
-                        {account.org.name ?? account.org.domain} ·{' '}
-                        {formatBankAmount(bankBalance, account.currency)}
+                        {[
+                          account.orgName,
+                          bankBalance === null
+                            ? account.currency
+                            : formatBankAmount(bankBalance, account.currency),
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
                       </div>
                     </div>
                     {local ? (
@@ -165,15 +203,26 @@ export function BankConnectionPanel({ connection }: { connection: BankConnection
                       </div>
                     ) : null}
                     {link ? (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs"
-                        disabled={unlink.isPending}
-                        onClick={() => unlink.mutate({ budgetId, accountId: link.AccountID })}
-                      >
-                        <Trans>Unlink</Trans>
-                      </Button>
+                      <>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          aria-label={t`Bank feed settings`}
+                          onClick={() => setConfiguring(link)}
+                        >
+                          <Settings2 className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs"
+                          disabled={unlink.isPending}
+                          onClick={() => unlink.mutate({ budgetId, accountId: link.AccountID })}
+                        >
+                          <Trans>Unlink</Trans>
+                        </Button>
+                      </>
                     ) : (
                       <Button
                         size="sm"
@@ -209,10 +258,18 @@ export function BankConnectionPanel({ connection }: { connection: BankConnection
       {linking && (
         <LinkAccountDialog
           budgetId={budgetId}
-          accessUrl={connection.AccessURL}
+          connection={connection}
           remote={linking}
           linkedAccountIds={linkedAccountIds}
           onOpenChange={(open) => !open && setLinking(null)}
+        />
+      )}
+      {configuring && (
+        <BankFeedSettingsDialog
+          link={configuring}
+          provider={connection.Provider}
+          accountName={accountsById.get(configuring.AccountID)?.Name ?? ''}
+          onOpenChange={(open) => !open && setConfiguring(null)}
         />
       )}
       <BankReviewDialog budgetId={budgetId} open={reviewOpen} onOpenChange={setReviewOpen} />
@@ -220,12 +277,16 @@ export function BankConnectionPanel({ connection }: { connection: BankConnection
         open={confirmDisconnect}
         onOpenChange={setConfirmDisconnect}
         title={t`Disconnect bank sync?`}
-        description={t`Links and pending reviews are removed. Imported transactions stay. To fully revoke access, also delete the app connection in SimpleFIN Bridge.`}
+        description={
+          isEnableBanking
+            ? t`Links, pending reviews and the stored Enable Banking key are removed. Imported transactions stay. To fully revoke access, also delete the application in the Enable Banking control panel.`
+            : t`Links and pending reviews are removed. Imported transactions stay. To fully revoke access, also delete the app connection in SimpleFIN Bridge.`
+        }
         confirmText={t`Disconnect`}
         variant="destructive"
         isLoading={disconnect.isPending}
         onConfirm={async () => {
-          await disconnect.mutateAsync(budgetId);
+          await disconnect.mutateAsync({ budgetId, provider: connection.Provider });
           setConfirmDisconnect(false);
         }}
       />

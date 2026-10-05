@@ -1,90 +1,71 @@
-import { Trans, useLingui } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
 import { useState } from 'react';
-import { ExternalLink, Loader2, ShieldCheck } from 'lucide-react';
-import { toast } from 'sonner';
-import { getErrorMessage } from '@shared/lib/errors';
+import { Plus } from 'lucide-react';
+import type { BankProvider } from '@budgero/core/browser';
 import { Button } from '@shared/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/ui/card';
-import { Input } from '@shared/ui/input';
-import { useConnectBank } from '../api/useBankSync';
-import { SIMPLEFIN_BRIDGE_URL } from '../lib/simplefin-client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui/tabs';
+import { ConnectSimpleFINCard } from './ConnectSimpleFINCard';
+import { EnableBankingSetupCard } from './EnableBankingSetupCard';
 
-export function ConnectBankCard({ budgetId }: { budgetId: number }) {
-  const { t } = useLingui();
-  const [token, setToken] = useState('');
-  const connect = useConnectBank();
+function defaultRegion(): 'eu' | 'us' {
+  try {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? '';
+    return zone.startsWith('Europe/') || zone.startsWith('Atlantic/') ? 'eu' : 'us';
+  } catch {
+    return 'us';
+  }
+}
 
-  const submit = () =>
-    connect.mutate(
-      { budgetId, setupToken: token },
-      {
-        onSuccess: () => {
-          setToken('');
-          toast.success(t`Connected to SimpleFIN`);
-        },
-        onError: (error) => toast.error(getErrorMessage(error, t`Couldn't connect to SimpleFIN`)),
-      }
+/** Offers whichever providers aren't connected yet; both can run side by side. */
+export function ConnectBankCard({
+  budgetId,
+  connected = [],
+}: {
+  budgetId: number;
+  connected?: BankProvider[];
+}) {
+  const [open, setOpen] = useState(false);
+  const hasSimpleFIN = connected.includes('simplefin');
+  const hasEnableBanking = connected.includes('enablebanking');
+
+  if (hasSimpleFIN && hasEnableBanking) return null;
+
+  if (hasSimpleFIN || hasEnableBanking) {
+    if (!open) {
+      return (
+        <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+          <Plus className="h-3.5 w-3.5 mr-1.5" />
+          {hasSimpleFIN ? (
+            <Trans>Also connect European banks (Enable Banking)</Trans>
+          ) : (
+            <Trans>Also connect US & Canada banks (SimpleFIN)</Trans>
+          )}
+        </Button>
+      );
+    }
+    return hasSimpleFIN ? (
+      <EnableBankingSetupCard budgetId={budgetId} />
+    ) : (
+      <ConnectSimpleFINCard budgetId={budgetId} />
     );
+  }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">
-          <Trans>Connect SimpleFIN Bridge</Trans>
-        </CardTitle>
-        <CardDescription>
-          <Trans>
-            Bank sync uses your own SimpleFIN Bridge subscription. Budgero talks to SimpleFIN
-            directly from this device; our servers never see your bank data.
-          </Trans>
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <ol className="list-decimal pl-5 text-sm space-y-1 text-muted-foreground">
-          <li>
-            <Trans>
-              Sign up at{' '}
-              <a
-                href={SIMPLEFIN_BRIDGE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline inline-flex items-center gap-0.5"
-              >
-                SimpleFIN Bridge
-                <ExternalLink className="h-3 w-3" />
-              </a>{' '}
-              and connect your banks there.
-            </Trans>
-          </li>
-          <li>
-            <Trans>Create a new app connection and copy its setup token.</Trans>
-          </li>
-          <li>
-            <Trans>Paste the token below.</Trans>
-          </li>
-        </ol>
-        <div className="flex gap-2">
-          <Input
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder={t`Setup token`}
-            className="font-mono text-xs"
-            autoComplete="off"
-            spellCheck={false}
-          />
-          <Button onClick={submit} disabled={!token.trim() || connect.isPending}>
-            {connect.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-            <Trans>Connect</Trans>
-          </Button>
-        </div>
-        <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
-          <ShieldCheck className="h-3.5 w-3.5 shrink-0 mt-px" />
-          <Trans>
-            The access key is stored encrypted inside this budget and syncs to your devices. Anyone
-            you share this budget with can sync it too.
-          </Trans>
-        </p>
-      </CardContent>
-    </Card>
+    <Tabs defaultValue={defaultRegion()} className="space-y-3">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="us">
+          <Trans>US & Canada</Trans>
+        </TabsTrigger>
+        <TabsTrigger value="eu">
+          <Trans>Europe</Trans>
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="us">
+        <ConnectSimpleFINCard budgetId={budgetId} />
+      </TabsContent>
+      <TabsContent value="eu">
+        <EnableBankingSetupCard budgetId={budgetId} />
+      </TabsContent>
+    </Tabs>
   );
 }

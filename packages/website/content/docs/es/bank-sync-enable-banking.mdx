@@ -1,0 +1,252 @@
+---
+title: "Sincronización bancaria con Enable Banking (Europa)"
+summary: "Sincroniza gratis cuentas bancarias europeas mediante Enable Banking y la banca abierta PSD2, con cifrado de extremo a extremo entre tu navegador y el agregador bancario."
+section: accounts-and-imports
+topicId: bank-sync-enable-banking
+takeaways:
+  - "Cómo registrar tu propia aplicación gratuita de Enable Banking y conectarla a Budgero."
+  - "Cómo funciona el acceso bancario y cómo renovarlo cada 180 días."
+  - "Cómo un relé ciego hace que tus datos bancarios sean ilegibles para los servidores de Budgero."
+---
+
+[Enable Banking](https://enablebanking.com) se conecta con miles de bancos del Espacio Económico Europeo y el Reino Unido a través de PSD2, la normativa de banca abierta de la UE. Budgero lo usa para importar tus transacciones y saldos automáticamente.
+
+**Es gratis para uso personal.** Enable Banking permite a los particulares usar su API sin coste en su modo "restricted" (restringido), que solo lee las cuentas de las que eres titular y que vinculas tú mismo. No pagas nada a Enable Banking, y Budgero no cobra extra por la sincronización bancaria.
+
+En EE. UU. o Canadá, usa [SimpleFIN](/docs/bank-sync-simplefin) en su lugar. Puedes conectar ambos en el mismo presupuesto.
+
+La sincronización bancaria está en beta.
+
+## Cómo funciona la configuración
+
+Para usar Enable Banking gratis, registras tu **propia aplicación** en su plataforma. Eso es lo que lo mantiene gratuito, y significa que la clave de acceso te pertenece a ti, no a Budgero. Aplicaciones de presupuesto autoalojadas como [Actual Budget](https://actualbudget.org/docs/advanced/bank-sync/enable-banking/) y [Firefly III](https://docs.firefly-iii.org/tutorials/data-importer/eb/) siguen el mismo proceso. Si ya lo has hecho para alguna de ellas, te resultará familiar. Registra una aplicación aparte para Budgero, para que cada app tenga su propia clave.
+
+La configuración lleva unos 15 minutos y solo hay que hacerla una vez. Después, la sincronización funciona en segundo plano hasta que tu banco te pida renovar el acceso, normalmente cada 180 días.
+
+## Paso 1: Crear una cuenta de Enable Banking
+
+Regístrate en [enablebanking.com](https://enablebanking.com). Puede que Enable Banking te envíe un correo de confirmación antes de que puedas usar el panel de control, y eso puede tardar un rato.
+
+## Paso 2: Registrar tu aplicación
+
+En el [panel de control de Enable Banking](https://enablebanking.com/cp/applications), abre **API applications** y registra una nueva aplicación:
+
+<table>
+  <thead>
+    <tr>
+      <th>Campo</th>
+      <th>Qué introducir</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Environment</td>
+      <td><strong>Production</strong>, para tus bancos reales. Elige Sandbox solo si quieres probar primero con un banco ficticio (ver más abajo).</td>
+    </tr>
+    <tr>
+      <td>Application name</td>
+      <td>Lo que quieras, por ejemplo "Budgero".</td>
+    </tr>
+    <tr>
+      <td>Allowed redirect URLs</td>
+      <td>La dirección de tu Budgero seguida de <code>/bank-sync/callback</code>. En Budgero Cloud es <code>https://my.budgero.app/bank-sync/callback</code>. Budgero muestra la URL exacta, con un botón para copiarla, en <strong>Ajustes › Sincronización bancaria › Europa</strong>.</td>
+    </tr>
+    <tr>
+      <td>Private key</td>
+      <td>Deja la opción predeterminada, <strong>Generate in the browser</strong>.</td>
+    </tr>
+    <tr>
+      <td>Correo electrónico, descripción y URL de la política de privacidad y de los términos</td>
+      <td>Rellénalos con tus propios datos. Enable Banking no comprueba las URL de las políticas en las aplicaciones personales (restricted), así que <code>https://budgero.app/privacy</code> sirve para ambas.</td>
+    </tr>
+  </tbody>
+</table>
+
+Al enviar el formulario, tu navegador descarga un archivo `.pem` con el ID de tu aplicación como nombre. Ese archivo es la clave privada de tu aplicación. Guárdalo en un lugar seguro: Enable Banking no volverá a mostrártelo.
+
+## Paso 3: Vincular tus cuentas bancarias a la aplicación
+
+En el panel de control, usa **Activate by linking accounts** (a veces aparece como **Link accounts**) e inicia sesión en tu banco. Vincula **todas** las cuentas que quieras sincronizar.
+
+En el modo restricted, Enable Banking solo devuelve las cuentas que vinculaste aquí. Si te saltas este paso, tu banco aparecerá en Budgero sin ninguna cuenta. Una vez hecho, tu aplicación aparece como **Restricted** y **Active**, que es lo correcto para uso personal.
+
+## Paso 4: Añadir la clave a Budgero
+
+1. En Budgero, abre **Ajustes › Sincronización bancaria** y elige la pestaña **Europa**.
+2. Sube el archivo `.pem`. Budgero rellena el ID de la aplicación a partir del nombre del archivo; si lo renombraste, pega el ID desde el panel de control.
+3. Selecciona **Verificar y guardar**.
+
+Budgero comprueba la clave con Enable Banking antes de guardar nada. Confirma que la clave funciona y que tu aplicación incluye la URL de redirección de Budgero. Si falta la URL de redirección, Budgero te indica cuál debes añadir.
+
+## Paso 5: Conectar tu banco
+
+1. En **Bancos**, elige tu país y tu banco, y selecciona **Continuar al inicio de sesión del banco**.
+2. Se abre la página de inicio de sesión de tu banco en una ventana pequeña. Inicia sesión y aprueba el acceso. Sí, otra vez: vincular las cuentas en el paso 3 activó tu aplicación, pero tu banco también tiene que aprobar esta conexión concreta.
+3. La ventana se cierra sola y Budgero guarda la conexión.
+
+Si tu navegador bloquea las ventanas emergentes, o usas Budgero como aplicación instalada, la página de inicio de sesión del banco se abre, en cambio, en la misma pestaña, y tu banco te devuelve a Budgero cuando termines.
+
+Para añadir otro banco, selecciona **Añadir banco** y repite el proceso.
+
+## Paso 6: Vincular tus cuentas
+
+En **Cuentas bancarias**, selecciona **Vincular** junto a una cuenta y elige adónde deben ir sus transacciones:
+
+- **Cuenta nueva.** Budgero crea la cuenta y ajusta su saldo inicial para que coincida hoy con tu banco. Elige cuánto tiempo atrás quieres importar. Por defecto son 30 días. La primera sincronización pide a tu banco todo el historial que permita, y Budgero importa a partir de la fecha que elegiste.
+- **Cuenta existente.** Elige una cuenta que hayas estado llevando a mano. La importación empieza el día después de tu último movimiento, así que nada se importa dos veces. Si una transacción bancaria se parece a otra que ya registraste, Budgero te pide que la revises en lugar de añadir un duplicado.
+
+Selecciona **Vincular e importar**. Las transacciones aparecen al instante y se marcan como confirmadas, porque el banco ya las ha contabilizado.
+
+## Cómo funciona la sincronización
+
+- **Automática.** Budgero sincroniza cuando abres la aplicación o vuelves a ella, como máximo cada 6 horas, en todos tus dispositivos.
+- **Bajo demanda.** Selecciona **Sincronizar ahora** en **Ajustes › Sincronización bancaria**, o usa el botón de sincronización en la página de una cuenta vinculada.
+- **Transacciones contabilizadas por defecto.** Los pagos con tarjeta pendientes se omiten hasta que tu banco los contabiliza, salvo que actives **Importar transacciones pendientes** para la cuenta (ver más abajo). Los pagos cancelados y rechazados nunca se importan.
+- **Descripciones limpias.** Muchos bancos, sobre todo en Alemania y Austria, anteponen a las descripciones códigos SEPA como `SVWZ+` o `EREF+`. Budgero elimina esos prefijos.
+- **Sin duplicados.** Cada transacción bancaria se importa una sola vez, incluso después de renovar el acceso. Algunos bancos envían transacciones sin referencia; aun así, Budgero distingue dos cafés idénticos del mismo día.
+- **Posibles coincidencias.** Cuando una transacción bancaria tiene el mismo importe que un movimiento que registraste tú, con cinco días o menos de diferencia, Budgero te pide que elijas **Emparejar**, **Añadir como nueva** u **Omitir** en lugar de adivinar.
+- **Sincronización con el usuario presente.** Los bancos pueden limitar cuántas veces una aplicación lee tus cuentas en segundo plano, a menudo a cuatro veces al día. Budgero sincroniza mientras usas la aplicación y se lo indica a Enable Banking, lo que normalmente evita que llegues a ese límite.
+
+## Ajustes del feed bancario
+
+Cada cuenta vinculada tiene sus propios ajustes. Selecciona el icono del engranaje junto a ella en **Ajustes › Sincronización bancaria**:
+
+- **Importar transacciones pendientes.** Desactivado por defecto. Cuando está activado, los pagos con tarjeta aparecen antes de que tu banco los contabilice, como transacciones sin confirmar. Cuando el banco contabiliza uno, Budgero actualiza directamente esa misma transacción, con la fecha y el importe contabilizados, y la marca como confirmada. Eso funciona incluso cuando el banco da una referencia nueva a la transacción contabilizada. Tu categoría, y cualquier beneficiario o nota que hayas cambiado, se mantienen. Si el banco descarta una transacción pendiente sin contabilizarla, por ejemplo una retención de tarjeta liberada, Budgero la elimina.
+- **Fecha.** Elige la fecha de compra (cuando pagaste), la fecha contable (cuando el banco la registró) o la fecha valor (cuando se movió el dinero). **Automático** usa la fecha contable.
+- **Beneficiario** y **Nota.** Elige si cada campo recibe el nombre del comercio o de la contraparte, o bien la descripción del pago, o deja la nota vacía. Los bancos europeos rellenan estos campos de forma distinta, así que vale la pena revisarlos si tus beneficiarios aparecen como códigos de referencia.
+- **Arreglar nombres de beneficiarios en MAYÚSCULAS.** Activado por defecto. Convierte `K-MARKET KAMPPI` en `K-Market Kamppi`. Los nombres que ya tienen minúsculas se quedan exactamente como los envió el banco.
+
+Los ajustes se aplican a las transacciones que se importen a partir de ese momento. Si falta el campo que elegiste en una transacción, Budgero recurre a la opción automática. Tus [reglas](/docs/rules-engine) también se ejecutan sobre cada transacción importada, así que puedes limpiar el resto allí.
+
+## Renovar el acceso cada 180 días
+
+PSD2 limita la duración de una autorización bancaria, normalmente a 180 días. Budgero pide el plazo más largo que permita tu banco, o 90 días si el banco no lo indica. **Ajustes › Sincronización bancaria** muestra cuándo caduca el acceso de cada banco. Una semana antes, Budgero te lo recuerda al abrir la aplicación. Selecciona **Volver a conectar** junto al banco e inicia sesión de nuevo.
+
+Algunos bancos retiran el acceso antes, por ejemplo por una verificación de identidad anual. En ese caso, la sincronización informa de que el acceso a ese banco ha caducado, y **Volver a conectar** lo soluciona de la misma forma.
+
+Volver a conectar no cambia nada en tu presupuesto. Budgero reconoce tus cuentas por un identificador estable que se mantiene tras la renovación, así que tus vínculos siguen en su sitio y ninguna transacción se importa dos veces.
+
+## Cómo la sincronización con Enable Banking preserva el zero-knowledge
+
+Budgero tiene [cifrado de extremo a extremo](/docs/security): nuestros servidores nunca guardan tu presupuesto más que como texto cifrado. La sincronización bancaria desde Europa mantiene esa garantía. Te explicamos cómo, porque es menos obvio de lo que parece.
+
+### El problema
+
+La API de Enable Banking no permite que las páginas web la llamen directamente. Los navegadores bloquean esas solicitudes por una regla de seguridad llamada CORS. La solución habitual es un servidor proxy que llama al agregador bancario en tu nombre. Pero el cifrado HTTPS solo funciona entre dos extremos, así que un proxy normal descifra todo lo que pasa por él: la lista de cuentas, cada transacción, las credenciales. Eso rompería el cifrado de extremo a extremo, y publicar el código fuente del proxy no lo arreglaría, porque nadie puede verificar qué ejecuta realmente un servidor.
+
+### Lo que hace Budgero en su lugar
+
+Budgero traslada el cifrado a tu navegador.
+
+1. **Tu navegador ejecuta su propio cifrado.** La primera vez que usas la sincronización bancaria de la UE, Budgero carga [libcurl.js](https://github.com/ading2210/libcurl.js): la conocida biblioteca curl y una implementación de TLS 1.3, compiladas a WebAssembly. Abre una sesión HTTPS cifrada desde tu navegador directamente hasta `api.enablebanking.com`.
+2. **Tu navegador comprueba por sí mismo el certificado de Enable Banking.** Usa una lista integrada de autoridades de certificación de confianza, la misma que usa Firefox. Si algo situado en medio sustituye el certificado por uno falso, la conexión falla en lugar de filtrar datos.
+3. **Un relé ciego transporta los bytes cifrados.** Los navegadores no pueden abrir conexiones de red en bruto, así que el tráfico cifrado viaja por un WebSocket hasta un pequeño relé integrado en el servidor de Budgero. El relé pasa los bytes a Enable Banking y te devuelve las respuestas cifradas. No tiene claves, así que no puede leer el tráfico en ninguna de las dos direcciones.
+4. **El relé solo puede llegar a Enable Banking.** Rechaza cualquier otro destino, así que no se puede usar como proxy abierto. Guarda contadores, no registros de tu tráfico.
+5. **Tu clave privada nunca sale de tu presupuesto.** Cada solicitud se autoriza con un token de corta duración que tu navegador firma con la clave privada de tu aplicación. La clave solo se guarda dentro de tu presupuesto cifrado, y el token firmado solo viaja dentro de la sesión cifrada.
+
+Piensa en ello como en una caja cerrada con llave. Con un proxy normal, le entregas una carta al proxy y él escribe otra nueva para el banco. Con el relé de Budgero, encierras la carta en una caja que solo Enable Banking puede abrir, y el relé no es más que el mensajero. Sabe adónde va la caja y más o menos cuánto pesa, pero no puede ver lo que hay dentro. Si alguien cambia la caja, la cerradura no encaja.
+
+El mismo patrón tiene décadas: es así como los navegadores web envían HTTPS a través de los proxies corporativos, que reenvían tráfico cifrado que no pueden leer.
+
+<table>
+  <thead>
+    <tr>
+      <th>Datos</th>
+      <th>¿Puede verlos el relé de Budgero?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Transacciones, saldos, nombres de cuentas, IBAN</td>
+      <td>No. Están cifrados entre tu navegador y Enable Banking.</td>
+    </tr>
+    <tr>
+      <td>Qué banco usas y qué cuentas sincronizas</td>
+      <td>No. También van dentro de la sesión cifrada.</td>
+    </tr>
+    <tr>
+      <td>La clave privada de tu aplicación y los tokens firmados</td>
+      <td>No. La clave nunca sale de tu presupuesto; los tokens viajan cifrados.</td>
+    </tr>
+    <tr>
+      <td>Que te conectaste a Enable Banking</td>
+      <td>Sí. El relé tiene que saber adónde enviar los bytes.</td>
+    </tr>
+    <tr>
+      <td>Tu dirección IP, cuándo sincronizas y aproximadamente cuántos datos se transfirieron</td>
+      <td>Sí. Cualquier relé ve esto.</td>
+    </tr>
+    <tr>
+      <td>Qué cuenta de Budgero está sincronizando</td>
+      <td>Sí. El relé exige que hayas iniciado sesión, para evitar abusos.</td>
+    </tr>
+  </tbody>
+</table>
+
+Enable Banking sí ve tus datos bancarios: es el servicio con licencia que se conecta con tu banco, sujeto a su propia política de privacidad. Las transacciones importadas se escriben en tu presupuesto en tu dispositivo y se cifran antes de sincronizarse, como todo lo demás en Budgero.
+
+Como en cualquier aplicación web con cifrado de extremo a extremo, confías en el código de la aplicación que ejecuta tu navegador. Budgero, incluido el relé, es [de código abierto](https://github.com/tombadilo-bombadilo/budgero), y los servidores autoalojados ejecutan el mismo relé.
+
+## Probar primero con un sandbox
+
+Para hacer pruebas sin tu banco real, registra una segunda aplicación con el entorno **Sandbox**. En Budgero, elige el banco **Mock ASPSP**, el banco ficticio de Enable Banking. En la sección **Mock ASPSP** del panel de control puedes añadir tus propias transacciones y saldos de prueba. Las aplicaciones Sandbox también aceptan URL de redirección con `http://` sin cifrar. Desconecta el sandbox en Budgero antes de configurar tu aplicación de producción.
+
+## Autoalojamiento
+
+Los servidores autoalojados de Budgero incluyen el relé, así que no hay nada que instalar ni configurar. Dos cosas que conviene comprobar:
+
+- **HTTPS.** Enable Banking exige una URL de redirección `https://` para las aplicaciones de producción. Sirve Budgero por HTTPS, por ejemplo detrás de un proxy inverso o con Tailscale, y usa esa dirección en el paso 2.
+- **Conexiones salientes.** Tu servidor debe poder llegar a `api.enablebanking.com` en el puerto 443.
+
+Tus sincronizaciones usan el relé de tu propio servidor, nunca el de Budgero Cloud.
+
+## Eliminar un banco o desconectar
+
+- **Eliminar** (el icono de la papelera junto a un banco) detiene la sincronización de ese banco y revoca su acceso en Enable Banking. Tus vínculos se mantienen, así que si vuelves a conectarlo más adelante, todo sigue donde lo dejaste.
+- **Desconectar** elimina de tu presupuesto la clave guardada, los vínculos y las revisiones pendientes. Las transacciones importadas se conservan.
+- Para revocarlo todo, elimina también la aplicación en el panel de control de Enable Banking.
+
+## Solución de problemas
+
+<table>
+  <thead>
+    <tr>
+      <th>Problema</th>
+      <th>Qué hacer</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Un banco se conecta pero no muestra ninguna cuenta</td>
+      <td>Vincula esas cuentas a tu aplicación en el panel de control (paso 3) y después selecciona <strong>Volver a conectar</strong>, o elimina el banco y vuelve a añadirlo.</td>
+    </tr>
+    <tr>
+      <td>"no incluye … como URL de redirección"</td>
+      <td>Añade la URL exacta que muestra Budgero a las URL de redirección permitidas de tu aplicación (Allowed redirect URLs) y vuelve a seleccionar <strong>Verificar y guardar</strong>.</td>
+    </tr>
+    <tr>
+      <td>"Ese archivo no es una clave privada RSA"</td>
+      <td>Sube el archivo <code>.pem</code> que se descargó de Enable Banking al registrar la aplicación, no un certificado ni ningún otro archivo.</td>
+    </tr>
+    <tr>
+      <td>"No se pudo contactar con Enable Banking a través del relé de Budgero"</td>
+      <td>Comprueba tu conexión. En un servidor autoalojado, comprueba que pueda llegar a <code>api.enablebanking.com</code> en el puerto 443.</td>
+    </tr>
+    <tr>
+      <td>"Tu banco limita la frecuencia con la que se pueden leer sus datos"</td>
+      <td>Tu banco solo permite unas pocas lecturas al día. Espera unas horas y vuelve a sincronizar.</td>
+    </tr>
+    <tr>
+      <td>La ventana de inicio de sesión no se abre</td>
+      <td>Tu navegador bloqueó la ventana emergente. Permite las ventanas emergentes para Budgero, o simplemente continúa: Budgero abre en su lugar la página de inicio de sesión del banco en la misma pestaña.</td>
+    </tr>
+    <tr>
+      <td>"El acceso a … caducó"</td>
+      <td>Selecciona <strong>Volver a conectar</strong> junto al banco e inicia sesión de nuevo.</td>
+    </tr>
+    <tr>
+      <td>La página de inicio de sesión de tu banco rechaza la solicitud</td>
+      <td>Asegúrate de que tu aplicación esté en el entorno correcto: Production para bancos reales, Sandbox para Mock ASPSP.</td>
+    </tr>
+  </tbody>
+</table>

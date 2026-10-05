@@ -42,6 +42,7 @@ Practical advice for households where simultaneous offline editing is routine: l
 Everything core works offline. The honest list of exceptions:
 
 - **Fetched exchange rates.** Live rate lookups need the network. If you budget across currencies and travel, set **manual rates** for the currencies you use (see [Accounts](/docs/accounts)) — manual rates work entirely offline. When no rate is cached, Budgero prompts you with the closest cached rate prefilled, and by default trues conversions up to official rates automatically once you reconnect.
+- **Bank sync.** Fetching transactions from [SimpleFIN](/docs/bank-sync-simplefin) or [Enable Banking](/docs/bank-sync-enable-banking) needs the network. Budgero syncs again the next time you open the app online.
 - **Inviting new members.** Generating and redeeming invite links is an online operation.
 - **The Push API.** Server-side by nature — though pushes sent while your device is offline simply wait in the server queue until you next sync.
 

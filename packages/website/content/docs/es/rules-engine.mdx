@@ -9,7 +9,7 @@ takeaways:
   - "Ejecuciones retroactivas, historial de ejecuciones y la red de seguridad de deshacer con un clic."
 ---
 
-Llevar un presupuesto de forma manual no tiene que ser repetitivo. El Motor de reglas vigila las transacciones a medida que llegan —de importaciones, entrada manual o la [Push API](/docs/push-api)— y aplica la limpieza que de otro modo harías a mano: corregir nombres de beneficiarios, asignar categorías, eliminar ruido en las notas. Defines el patrón una vez; Budgero lo aplica para siempre.
+Llevar un presupuesto a mano no tiene que ser repetitivo, y los datos bancarios automáticos no tienen por qué ser un caos. El Motor de reglas vigila las transacciones a medida que llegan —de importaciones, [sincronización bancaria](/docs/bank-sync-enable-banking), entrada manual o la [Push API](/docs/push-api)— y aplica la limpieza que de otro modo harías a mano: corregir nombres de beneficiarios, asignar categorías, eliminar ruido en las notas. Defines el patrón una vez; Budgero lo aplica para siempre.
 
 Las reglas se encuentran en **Ajustes → Reglas**.
 
@@ -44,7 +44,7 @@ Cada regla se ejecuta en uno de tres modos:
   </tbody>
 </table>
 
-Las reglas continuas se activan en cada vía de entrada —importaciones CSV/PDF, entrada manual, Push API. Las reglas de Una vez se marcan como consumidas tras su ejecución y no se activan de nuevo hasta que se reinician. Las reglas de Autocompletar nunca modifican nada por sí solas; rellenan los campos como sugerencias en el formulario de entrada, una vez por sesión del formulario.
+Las reglas continuas se activan en cada vía de entrada —importaciones CSV/PDF, sincronización bancaria, entrada manual, Push API. Las reglas de Una vez se marcan como consumidas tras su ejecución y no se activan de nuevo hasta que se reinician. Las reglas de Autocompletar nunca modifican nada por sí solas; rellenan los campos como sugerencias en el formulario de entrada, una vez por sesión del formulario.
 
 ## Condiciones: qué coincide una regla
 

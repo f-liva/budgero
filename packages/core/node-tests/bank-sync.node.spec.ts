@@ -1,6 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { NodeSqlJsAdapter, ServiceManager, asMilli } from '../src';
-import type { SimpleFINTransaction } from '../src/services/bank-sync/types';
+import {
+  applyBankFeedSettings,
+  bankOperationId,
+  DEFAULT_BANK_FEED_SETTINGS,
+  fromSimpleFINTransaction,
+  parseBankFeedSettings,
+  parseEnableBankingConfig,
+  tidyPayeeName,
+} from '../src/services/bank-sync';
+import type {
+  BankTransaction,
+  EnableBankingSession,
+  SimpleFINTransaction,
+} from '../src/services/bank-sync/types';
 
 const at = (date: string) => {
   const [y, m, d] = date.split('-').map(Number);
@@ -50,13 +63,16 @@ async function setup() {
     importFrom: '2026-09-01',
   });
   const link = services.bankSync.listLinks(budgetId)[0];
-  const plan = (transactions: SimpleFINTransaction[], wasImported = () => false) =>
+  const plan = (
+    transactions: SimpleFINTransaction[],
+    wasImported: (row: { operationId: string }) => boolean = () => false
+  ) =>
     services.bankSync.planImport({
       budgetId,
       accountId: account.ID,
       currency: 'USD',
       link,
-      transactions,
+      transactions: transactions.map(fromSimpleFINTransaction),
       wasImported,
     });
   const importRow = (identity: ReturnType<typeof plan>['imports'][number]) =>
@@ -201,8 +217,309 @@ describe('SimpleFIN import planning', () => {
 
   it('drops links and pending reviews with the connection', async () => {
     const { services, budgetId } = await setup();
-    services.bankSync.deleteConnection(budgetId);
-    expect(services.bankSync.getConnection(budgetId)).toBeNull();
+    services.bankSync.deleteConnection(budgetId, 'simplefin');
+    expect(services.bankSync.getConnection(budgetId, 'simplefin')).toBeNull();
     expect(services.bankSync.listLinks(budgetId)).toEqual([]);
+  });
+});
+
+const session = (id: string, bank: string, hash = 'HASH-1'): EnableBankingSession => ({
+  sessionId: id,
+  aspsp: { name: bank, country: 'FI' },
+  validUntil: '2027-03-31T00:00:00Z',
+  createdAt: '2026-10-02T00:00:00Z',
+  accounts: [{ uid: `uid-${id}`, hash, name: 'Current', currency: 'EUR' }],
+});
+
+describe('Enable Banking connections', () => {
+  it('stores credentials, replaces a re-authorized bank and keeps sessions on key changes', async () => {
+    const { services, budgetId } = await setup();
+    services.bankSync.deleteConnection(budgetId, 'simplefin');
+    services.bankSync.saveEnableBankingConnection(budgetId, {
+      appId: 'app-1',
+      privateKeyPem: 'PEM',
+    });
+    services.bankSync.saveEnableBankingSession(budgetId, session('s1', 'Nordea', 'HASH-1'));
+    services.bankSync.saveEnableBankingSession(budgetId, session('s2', 'OP', 'HASH-2'));
+    // Re-authorizing the Nordea login (same account) replaces s1.
+    services.bankSync.saveEnableBankingSession(budgetId, session('s3', 'Nordea', 'HASH-1'));
+
+    const connection = services.bankSync.getConnection(budgetId, 'enablebanking')!;
+    expect(connection.Provider).toBe('enablebanking');
+    let config = parseEnableBankingConfig(connection)!;
+    expect(config.sessions.map((s) => s.sessionId)).toEqual(['s2', 's3']);
+
+    services.bankSync.saveEnableBankingConnection(budgetId, {
+      appId: 'app-1',
+      privateKeyPem: 'NEW PEM',
+    });
+    config = parseEnableBankingConfig(services.bankSync.getConnection(budgetId, 'enablebanking'))!;
+    expect(config.privateKeyPem).toBe('NEW PEM');
+    expect(config.sessions).toHaveLength(2);
+
+    services.bankSync.removeEnableBankingSession(budgetId, 's2');
+    config = parseEnableBankingConfig(services.bankSync.getConnection(budgetId, 'enablebanking'))!;
+    expect(config.sessions.map((s) => s.sessionId)).toEqual(['s3']);
+
+    // A second login at the same bank (another person's accounts) keeps both.
+    services.bankSync.saveEnableBankingSession(budgetId, session('s4', 'Nordea', 'HASH-9'));
+    config = parseEnableBankingConfig(services.bankSync.getConnection(budgetId, 'enablebanking'))!;
+    expect(config.sessions.map((s) => s.sessionId)).toEqual(['s3', 's4']);
+
+    // A different application can't use the old app's sessions.
+    services.bankSync.saveEnableBankingConnection(budgetId, {
+      appId: 'other-app',
+      privateKeyPem: 'PEM',
+    });
+    config = parseEnableBankingConfig(services.bankSync.getConnection(budgetId, 'enablebanking'))!;
+    expect(config.sessions).toEqual([]);
+  });
+
+  it('keeps SimpleFIN and Enable Banking side by side, each with its own links', async () => {
+    const { services, budgetId, account } = await setup();
+    services.bankSync.saveEnableBankingConnection(budgetId, { appId: 'app', privateKeyPem: 'PEM' });
+    const euAccount = await services.accounts.createAccount(
+      'EU',
+      budgetId,
+      'Checking',
+      'EUR',
+      asMilli(0),
+      {},
+      true
+    );
+    services.bankSync.saveLink({
+      budgetId,
+      provider: 'enablebanking',
+      accountId: euAccount.ID,
+      externalAccountId: 'HASH-1',
+      externalName: 'Current',
+      orgName: 'Nordea',
+      importFrom: '2026-09-01',
+    });
+    services.bankSync.recordSync({
+      budgetId,
+      provider: 'enablebanking',
+      at: '2026-10-02T10:00:00Z',
+      error: null,
+      links: [],
+    });
+
+    expect(services.bankSync.listConnections(budgetId).map((c) => c.Provider)).toEqual([
+      'simplefin',
+      'enablebanking',
+    ]);
+    expect(services.bankSync.listLinks(budgetId, 'simplefin').map((l) => l.AccountID)).toEqual([
+      account.ID,
+    ]);
+    expect(services.bankSync.getConnection(budgetId, 'simplefin')?.LastSyncAt).toBeNull();
+    expect(services.bankSync.getConnection(budgetId, 'enablebanking')?.LastSyncAt).toBe(
+      '2026-10-02T10:00:00Z'
+    );
+
+    services.bankSync.deleteConnection(budgetId, 'enablebanking');
+    expect(services.bankSync.listConnections(budgetId).map((c) => c.Provider)).toEqual([
+      'simplefin',
+    ]);
+    expect(services.bankSync.listLinks(budgetId).map((l) => l.Provider)).toEqual(['simplefin']);
+  });
+
+  it('ignores SimpleFIN connections and broken config', () => {
+    expect(parseEnableBankingConfig({ Provider: 'simplefin', ConfigJSON: '{}' })).toBeNull();
+    expect(parseEnableBankingConfig({ Provider: 'enablebanking', ConfigJSON: 'nope' })).toBeNull();
+  });
+
+  it('plans Enable Banking rows under their own namespace, never colliding with SimpleFIN', async () => {
+    const { services, budgetId, account } = await setup();
+    const row = (id: string, amount: number, pending = false): BankTransaction => ({
+      id,
+      date: '2026-09-05',
+      amount,
+      payee: 'Cafe',
+      memo: '',
+      pending,
+    });
+    const result = services.bankSync.planImport({
+      budgetId,
+      accountId: account.ID,
+      currency: 'EUR',
+      provider: 'enablebanking',
+      link: { ExternalAccountID: 'HASH-1', ImportFrom: '2026-09-01' },
+      transactions: [row('e1', -3500), row('e2', 120000), row('p', -1000, true)],
+      wasImported: () => false,
+    });
+    expect(result.imports.map((r) => [r.sourceKey, r.inflow, r.outflow])).toEqual([
+      [JSON.stringify(['enablebanking-v1', 'HASH-1', 'e1']), 0, 3500],
+      [JSON.stringify(['enablebanking-v1', 'HASH-1', 'e2']), 120000, 0],
+    ]);
+    expect(result.imports[0].operationId).toBe(
+      bankOperationId(budgetId, account.ID, 'HASH-1', 'e1', 'enablebanking')
+    );
+    expect(bankOperationId(budgetId, account.ID, 'HASH-1', 'e1')).toContain('simplefin-v1');
+  });
+});
+
+describe('Bank feed settings', () => {
+  it('title-cases only ALL-CAPS payees', () => {
+    expect(tidyPayeeName('K-MARKET KAMPPI')).toBe('K-Market Kamppi');
+    expect(tidyPayeeName("MCDONALD'S 7-ELEVEN")).toBe("Mcdonald's 7-Eleven");
+    expect(tidyPayeeName('ÅHLÉNS CITY')).toBe('Åhléns City');
+    expect(tidyPayeeName("McDonald's")).toBe("McDonald's");
+    expect(tidyPayeeName('1234 5678')).toBe('1234 5678');
+  });
+
+  it('maps the chosen bank fields to date, payee and memo, falling back when missing', () => {
+    const row: BankTransaction = {
+      id: 'x',
+      date: '2026-09-05',
+      amount: -1000,
+      payee: 'SHOP',
+      memo: 'Card 1234',
+      pending: false,
+      fields: {
+        counterparty: 'SHOP',
+        description: 'Card 1234',
+        bookingDate: '2026-09-07',
+        transactionDate: '2026-09-05',
+      },
+    };
+    const defaults = parseBankFeedSettings({ SettingsJSON: '{}' });
+    expect(applyBankFeedSettings(row, defaults)).toMatchObject({
+      date: '2026-09-05',
+      payee: 'Shop',
+      memo: 'Card 1234',
+    });
+    expect(
+      applyBankFeedSettings(row, {
+        ...defaults,
+        date: 'booking',
+        payee: 'description',
+        memo: 'counterparty',
+        tidyPayees: false,
+      })
+    ).toMatchObject({ date: '2026-09-07', payee: 'Card 1234', memo: 'SHOP' });
+    // No value date from this bank: keep the default date.
+    expect(applyBankFeedSettings(row, { ...defaults, date: 'value' }).date).toBe('2026-09-05');
+    expect(applyBankFeedSettings(row, { ...defaults, memo: 'none' }).memo).toBe('');
+  });
+
+  it('stores settings per linked account', async () => {
+    const { services, budgetId, account } = await setup();
+    services.bankSync.updateLinkSettings(account.ID, {
+      ...DEFAULT_BANK_FEED_SETTINGS,
+      importPending: true,
+    });
+    const [link] = services.bankSync.listLinks(budgetId);
+    expect(parseBankFeedSettings(link)).toMatchObject({ importPending: true, tidyPayees: true });
+    // Re-linking the account keeps its settings.
+    services.bankSync.saveLink({
+      budgetId,
+      accountId: account.ID,
+      externalAccountId: 'ACT-1',
+      externalName: 'Everyday',
+      orgName: 'Bank',
+      importFrom: '2026-09-01',
+    });
+    expect(parseBankFeedSettings(services.bankSync.listLinks(budgetId)[0]).importPending).toBe(
+      true
+    );
+  });
+});
+
+describe('Pending transactions', () => {
+  const row = (id: string, date: string, amount: number, pending: boolean, payee = 'Cafe') =>
+    ({ id, date, amount, payee, memo: '', pending }) satisfies BankTransaction;
+
+  async function pendingSetup(importPending = true) {
+    const ctx = await setup();
+    const link = ctx.services.bankSync.listLinks(ctx.budgetId)[0];
+    const settings = { ...DEFAULT_BANK_FEED_SETTINGS, importPending };
+    const applied = new Set<string>();
+    const plan = (transactions: BankTransaction[]) =>
+      ctx.services.bankSync.planImport({
+        budgetId: ctx.budgetId,
+        accountId: ctx.account.ID,
+        currency: 'USD',
+        provider: 'enablebanking',
+        link,
+        settings,
+        transactions,
+        wasImported: (r) => applied.has(r.operationId),
+      });
+    const importRow = async (identity: ReturnType<typeof plan>['imports'][number]) => {
+      applied.add(identity.operationId);
+      return ctx.importRow(identity);
+    };
+    return { ...ctx, plan, importRow, applied };
+  }
+
+  it('skips pending rows unless the account imports them', async () => {
+    const off = await pendingSetup(false);
+    expect(off.plan([row('p1', '2026-09-05', -4500, true)]).imports).toEqual([]);
+    const on = await pendingSetup(true);
+    const [identity] = on.plan([row('p1', '2026-09-05', -4500, true)]).imports;
+    expect(identity).toMatchObject({ pending: true, outflow: 4500 });
+    expect(identity.operationId.endsWith('#pending')).toBe(true);
+  });
+
+  it('settles a pending row booked under the same ID', async () => {
+    const { plan, importRow } = await pendingSetup();
+    const [pending] = plan([row('p1', '2026-09-05', -4500, true)]).imports;
+    const id = await importRow(pending);
+    expect(plan([row('p1', '2026-09-05', -4500, true)])).toMatchObject({ imports: [], skipped: 1 });
+    const booked = plan([row('p1', '2026-09-06', -4500, false)]);
+    expect(booked.imports).toEqual([]);
+    expect(booked.settles).toMatchObject([
+      { transactionId: id, identity: { date: '2026-09-06' }, previous: { pending: true } },
+    ]);
+  });
+
+  it('settles a pending row the bank books under a new ID, preferring the same payee', async () => {
+    const { plan, importRow } = await pendingSetup();
+    const first = plan([
+      row('p1', '2026-09-05', -4500, true, 'Cafe'),
+      row('p2', '2026-09-05', -4500, true, 'Bar'),
+    ]);
+    const cafe = await importRow(first.imports[0]);
+    const bar = await importRow(first.imports[1]);
+    // The bank's answer covers the whole window, starting before both rows.
+    const booked = plan([
+      row('b0', '2026-09-01', -100, false, 'Kiosk'),
+      row('b9', '2026-09-07', -4500, false, 'Bar'),
+    ]);
+    expect(booked.settles.map((s) => s.transactionId)).toEqual([bar]);
+    expect(booked.imports.map((i) => i.payee)).toEqual(['Kiosk']);
+    // The other pending row vanished without being booked: it's removed.
+    expect(booked.removals).toEqual([cafe]);
+  });
+
+  it('keeps pending rows when the bank returned nothing at all', async () => {
+    const { plan, importRow } = await pendingSetup();
+    await importRow(plan([row('p1', '2026-09-05', -4500, true)]).imports[0]);
+    expect(plan([]).removals).toEqual([]);
+  });
+
+  it("doesn't import a pending row that matches an entry typed by hand", async () => {
+    const { plan, services, account, budgetId } = await pendingSetup();
+    await services.transactions.addTransaction(
+      asMilli(0),
+      asMilli(4500),
+      account.ID,
+      0,
+      budgetId,
+      '2026-09-04',
+      '',
+      '',
+      'Coffee'
+    );
+    const result = plan([row('p1', '2026-09-05', -4500, true)]);
+    expect(result).toMatchObject({ imports: [], reviews: [], skipped: 1 });
+  });
+
+  it("doesn't bring back a pending row the user deleted once it's booked", async () => {
+    const { plan, importRow, services } = await pendingSetup();
+    const id = await importRow(plan([row('p1', '2026-09-05', -4500, true)]).imports[0]);
+    services.transactions.deleteTransaction(id);
+    const booked = plan([row('p1', '2026-09-06', -4500, false)]);
+    expect(booked).toMatchObject({ imports: [], settles: [], skipped: 1 });
   });
 });

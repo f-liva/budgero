@@ -1,0 +1,156 @@
+---
+title: "Synchro bancaire avec SimpleFIN (États-Unis et Canada)"
+summary: "Importez les transactions de banques américaines et canadiennes via SimpleFIN Bridge, sans que vos données bancaires ne passent jamais par les serveurs de Budgero."
+section: accounts-and-imports
+topicId: bank-sync-simplefin
+takeaways:
+  - "Comment connecter SimpleFIN Bridge et lier vos comptes bancaires en quelques minutes."
+  - "Comment fonctionnent la synchronisation, la détection des doublons et les transactions en attente."
+  - "Pourquoi vos données bancaires vont directement de SimpleFIN à votre navigateur, sans jamais atteindre Budgero."
+---
+
+[SimpleFIN Bridge](https://beta-bridge.simplefin.org/) se connecte à des milliers de banques et de coopératives de crédit aux États-Unis et au Canada. Budgero s'en sert pour importer automatiquement vos transactions et vos soldes. Vous conservez votre propre abonnement SimpleFIN, et Budgero communique avec lui directement depuis votre appareil.
+
+Si votre banque est en Europe, utilisez plutôt [Enable Banking](/docs/bank-sync-enable-banking). Ce service est gratuit pour un usage personnel. Vous pouvez connecter les deux dans le même budget.
+
+La synchronisation bancaire est en bêta. Les transactions importées sont des transactions Budgero ordinaires : vous pouvez les modifier, les catégoriser ou les supprimer comme n'importe quelle autre.
+
+## Avant de commencer
+
+- **Un abonnement SimpleFIN Bridge.** SimpleFIN facture des frais modestes, environ 1,50 $ par mois ou 15 $ par an au moment où nous écrivons ces lignes. Budgero n'y ajoute rien.
+- **Environ cinq minutes.**
+- **Budgero déverrouillé sur l'appareil que vous configurez.** La connexion est enregistrée dans votre budget chiffré ; elle se synchronise donc automatiquement sur vos autres appareils.
+
+## Étape 1 : Connectez vos banques dans SimpleFIN Bridge
+
+1. Rendez-vous sur [beta-bridge.simplefin.org](https://beta-bridge.simplefin.org/) et choisissez **Get Started**. Connectez-vous avec le lien que SimpleFIN vous envoie par e-mail.
+2. Dans **Financial Institutions** (vos établissements financiers), ajoutez une nouvelle connexion pour chaque banque à synchroniser, puis connectez-vous à la banque lorsqu'on vous le demande.
+3. Dans **Apps**, créez une nouvelle connexion d'application et copiez son **jeton de configuration** (« setup token ») : une longue chaîne de lettres et de chiffres.
+
+Un jeton de configuration ne fonctionne qu'une seule fois. Si vous le perdez ou si la connexion échoue, créez-en un nouveau.
+
+## Étape 2 : Connectez Budgero
+
+1. Dans Budgero, ouvrez **Paramètres › Synchro bancaire** et choisissez l'onglet **États-Unis & Canada**.
+2. Collez le jeton de configuration et sélectionnez **Connecter**.
+
+Budgero échange le jeton contre une clé d'accès privée et enregistre cette clé dans votre budget. Le panneau affiche ensuite tous les comptes auxquels SimpleFIN a accès.
+
+## Étape 3 : Liez vos comptes
+
+Sélectionnez **Lier** à côté d'un compte bancaire et choisissez où ses transactions doivent aller :
+
+- **Nouveau compte.** Budgero crée le compte et définit son solde d'ouverture pour qu'il corresponde à votre banque aujourd'hui. Choisissez jusqu'où remonter dans l'historique : 30 jours par défaut.
+- **Compte existant.** Choisissez un compte que vous suivez déjà à la main. L'import commence le lendemain de votre dernière saisie, pour que rien ne soit importé deux fois. Si une transaction bancaire ressemble à une saisie existante, Budgero vous demande de la vérifier au lieu de créer un doublon.
+
+Sélectionnez **Lier et importer**. Les transactions apparaissent immédiatement et sont marquées comme pointées, puisque la banque les a déjà comptabilisées.
+
+Un compte ne peut être lié qu'à un seul flux bancaire à la fois. **Délier** arrête la synchronisation mais conserve toutes les transactions déjà importées.
+
+## Fonctionnement de la synchronisation
+
+- **Automatique.** Budgero se synchronise quand vous ouvrez l'application ou y revenez, au plus une fois toutes les 6 heures. Cela vaut pour l'ensemble de vos appareils : si votre téléphone s'est synchronisé il y a une heure, votre ordinateur portable ne se synchronisera pas à nouveau.
+- **À la demande.** Sélectionnez **Synchroniser** dans **Paramètres › Synchro bancaire**, ou utilisez le bouton de synchronisation sur la page d'un compte lié.
+- **Chevauchement.** Chaque synchronisation remonte une semaine avant la précédente, pour rattraper les transactions que la banque a comptabilisées en retard. Les transactions déjà importées par Budgero sont ignorées, même celles que vous avez supprimées depuis. Une transaction bancaire supprimée le reste.
+- **Les transactions en attente** sont ignorées jusqu'à ce que la banque les comptabilise, sauf si vous activez **Importer les transactions en attente** pour le compte (voir ci-dessous). Dans les deux cas, vous ne vous retrouvez jamais avec une ligne en attente et une ligne comptabilisée pour le même achat.
+- **Transactions réémises.** Les banques réémettent parfois une transaction sous un nouvel identifiant. Budgero la reconnaît à sa date, son montant et son bénéficiaire, et met à jour la ligne existante au lieu d'en ajouter une copie.
+- **Soldes.** **Paramètres › Synchro bancaire** affiche le solde bancaire de chaque compte lié et le signale lorsque votre solde pointé dans Budgero est différent.
+
+Pour la plupart des banques, SimpleFIN actualise les données environ une fois par jour. Une transaction effectuée ce matin peut n'apparaître que demain.
+
+## Réglages du flux bancaire
+
+Chaque compte lié a ses propres réglages. Sélectionnez l'icône en forme d'engrenage à côté du compte dans **Paramètres › Synchro bancaire** :
+
+- **Importer les transactions en attente.** Désactivée par défaut. Lorsque cette option est activée, les paiements par carte apparaissent avant que la banque ne les comptabilise, sous forme de transactions non pointées. Dès que la banque en comptabilise un, Budgero met directement à jour cette même transaction, avec la date et le montant comptabilisés, et la marque comme pointée. Votre catégorie, ainsi que tout bénéficiaire ou mémo que vous avez modifié, sont conservés. Si la banque abandonne une transaction en attente sans la comptabiliser, par exemple une pré-autorisation de carte levée, Budgero la supprime.
+- **Date.** Choisissez la date d'achat (quand vous avez payé) ou la date de comptabilisation (quand la banque l'a enregistrée). **Automatique** utilise la date d'achat lorsque SimpleFIN en fournit une.
+- **Bénéficiaire** et **Mémo.** Choisissez, pour chaque champ, entre le nom du commerçant et la description de la banque, ou laissez le mémo vide.
+- **Nettoyer les noms de bénéficiaires en MAJUSCULES.** Activée par défaut. Transforme `TRADER JOE'S #552` en `Trader Joe's #552`. Les noms qui contiennent déjà des minuscules restent exactement tels que la banque les a envoyés.
+
+Les réglages s'appliquent aux transactions importées à partir de ce moment. Si le champ choisi manque pour une transaction, Budgero revient au choix automatique. Vos [règles](/docs/rules-engine) s'appliquent aussi à chaque transaction importée : vous pouvez donc y faire le reste du nettoyage.
+
+## Vérifier les correspondances possibles
+
+Lorsqu'une transaction bancaire a le même montant qu'une saisie que vous avez faite vous-même, à cinq jours près, Budgero ne l'importe pas automatiquement. Il affiche plutôt une alerte avec un bouton **Vérifier** :
+
+- **Associer** relie la transaction bancaire à votre saisie et marque celle-ci comme pointée.
+- **Ajouter comme nouvelle** importe la transaction bancaire comme une transaction distincte.
+- **Ignorer** l'écarte définitivement.
+
+## Comment la synchronisation SimpleFIN préserve le Zero-knowledge
+
+Budgero est [chiffré de bout en bout](/docs/security) : nos serveurs ne stockent votre budget que sous forme de texte chiffré qu'ils ne peuvent pas lire. La synchronisation bancaire tient cette promesse, car les serveurs de Budgero ne prennent tout simplement aucune part aux échanges qui portent vos données bancaires.
+
+1. **Votre navigateur communique directement avec SimpleFIN.** SimpleFIN Bridge autorise les applications web à l'appeler depuis le navigateur ; Budgero envoie donc la requête directement de votre appareil à SimpleFIN, en HTTPS. La réponse, avec vos comptes, vos soldes et vos transactions, revient directement sur votre appareil. Aucun serveur Budgero ne la relaie, ne la met en cache ni ne la journalise.
+2. **La clé d'accès reste dans votre budget chiffré.** La clé émise par SimpleFIN est stockée dans votre budget, à côté de vos transactions. Elle ne parvient à nos serveurs qu'à l'intérieur du budget chiffré, jamais sous une forme lisible.
+3. **Les transactions importées sont chiffrées comme tout le reste.** Budgero les écrit dans votre budget sur votre appareil, les chiffre, et seulement ensuite les synchronise.
+
+<table>
+  <thead>
+    <tr>
+      <th>Qui</th>
+      <th>Peut voir vos données bancaires ?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Vos appareils</td>
+      <td>Oui. Ils déchiffrent votre budget.</td>
+    </tr>
+    <tr>
+      <td>SimpleFIN Bridge</td>
+      <td>Oui. C'est le service qui se connecte à votre banque, selon sa propre politique de confidentialité.</td>
+    </tr>
+    <tr>
+      <td>Les serveurs de Budgero</td>
+      <td>Non. Ils ne reçoivent jamais les requêtes, les réponses ni la clé d'accès sous une forme lisible.</td>
+    </tr>
+    <tr>
+      <td>Les personnes avec qui vous partagez le budget</td>
+      <td>Oui. La clé d'accès se trouve dans le budget, elles peuvent donc aussi le synchroniser.</td>
+    </tr>
+  </tbody>
+</table>
+
+Comme pour toute application web chiffrée de bout en bout, cela repose sur le code de l'application que votre navigateur exécute. Le code de Budgero est [open source](https://github.com/tombadilo-bombadilo/budgero), et vous pouvez l'[auto-héberger](/docs/self-hosting-guide).
+
+## Déconnexion
+
+Sélectionnez **Déconnecter** dans **Paramètres › Synchro bancaire**. Budgero supprime la clé d'accès, les liens et les vérifications en attente, et conserve toutes les transactions déjà importées. Pour révoquer complètement l'accès, supprimez aussi la connexion d'application dans SimpleFIN Bridge.
+
+## Dépannage
+
+<table>
+  <thead>
+    <tr>
+      <th>Message</th>
+      <th>Que faire</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>« Ce jeton de configuration a déjà été utilisé ou révoqué »</td>
+      <td>Un jeton de configuration ne fonctionne qu'une fois. Créez-en un nouveau dans SimpleFIN Bridge.</td>
+    </tr>
+    <tr>
+      <td>« SimpleFIN a refusé l'accès »</td>
+      <td>La connexion d'application a été supprimée ou révoquée. Déconnectez SimpleFIN dans Budgero, puis connectez-le à nouveau avec un nouveau jeton de configuration.</td>
+    </tr>
+    <tr>
+      <td>« Votre abonnement SimpleFIN Bridge nécessite votre attention »</td>
+      <td>Vérifiez vos informations de paiement dans SimpleFIN Bridge.</td>
+    </tr>
+    <tr>
+      <td>« … nécessite votre attention dans SimpleFIN Bridge »</td>
+      <td>La connexion à votre banque dans SimpleFIN Bridge a cessé de fonctionner. Connectez-vous à SimpleFIN Bridge, corrigez la connexion de cette banque, puis synchronisez à nouveau.</td>
+    </tr>
+    <tr>
+      <td>Un compte affiche « … n'a pas été renvoyé par SimpleFIN »</td>
+      <td>La connexion bancaire dans SimpleFIN Bridge nécessite une intervention, souvent une nouvelle connexion à la banque. Corrigez-la dans SimpleFIN Bridge, puis synchronisez à nouveau.</td>
+    </tr>
+    <tr>
+      <td>Des transactions plus anciennes manquent</td>
+      <td>La profondeur d'historique disponible via SimpleFIN dépend de votre banque. Budgero importe tout ce que SimpleFIN renvoie à partir de la date de début que vous avez choisie.</td>
+    </tr>
+  </tbody>
+</table>

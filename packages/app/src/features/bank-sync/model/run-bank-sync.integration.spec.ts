@@ -3,9 +3,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // The integration test needs the Node database adapter; production uses the browser entry.
 // eslint-disable-next-line no-restricted-imports
 import { asMilli, NodeSqlJsAdapter, ServiceManager, type Services } from '@budgero/core';
-import type { SimpleFINAccount, SimpleFINAccountSet } from '@budgero/core/browser';
+import { DEFAULT_BANK_FEED_SETTINGS } from '@budgero/core/browser';
+import type {
+  EnableBankingSession,
+  SimpleFINAccount,
+  SimpleFINAccountSet,
+} from '@budgero/core/browser';
 import { executeMutationOp } from '@shared/mutations/op-code-registry';
 import type { AppRuntime } from '@shared/runtime/app-runtime';
+import type { EnableBankingTransaction } from '../lib/enable-banking/client';
+import { fromSimpleFINAccount } from '../lib/provider';
 import { linkAccounts } from './link-accounts';
 import { isSyncDue, runBankSync, syncStart } from './run-bank-sync';
 
@@ -14,6 +21,12 @@ const state = vi.hoisted(() => ({
   applied: new Set<string>(),
   remote: { errors: [], accounts: [] } as SimpleFINAccountSet,
   fetches: 0,
+  failSimpleFIN: false,
+  eb: {
+    rows: [] as EnableBankingTransaction[],
+    balance: '0.00' as string | null,
+    calls: [] as { uid: string; dateFrom: string; longest: boolean }[],
+  },
 }));
 vi.mock('@shared/runtime/global', () => ({
   getRuntime: () => ({ services: () => state.services }),
@@ -30,7 +43,30 @@ vi.mock('@shared/runtime/mutation-router', () => ({
 vi.mock('../lib/simplefin-client', () => ({
   fetchTransactions: async () => {
     state.fetches++;
+    if (state.failSimpleFIN) throw new Error('SimpleFIN is down');
     return structuredClone(state.remote);
+  },
+}));
+
+vi.mock('../lib/enable-banking/client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/enable-banking/client')>()),
+  getBalance: async () =>
+    state.eb.balance === null
+      ? null
+      : {
+          amount: Math.round(Number(state.eb.balance) * 1000),
+          currency: 'EUR',
+          date: '2026-09-10T12:00:00Z',
+          day: '2026-09-10',
+        },
+  getTransactions: async (
+    _credentials: unknown,
+    uid: string,
+    dateFrom: string,
+    options: { longest?: boolean } = {}
+  ) => {
+    state.eb.calls.push({ uid, dateFrom, longest: Boolean(options.longest) });
+    return structuredClone(state.eb.rows);
   },
 }));
 
@@ -73,6 +109,8 @@ describe('bank sync engine', () => {
     state.services = services;
     state.applied.clear();
     state.fetches = 0;
+    state.failSimpleFIN = false;
+    state.eb = { rows: [], balance: '0.00', calls: [] };
     budgetId = await services.budgets.createBudget({
       name: 'Bank sync',
       display_currency: 'USD',
@@ -126,7 +164,7 @@ describe('bank sync engine', () => {
     );
     const [linked] = services.bankSync.listLinks(budgetId);
     expect(linked.LastBalance).toBe(900000);
-    expect(services.bankSync.getConnection(budgetId)?.LastSyncAt).toBeTruthy();
+    expect(services.bankSync.getConnection(budgetId, 'simplefin')?.LastSyncAt).toBeTruthy();
 
     expect((await runBankSync(runtime, budgetId)).imported).toBe(0);
     const coffee = rows.find((row) => row.OutflowNative === 4000)!;
@@ -209,9 +247,10 @@ describe('bank sync engine', () => {
       '2500.00'
     );
     state.remote = { errors: [], accounts: [remote] };
-    const result = await linkAccounts(runtime, 'https://u:p@bridge.example/simplefin', budgetId, [
+    const connection = services.bankSync.getConnection(budgetId, 'simplefin')!;
+    const result = await linkAccounts(runtime, connection, [
       {
-        remote,
+        remote: fromSimpleFINAccount(remote),
         importFrom: '2026-09-01',
         target: { kind: 'new', name: 'Everyday', type: 'Checking' as never },
       },
@@ -224,6 +263,7 @@ describe('bank sync engine', () => {
       0
     );
     expect(net).toBe(2500000);
+    expect(rows.every((row) => Boolean(row.Cleared))).toBe(true);
     expect(rows.map((row) => row.Date).sort()[0]).toBe('2026-08-31');
   });
 
@@ -240,5 +280,199 @@ describe('bank sync engine', () => {
     expect(isSyncDue(last, now)).toBe(false);
     expect(isSyncDue(new Date(2026, 8, 20, 8).toISOString(), now)).toBe(true);
     expect(isSyncDue(null, now)).toBe(true);
+  });
+
+  describe('Enable Banking', () => {
+    const session = (id: string, uid: string, validUntil = '2099-01-01T00:00:00Z') =>
+      ({
+        sessionId: id,
+        aspsp: { name: 'Nordea', country: 'FI' },
+        validUntil,
+        createdAt: new Date().toISOString(),
+        accounts: [{ uid, hash: 'HASH-1', name: 'Käyttötili', currency: 'EUR' }],
+      }) satisfies EnableBankingSession;
+    const ebRow = (ref: string, date: string, amount: string, debit = true) =>
+      ({
+        entry_reference: ref,
+        transaction_amount: { amount, currency: 'EUR' },
+        credit_debit_indicator: debit ? 'DBIT' : 'CRDT',
+        status: 'BOOK',
+        booking_date: date,
+        creditor: { name: `Shop ${ref}` },
+      }) satisfies EnableBankingTransaction;
+
+    // The SimpleFIN connection from beforeEach stays: both providers coexist.
+    const linkEnableBanking = async () => {
+      services.bankSync.saveEnableBankingConnection(budgetId, {
+        appId: 'app',
+        privateKeyPem: 'PEM',
+      });
+      services.bankSync.saveEnableBankingSession(budgetId, session('s1', 'uid-1'));
+      const account = await services.accounts.createAccount(
+        'Käyttötili',
+        budgetId,
+        'Checking',
+        'EUR',
+        asMilli(0),
+        {},
+        true
+      );
+      services.bankSync.saveLink({
+        budgetId,
+        provider: 'enablebanking',
+        accountId: account.ID,
+        externalAccountId: 'HASH-1',
+        externalName: 'Käyttötili',
+        orgName: 'Nordea',
+        importFrom: '2026-09-01',
+      });
+      state.eb.calls = [];
+      return account.ID;
+    };
+
+    it('imports booked rows once, across a re-authorization that changes account IDs', async () => {
+      const accountId = await linkEnableBanking();
+      state.eb.balance = '470.50';
+      state.eb.rows = [
+        ebRow('e1', '2026-09-02', '25.50'),
+        ebRow('e2', '2026-09-03', '500.00', false),
+      ];
+      expect(await runBankSync(runtime, budgetId)).toEqual({ imported: 2, reviews: 0, errors: [] });
+      expect(state.eb.calls).toEqual([{ uid: 'uid-1', dateFrom: '2026-09-01', longest: true }]);
+      expect(services.bankSync.listLinks(budgetId)[0].LastBalance).toBe(470500);
+
+      // The bank's yearly re-consent: a new session with new UIDs, same identification hash.
+      services.bankSync.saveEnableBankingSession(budgetId, session('s2', 'uid-2'));
+      state.eb.rows.push(ebRow('e3', '2026-09-04', '4.00'));
+      expect(await runBankSync(runtime, budgetId)).toMatchObject({ imported: 1, errors: [] });
+      expect(state.eb.calls.at(-1)).toMatchObject({ uid: 'uid-2', longest: false });
+      expect(services.transactions.getTransactionsByAccount(accountId)).toHaveLength(3);
+    });
+
+    it('syncs SimpleFIN and Enable Banking together, and one failing spares the other', async () => {
+      const usAccount = await link();
+      const euAccount = await linkEnableBanking();
+      state.remote = {
+        errors: [],
+        accounts: [
+          remoteAccount([
+            { id: 't1', posted: posted('2026-09-02'), amount: '-25.50', description: 'Grocer' },
+          ]),
+        ],
+      };
+      state.eb.rows = [ebRow('e1', '2026-09-02', '10.00')];
+      expect(await runBankSync(runtime, budgetId)).toMatchObject({ imported: 2, errors: [] });
+      expect(services.transactions.getTransactionsByAccount(usAccount)).toHaveLength(1);
+      expect(services.transactions.getTransactionsByAccount(euAccount)).toHaveLength(1);
+
+      state.failSimpleFIN = true;
+      state.eb.rows.push(ebRow('e2', '2026-09-03', '4.00'));
+      const result = await runBankSync(runtime, budgetId);
+      expect(result.imported).toBe(1);
+      expect(result.errors).toEqual(['SimpleFIN is down']);
+      expect(services.bankSync.getConnection(budgetId, 'simplefin')?.LastError).toBe(
+        'SimpleFIN is down'
+      );
+      expect(services.bankSync.getConnection(budgetId, 'enablebanking')?.LastError).toBeNull();
+    });
+
+    const newEnableBankingAccount = () => {
+      services.bankSync.saveEnableBankingConnection(budgetId, {
+        appId: 'app',
+        privateKeyPem: 'PEM',
+      });
+      services.bankSync.saveEnableBankingSession(budgetId, session('s1', 'uid-1'));
+      const connection = services.bankSync.getConnection(budgetId, 'enablebanking')!;
+      return linkAccounts(runtime, connection, [
+        {
+          remote: {
+            id: 'HASH-1',
+            name: 'Käyttötili',
+            orgName: 'Nordea',
+            currency: 'EUR',
+            balance: null,
+            balanceDate: null,
+          },
+          importFrom: '2026-09-01',
+          target: { kind: 'new', name: 'Käyttötili', type: 'Checking' as never },
+        },
+      ]);
+    };
+
+    it("opens a new account from the bank's balance day, not the device's timezone", async () => {
+      state.eb.balance = '100.00';
+      // Booked on the balance day: already in the balance. The day after: not yet.
+      state.eb.rows = [ebRow('e1', '2026-09-10', '25.50'), ebRow('e2', '2026-09-11', '4.00')];
+      await newEnableBankingAccount();
+      const [link] = services.bankSync.listLinks(budgetId, 'enablebanking');
+      const rows = services.transactions.getTransactionsByAccount(link.AccountID);
+      const opening = rows.find((row) => row.Date === '2026-08-31')!;
+      expect(opening.InflowNative).toBe(125500);
+      expect(rows.every((row) => Boolean(row.Cleared))).toBe(true);
+    });
+
+    it('refuses to open a new account when the bank sends no balance', async () => {
+      state.eb.balance = null;
+      state.eb.rows = [ebRow('e1', '2026-09-02', '25.50')];
+      const before = services.accounts.listAccounts(budgetId).length;
+      await expect(newEnableBankingAccount()).rejects.toThrow(/didn't send a balance/);
+      expect(services.accounts.listAccounts(budgetId)).toHaveLength(before);
+      expect(services.bankSync.listLinks(budgetId, 'enablebanking')).toEqual([]);
+    });
+
+    it('imports pending rows uncleared, then settles or removes them as the bank decides', async () => {
+      const accountId = await linkEnableBanking();
+      services.bankSync.updateLinkSettings(accountId, {
+        ...DEFAULT_BANK_FEED_SETTINGS,
+        importPending: true,
+      });
+      const pending = (ref: string, date: string, amount: string) => ({
+        ...ebRow(ref, date, amount),
+        status: 'PDNG',
+      });
+      state.eb.rows = [
+        ebRow('e0', '2026-09-02', '5.00'),
+        pending('p1', '2026-09-05', '12.00'),
+        pending('hold', '2026-09-05', '80.00'),
+      ];
+      expect(await runBankSync(runtime, budgetId)).toMatchObject({ imported: 3 });
+      const byOutflow = () =>
+        new Map(
+          services.transactions
+            .getTransactionsByAccount(accountId)
+            .map((row) => [Number(row.OutflowNative), row] as const)
+        );
+      const coffee = byOutflow().get(12000)!;
+      expect(Boolean(coffee.Cleared)).toBe(false);
+      expect(Boolean(byOutflow().get(80000)!.Cleared)).toBe(false);
+      await services.transactions.updateTransactionColumn(coffee.ID, 'memo', 'with Anna');
+
+      // Booked under a new reference a day later; the hold was released.
+      state.eb.rows = [ebRow('e0', '2026-09-02', '5.00'), ebRow('b1', '2026-09-06', '12.00')];
+      expect(await runBankSync(runtime, budgetId)).toMatchObject({ imported: 0, errors: [] });
+      const after = byOutflow();
+      const settled = after.get(12000)!;
+      expect(settled.ID).toBe(coffee.ID);
+      expect(Boolean(settled.Cleared)).toBe(true);
+      expect(settled.Date).toBe('2026-09-06');
+      expect(settled.Memo).toBe('with Anna');
+      expect(after.has(80000)).toBe(false);
+
+      // Nothing doubles up on the next sync.
+      expect(await runBankSync(runtime, budgetId)).toMatchObject({ imported: 0 });
+      expect(services.transactions.getTransactionsByAccount(accountId)).toHaveLength(2);
+    });
+
+    it('reports an expired consent without calling the bank', async () => {
+      await linkEnableBanking();
+      services.bankSync.saveEnableBankingSession(
+        budgetId,
+        session('s1', 'uid-1', '2020-01-01T00:00:00Z')
+      );
+      const result = await runBankSync(runtime, budgetId);
+      expect(result.imported).toBe(0);
+      expect(result.errors.join(' ')).toContain('Nordea');
+      expect(state.eb.calls).toEqual([]);
+    });
   });
 });

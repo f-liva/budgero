@@ -1,7 +1,7 @@
 import { Trans, useLingui } from '@lingui/react/macro';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { isCryptoCurrency, type SimpleFINAccount } from '@budgero/core/browser';
+import { isCryptoCurrency, type BankConnection } from '@budgero/core/browser';
 import { useAccounts } from '@entities/account/api/useAccounts';
 import { ACCOUNT_TYPES, AccountTypeEnum } from '@entities/account/model/accountTypes';
 import { useSpaceQuery } from '@shared/api/useSpaceQuery';
@@ -21,6 +21,7 @@ import { Label } from '@shared/ui/label';
 import { RadioGroup, RadioGroupItem } from '@shared/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui/select';
 import { useLinkBankAccounts } from '../api/useBankSync';
+import { providerName, type RemoteBankAccount } from '../lib/provider';
 import {
   daysAgo,
   defaultImportFrom,
@@ -30,15 +31,15 @@ import {
 
 interface LinkAccountDialogProps {
   budgetId: number;
-  accessUrl: string;
-  remote: SimpleFINAccount | null;
+  connection: BankConnection;
+  remote: RemoteBankAccount | null;
   linkedAccountIds: Set<number>;
   onOpenChange: (open: boolean) => void;
 }
 
 export function LinkAccountDialog({
   budgetId,
-  accessUrl,
+  connection,
   remote,
   linkedAccountIds,
   onOpenChange,
@@ -86,6 +87,7 @@ export function LinkAccountDialog({
   }, [mode, accountId, latest]);
 
   if (!remote) return null;
+  const provider = providerName(connection);
   const currencySupported = isSupportedBankCurrency(remote.currency);
   const canSubmit =
     !link.isPending &&
@@ -96,8 +98,7 @@ export function LinkAccountDialog({
   const submit = () => {
     link.mutate(
       {
-        budgetId,
-        accessUrl,
+        connection,
         requests: [
           {
             remote,
@@ -129,7 +130,7 @@ export function LinkAccountDialog({
             <Trans>Link {remote.name}</Trans>
           </DialogTitle>
           <DialogDescription>
-            {remote.org.name ?? remote.org.domain} · {remote.currency}
+            {[remote.orgName, remote.currency].filter(Boolean).join(' · ')}
           </DialogDescription>
         </DialogHeader>
 
@@ -226,7 +227,7 @@ export function LinkAccountDialog({
               ) : (
                 <Trans>The opening balance is set so the account matches your bank today.</Trans>
               )}{' '}
-              <Trans>Older dates only return what your bank shares with SimpleFIN.</Trans>
+              <Trans>Older dates only return what your bank shares with {provider}.</Trans>
             </p>
           </div>
         </div>

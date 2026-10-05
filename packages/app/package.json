@@ -141,6 +141,7 @@
   },
   "dependencies": {
     "@lingui/core": "^6.6.0",
-    "@lingui/react": "^6.6.0"
+    "@lingui/react": "^6.6.0",
+    "libcurl.js": "0.7.4"
   }
 }

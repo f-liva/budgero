@@ -77,9 +77,9 @@ const makeComparisonData = (
   },
   {
     feature: t('comparisonData_bank_sync'),
-    budgero: t('comparisonData_no_by_design'),
+    budgero: true,
     everydollar: t('comparisonData_premium_only'),
-    budgeroNote: t('comparisonData_privacy_first_approach'),
+    budgeroNote: copy('u_6e7d19eaf95d'),
     everydollarNote: t('comparisonData_us_banks_only'),
   },
   {

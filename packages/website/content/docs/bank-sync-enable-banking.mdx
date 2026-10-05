@@ -1,0 +1,252 @@
+---
+title: Bank Sync with Enable Banking (Europe)
+summary: Sync European bank accounts for free through Enable Banking and PSD2 open banking, encrypted end to end between your browser and the bank aggregator.
+section: accounts-and-imports
+topicId: bank-sync-enable-banking
+takeaways:
+  - How to register your own free Enable Banking app and connect it to Budgero.
+  - How bank access works, and how to renew it every 180 days.
+  - How a blind relay keeps your bank data unreadable to Budgero's servers.
+---
+
+[Enable Banking](https://enablebanking.com) connects to thousands of banks across the European Economic Area and the UK through PSD2, the EU's open banking rules. Budgero uses it to import your transactions and balances automatically.
+
+**It's free for personal use.** Enable Banking lets individuals use their API at no cost in its "restricted" mode, which only reads accounts you own and link yourself. You don't pay Enable Banking anything, and Budgero doesn't charge extra for bank sync.
+
+In the US or Canada, use [SimpleFIN](/docs/bank-sync-simplefin) instead. You can connect both in the same budget.
+
+Bank sync is in beta.
+
+## How setup works
+
+To use Enable Banking for free, you register your **own application** with them. That's what keeps it free, and it means the access key belongs to you, not to Budgero. Self-hosted budgeting apps such as [Actual Budget](https://actualbudget.org/docs/advanced/bank-sync/enable-banking/) and [Firefly III](https://docs.firefly-iii.org/tutorials/data-importer/eb/) use the same process. If you've done it for one of them, this will feel familiar. Register a separate application for Budgero so each app has its own key.
+
+Setup takes about 15 minutes, once. After that, syncing runs in the background until your bank asks you to renew access, usually every 180 days.
+
+## Step 1: Create an Enable Banking account
+
+Sign up at [enablebanking.com](https://enablebanking.com). Enable Banking may send a confirmation email before you can use the control panel, and that can take a while.
+
+## Step 2: Register your application
+
+In the [Enable Banking control panel](https://enablebanking.com/cp/applications), open **API applications** and register a new application:
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>What to enter</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Environment</td>
+      <td><strong>Production</strong>, for your real banks. Choose Sandbox only to try things with a fake bank first (see below).</td>
+    </tr>
+    <tr>
+      <td>Application name</td>
+      <td>Anything, for example "Budgero".</td>
+    </tr>
+    <tr>
+      <td>Allowed redirect URLs</td>
+      <td>Your Budgero address followed by <code>/bank-sync/callback</code>. On Budgero Cloud that's <code>https://my.budgero.app/bank-sync/callback</code>. Budgero shows the exact URL, with a copy button, in <strong>Settings › Bank sync › Europe</strong>.</td>
+    </tr>
+    <tr>
+      <td>Private key</td>
+      <td>Keep the default, <strong>Generate in the browser</strong>.</td>
+    </tr>
+    <tr>
+      <td>Email, description, privacy policy and terms URLs</td>
+      <td>Fill these in with your own details. Enable Banking doesn't check the policy URLs for personal (restricted) apps, so <code>https://budgero.app/privacy</code> works for both.</td>
+    </tr>
+  </tbody>
+</table>
+
+When you submit the form, your browser downloads a `.pem` file named after your application ID. That file is your app's private key. Keep it safe: Enable Banking won't show it again.
+
+## Step 3: Link your bank accounts to the application
+
+In the control panel, use **Activate by linking accounts** (sometimes shown as **Link accounts**) and sign in to your bank. Link **every** account you want to sync.
+
+In restricted mode, Enable Banking only returns accounts you linked here. If you skip this step, your bank shows up in Budgero with no accounts. Once it's done, your application shows as **Restricted** and **Active**, which is right for personal use.
+
+## Step 4: Add the key to Budgero
+
+1. In Budgero, open **Settings › Bank sync** and choose the **Europe** tab.
+2. Upload the `.pem` file. Budgero fills in the application ID from the file name; if you renamed the file, paste the ID from the control panel.
+3. Select **Verify and save**.
+
+Budgero checks the key with Enable Banking before saving anything. It confirms the key works and that your application lists Budgero's redirect URL. If the redirect URL is missing, Budgero tells you which one to add.
+
+## Step 5: Connect your bank
+
+1. Under **Banks**, choose your country and your bank, then select **Continue to bank login**.
+2. Your bank's login page opens in a small window. Sign in and approve access. Yes, again: linking the accounts in step 3 activated your application, but your bank also has to approve this specific connection.
+3. The window closes by itself, and Budgero saves the connection.
+
+If your browser blocks pop-ups, or you use Budgero as an installed app, the bank's login page opens in the same tab instead, and your bank sends you back to Budgero when you're done.
+
+To add another bank, select **Add bank** and repeat.
+
+## Step 6: Link your accounts
+
+Under **Bank accounts**, select **Link** next to an account and choose where its transactions should go:
+
+- **New account.** Budgero creates the account and sets its opening balance so it matches your bank today. Choose how far back to import. The default is 30 days. The first sync asks your bank for as much history as it allows, and Budgero imports from your chosen date.
+- **Existing account.** Pick an account you've been tracking by hand. The import starts the day after your latest entry, so nothing is imported twice. If a bank transaction looks like one you already entered, Budgero asks you to review it instead of adding a duplicate.
+
+Select **Link and import**. Transactions appear right away and are marked cleared, because the bank has booked them.
+
+## How syncing works
+
+- **Automatic.** Budgero syncs when you open the app or come back to it, at most every 6 hours, across all your devices.
+- **On demand.** Select **Sync now** in **Settings › Bank sync**, or use the sync button on a linked account's page.
+- **Booked transactions by default.** Pending card payments are skipped until your bank books them, unless you turn on **Import pending transactions** for the account (see below). Cancelled and rejected payments are never imported.
+- **Clean descriptions.** Many banks, especially in Germany and Austria, prefix descriptions with SEPA codes such as `SVWZ+` or `EREF+`. Budgero removes those prefixes.
+- **No duplicates.** Each bank transaction is imported once, even after you renew access. Some banks send transactions without a reference; Budgero still tells two identical coffees on the same day apart.
+- **Possible matches.** When a bank transaction has the same amount as an entry you typed in within five days of it, Budgero asks you to **Match**, **Add as new**, or **Skip** instead of guessing.
+- **User-present syncing.** Banks may limit how often an app can read your accounts in the background, often to four times a day. Budgero syncs while you're using the app and tells Enable Banking so, which usually keeps you clear of that limit.
+
+## Bank feed settings
+
+Each linked account has its own settings. Select the gear icon next to it in **Settings › Bank sync**:
+
+- **Import pending transactions.** Off by default. When it's on, card payments show up before your bank books them, as uncleared transactions. Once the bank books one, Budgero updates the same transaction in place, with the booked date and amount, and marks it cleared. That works even when the bank gives the booked transaction a new reference. Your category, and any payee or memo you changed, stay. If the bank drops a pending transaction without booking it, for example a released card hold, Budgero removes it.
+- **Date.** Choose the purchase date (when you paid), the booking date (when the bank recorded it) or the value date (when the money moved). **Automatic** uses the booking date.
+- **Payee** and **Memo.** Choose whether the merchant or counterparty name or the payment description goes into each field, or leave the memo empty. European banks fill these fields differently, so this is worth a look if your payees come out as reference codes.
+- **Tidy ALL-CAPS payee names.** On by default. Turns `K-MARKET KAMPPI` into `K-Market Kamppi`. Names that already have lowercase letters stay exactly as the bank sent them.
+
+Settings apply to transactions imported from then on. If a field you picked is missing for a transaction, Budgero falls back to the automatic choice. Your [rules](/docs/rules-engine) run on every imported transaction too, so you can clean up the rest there.
+
+## Renewing access every 180 days
+
+PSD2 limits how long a bank authorization lasts, usually 180 days. Budgero asks for as long as your bank allows, or 90 days if the bank doesn't say. **Settings › Bank sync** shows when each bank's access expires. A week before it does, Budgero reminds you when you open the app. Select **Reconnect** next to the bank and sign in again.
+
+Some banks end access early, for example for a yearly identity check. Syncing then reports that access to that bank expired, and **Reconnect** fixes it the same way.
+
+Reconnecting changes nothing in your budget. Budgero recognizes your accounts by a stable identifier that survives the renewal, so your links stay in place and no transaction is imported twice.
+
+## How Enable Banking sync preserves zero knowledge
+
+Budgero is [end-to-end encrypted](/docs/security): our servers only ever hold your budget as ciphertext. Bank sync from Europe keeps that guarantee. Here's how, since it's less obvious than it sounds.
+
+### The problem
+
+Enable Banking's API doesn't let web pages call it directly. Browsers block those requests, a security rule called CORS. The usual workaround is a proxy server that calls the bank aggregator on your behalf. But HTTPS encryption only runs between two endpoints, so a normal proxy decrypts everything passing through it: the account list, every transaction, the credentials. That would break end-to-end encryption, and publishing the proxy's source code wouldn't fix it, because nobody can verify what a server actually runs.
+
+### What Budgero does instead
+
+Budgero moves the encryption into your browser.
+
+1. **Your browser runs its own encryption.** Budgero loads [libcurl.js](https://github.com/ading2210/libcurl.js), the well-known curl library and a TLS 1.3 implementation compiled to WebAssembly, the first time you use EU bank sync. It opens an encrypted HTTPS session from your browser straight to `api.enablebanking.com`.
+2. **Your browser checks Enable Banking's certificate itself.** It uses a bundled list of trusted certificate authorities, the same list Firefox uses. If anything in between swapped in a fake certificate, the connection fails instead of leaking data.
+3. **A blind relay carries the encrypted bytes.** Browsers can't open raw network connections, so the encrypted traffic travels over a WebSocket to a small relay built into Budgero's server. The relay passes the bytes on to Enable Banking and passes the encrypted answers back. It has no keys, so it can't read either direction.
+4. **The relay can only reach Enable Banking.** It refuses every other destination, so it can't be used as an open proxy. It keeps counters, not logs of your traffic.
+5. **Your private key never leaves your budget.** Each request is authorized with a short-lived token that your browser signs with your app's private key. The key is stored only inside your encrypted budget, and the signed token travels only inside the encrypted session.
+
+Think of it as a locked box. With a normal proxy, you hand the proxy a letter and it writes a new one to the bank. With Budgero's relay, you lock the letter in a box only Enable Banking can open, and the relay is just the courier. It knows where the box is going and roughly how heavy it is, but it can't see inside. Swap the box, and the lock won't match.
+
+The same pattern is decades old: it's how web browsers send HTTPS through corporate proxies, which forward encrypted traffic they can't read.
+
+<table>
+  <thead>
+    <tr>
+      <th>Data</th>
+      <th>Can Budgero's relay see it?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Transactions, balances, account names, IBANs</td>
+      <td>No. They're encrypted between your browser and Enable Banking.</td>
+    </tr>
+    <tr>
+      <td>Which bank you use and which accounts you sync</td>
+      <td>No. They're inside the encrypted session too.</td>
+    </tr>
+    <tr>
+      <td>Your app's private key and the signed tokens</td>
+      <td>No. The key never leaves your budget; tokens travel encrypted.</td>
+    </tr>
+    <tr>
+      <td>That you connected to Enable Banking</td>
+      <td>Yes. The relay has to know where to send the bytes.</td>
+    </tr>
+    <tr>
+      <td>Your IP address, when you sync, and roughly how much data moved</td>
+      <td>Yes. Any relay sees this.</td>
+    </tr>
+    <tr>
+      <td>Which Budgero account is syncing</td>
+      <td>Yes. The relay requires you to be signed in, to prevent abuse.</td>
+    </tr>
+  </tbody>
+</table>
+
+Enable Banking itself does see your bank data: it's the licensed service that connects to your bank, under its own privacy policy. Imported transactions are written into your budget on your device and encrypted before they sync, like everything else in Budgero.
+
+As with every end-to-end encrypted web app, you're trusting the app code your browser runs. Budgero, including the relay, is [open source](https://github.com/tombadilo-bombadilo/budgero), and self-hosted servers run the same relay.
+
+## Trying it with a sandbox first
+
+To test without your real bank, register a second application with the **Sandbox** environment. In Budgero, choose the bank **Mock ASPSP**, Enable Banking's fake bank. In the control panel's **Mock ASPSP** section you can add your own test transactions and balances. Sandbox applications also accept plain `http://` redirect URLs. Disconnect the sandbox in Budgero before you set up your production application.
+
+## Self-hosting
+
+Self-hosted Budgero servers include the relay, so there's nothing to install or configure. Two things to check:
+
+- **HTTPS.** Enable Banking requires an `https://` redirect URL for production applications. Serve Budgero over HTTPS, for example behind a reverse proxy or with Tailscale, and use that address in step 2.
+- **Outgoing connections.** Your server must be able to reach `api.enablebanking.com` on port 443.
+
+Your syncs use your own server's relay, never Budgero Cloud's.
+
+## Removing a bank or disconnecting
+
+- **Remove** (the bin icon next to a bank) stops syncing that bank and revokes its access at Enable Banking. Your links stay, so reconnecting later picks up where you left off.
+- **Disconnect** removes the stored key, links, and pending reviews from your budget. Imported transactions stay.
+- To revoke everything, also delete the application in the Enable Banking control panel.
+
+## Troubleshooting
+
+<table>
+  <thead>
+    <tr>
+      <th>Problem</th>
+      <th>What to do</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>A bank connects but shows no accounts</td>
+      <td>Link those accounts to your application in the control panel (step 3), then select <strong>Reconnect</strong> or remove and add the bank again.</td>
+    </tr>
+    <tr>
+      <td>"doesn't list … as a redirect URL"</td>
+      <td>Add the exact URL Budgero shows to your application's allowed redirect URLs, then select <strong>Verify and save</strong> again.</td>
+    </tr>
+    <tr>
+      <td>"That file isn't an RSA private key"</td>
+      <td>Upload the <code>.pem</code> file Enable Banking downloaded when you registered the application, not a certificate or another file.</td>
+    </tr>
+    <tr>
+      <td>"Couldn't reach Enable Banking through the Budgero relay"</td>
+      <td>Check your connection. On a self-hosted server, check that it can reach <code>api.enablebanking.com</code> on port 443.</td>
+    </tr>
+    <tr>
+      <td>"Your bank limits how often its data can be read"</td>
+      <td>Your bank allows only a few reads a day. Wait a few hours and sync again.</td>
+    </tr>
+    <tr>
+      <td>The login window doesn't open</td>
+      <td>Your browser blocked the pop-up. Allow pop-ups for Budgero, or just continue: Budgero opens the bank's login page in the same tab instead.</td>
+    </tr>
+    <tr>
+      <td>"Access to … expired"</td>
+      <td>Select <strong>Reconnect</strong> next to the bank and sign in again.</td>
+    </tr>
+    <tr>
+      <td>Your bank's login page rejects the request</td>
+      <td>Make sure your application is in the right environment: Production for real banks, Sandbox for Mock ASPSP.</td>
+    </tr>
+  </tbody>
+</table>

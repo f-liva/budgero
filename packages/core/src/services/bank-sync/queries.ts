@@ -5,6 +5,7 @@ import type {
   BankConnection,
   BankLink,
   BankLinkInput,
+  BankProvider,
   BankReview,
   BankReviewInput,
   BankReviewStatus,
@@ -29,37 +30,68 @@ interface BankReviewRow {
 export class BankSyncQueries {
   constructor(private db: DatabaseAdapter) {}
 
-  getConnection(budgetId: number): BankConnection | null {
+  getConnection(budgetId: number, provider: BankProvider): BankConnection | null {
     return (
       getRow<BankConnection>(
         this.db,
-        'SELECT * FROM bank_connections WHERE BudgetID = ?',
-        budgetId
+        'SELECT * FROM bank_connections WHERE BudgetID = ? AND Provider = ?',
+        budgetId,
+        provider
       ) ?? null
     );
   }
 
-  upsertConnection(budgetId: number, accessUrl: string): void {
-    run(
+  listConnections(budgetId: number): BankConnection[] {
+    return allRows<BankConnection>(
       this.db,
-      `INSERT INTO bank_connections (BudgetID, Provider, AccessURL) VALUES (?, 'simplefin', ?)
-      ON CONFLICT(BudgetID) DO UPDATE SET AccessURL = excluded.AccessURL, LastError = NULL`,
-      budgetId,
-      accessUrl
+      'SELECT * FROM bank_connections WHERE BudgetID = ? ORDER BY ID',
+      budgetId
     );
   }
 
-  deleteConnection(budgetId: number): void {
-    run(this.db, 'DELETE FROM bank_reviews WHERE BudgetID = ?', budgetId);
-    run(this.db, 'DELETE FROM bank_links WHERE BudgetID = ?', budgetId);
-    run(this.db, 'DELETE FROM bank_connections WHERE BudgetID = ?', budgetId);
+  upsertConnection(
+    budgetId: number,
+    provider: BankProvider,
+    accessUrl: string,
+    configJson: string
+  ): void {
+    run(
+      this.db,
+      `INSERT INTO bank_connections (BudgetID, Provider, AccessURL, ConfigJSON) VALUES (?, ?, ?, ?)
+      ON CONFLICT(BudgetID, Provider) DO UPDATE SET
+        AccessURL = excluded.AccessURL, ConfigJSON = excluded.ConfigJSON, LastError = NULL`,
+      budgetId,
+      provider,
+      accessUrl,
+      configJson
+    );
   }
 
-  listLinks(budgetId: number): BankLink[] {
+  deleteConnection(budgetId: number, provider: BankProvider): void {
+    run(
+      this.db,
+      `DELETE FROM bank_reviews WHERE BudgetID = ? AND AccountID IN
+        (SELECT AccountID FROM bank_links WHERE BudgetID = ? AND Provider = ?)`,
+      budgetId,
+      budgetId,
+      provider
+    );
+    run(this.db, 'DELETE FROM bank_links WHERE BudgetID = ? AND Provider = ?', budgetId, provider);
+    run(
+      this.db,
+      'DELETE FROM bank_connections WHERE BudgetID = ? AND Provider = ?',
+      budgetId,
+      provider
+    );
+  }
+
+  listLinks(budgetId: number, provider?: BankProvider): BankLink[] {
     return allRows<BankLink>(
       this.db,
-      'SELECT * FROM bank_links WHERE BudgetID = ? ORDER BY ID',
-      budgetId
+      'SELECT * FROM bank_links WHERE BudgetID = ? AND (? IS NULL OR Provider = ?) ORDER BY ID',
+      budgetId,
+      provider ?? null,
+      provider ?? null
     );
   }
 
@@ -73,9 +105,11 @@ export class BankSyncQueries {
     );
     run(
       this.db,
-      `INSERT INTO bank_links (BudgetID, AccountID, ExternalAccountID, ExternalName, OrgName, ImportFrom)
-      VALUES (?, ?, ?, ?, ?, ?)
+      `INSERT INTO bank_links
+        (BudgetID, Provider, AccountID, ExternalAccountID, ExternalName, OrgName, ImportFrom)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(AccountID) DO UPDATE SET
+        Provider = excluded.Provider,
         ExternalAccountID = excluded.ExternalAccountID,
         ExternalName = excluded.ExternalName,
         OrgName = excluded.OrgName,
@@ -84,11 +118,21 @@ export class BankSyncQueries {
         LastBalance = NULL,
         LastBalanceDate = NULL`,
       input.budgetId,
+      input.provider ?? 'simplefin',
       input.accountId,
       input.externalAccountId,
       input.externalName,
       input.orgName,
       input.importFrom
+    );
+  }
+
+  updateLinkSettings(accountId: number, settingsJson: string): void {
+    run(
+      this.db,
+      'UPDATE bank_links SET SettingsJSON = ? WHERE AccountID = ?',
+      settingsJson,
+      accountId
     );
   }
 
@@ -100,15 +144,17 @@ export class BankSyncQueries {
   recordSync(input: BankSyncRecordInput): void {
     run(
       this.db,
-      'UPDATE bank_connections SET LastSyncAt = ?, LastError = ? WHERE BudgetID = ?',
+      'UPDATE bank_connections SET LastSyncAt = ?, LastError = ? WHERE BudgetID = ? AND Provider = ?',
       input.at,
       input.error,
-      input.budgetId
+      input.budgetId,
+      input.provider ?? 'simplefin'
     );
     for (const link of input.links) {
       run(
         this.db,
-        `UPDATE bank_links SET LastSyncAt = ?, LastBalance = ?, LastBalanceDate = ?
+        `UPDATE bank_links SET LastSyncAt = ?, LastBalance = COALESCE(?, LastBalance),
+          LastBalanceDate = COALESCE(?, LastBalanceDate)
         WHERE BudgetID = ? AND AccountID = ?`,
         input.at,
         link.balance,

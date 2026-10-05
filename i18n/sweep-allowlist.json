@@ -115,6 +115,11 @@
       "file": "src/shared/lib/keyboard-shortcuts.ts",
       "text": "Shift+{\u2026}",
       "reason": "Keyboard key-name label (Shift + key); key names are locale-stable, not translatable copy."
+    },
+    {
+      "file": "src/features/bank-sync/lib/provider.ts",
+      "text": "Enable Banking",
+      "reason": "Brand name of the bank data provider; never translated."
     }
   ]
 }

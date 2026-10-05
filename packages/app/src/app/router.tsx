@@ -31,6 +31,7 @@ import PushApiPage from '@pages/settings/push-api';
 import AuditLogPage from '@pages/settings/AuditLogPage';
 import AISettingsPage from '@pages/settings/ai';
 import BankSyncPage from '@pages/settings/bank-sync';
+import BankSyncCallbackPage from '@pages/settings/bank-sync/BankSyncCallbackPage';
 import SyncStatusPage from '@pages/settings/SyncStatusPage';
 import { DashboardPage } from '@pages/dashboard/DashboardPage';
 import { BudgetingPage } from '@pages/budgeting/BudgetingPage';
@@ -132,6 +133,7 @@ function AppRouter() {
             <Route path="/settings/audit-log" element={<AuditLogPage />} />
             <Route path="/settings/ai" element={<AISettingsPage />} />
             <Route path="/settings/bank-sync" element={<BankSyncPage />} />
+            <Route path="/bank-sync/callback" element={<BankSyncCallbackPage />} />
             <Route path="/settings/about" element={<AboutPage />} />
           </Route>
         </Route>
