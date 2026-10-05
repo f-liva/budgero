@@ -185,7 +185,7 @@ func (h *Handlers) DeleteSelfHostUser(c echo.Context) error {
 	}
 
 	ctx := c.Request().Context()
-	spaceIDs, err := h.services.User.DeleteWithSpaces(ctx, userID)
+	report, err := h.purgeUser(ctx, userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) || errors.Is(err, domain.ErrUserNotFound) {
 			return echo.NewHTTPError(http.StatusNotFound, "user not found")
@@ -193,17 +193,9 @@ func (h *Handlers) DeleteSelfHostUser(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to delete user")
 	}
 
-	if h.syncHub != nil {
-		for _, spaceID := range spaceIDs {
-			if err := h.syncHub.ResetSpace(spaceID); err != nil {
-				log.Error().Err(err).Str("space_id", spaceID).Msg("failed to reset sync state after deleting user")
-			}
-		}
-	}
-
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"success":       true,
-		"removedSpaces": spaceIDs,
+		"removedSpaces": report.SpacesDeleted,
 	})
 }
 

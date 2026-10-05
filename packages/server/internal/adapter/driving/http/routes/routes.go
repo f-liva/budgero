@@ -206,6 +206,10 @@ func SetupRoutes(e *echo.Echo, h *handler.Handlers, services *application.Servic
 	admin.POST("/users/:id/block", h.BlockUser)
 	admin.POST("/users/:id/unblock", h.UnblockUser)
 
+	// Inactive users and permanent purge (data, mutation log, Clerk account)
+	admin.GET("/users/inactive", h.GetInactiveUsers)
+	admin.POST("/users/purge", h.PurgeUsers)
+
 	// Sync utilities
 	admin.POST("/sync/clerk", h.SyncClerkUsers)
 	if !opts.SelfHost {

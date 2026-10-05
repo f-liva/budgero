@@ -8,6 +8,7 @@ import (
 
 	"budgero-server/internal/adapter/driven/lemonsqueezy"
 	"budgero-server/internal/domain"
+	"budgero-server/internal/port/driven/repository"
 
 	clerk "github.com/clerk/clerk-sdk-go/v2"
 	clerkuser "github.com/clerk/clerk-sdk-go/v2/user"
@@ -85,25 +86,39 @@ func (h *Handlers) syncClerkUsers(ctx context.Context) (ClerkSyncResult, error) 
 		page++
 	}
 
-	// Delete local users that no longer exist in Clerk (orphan cleanup).
-	// Only user_ prefixed IDs are Clerk-managed; skip self-host or manual accounts.
+	// Purge local users that no longer exist in Clerk (orphan cleanup): their
+	// data, mutation log and activity go with them. Only user_ prefixed IDs are
+	// Clerk-managed; self-host or manual accounts are skipped.
 	localUsers, err := h.services.Admin.ListUsers(ctx)
-	if err != nil {
+	switch {
+	case err != nil:
 		log.Warn().Err(err).Msg("Failed to list local users for orphan cleanup; skipping")
-	} else {
+	case len(clerkIDs) == 0 && hasClerkManagedUser(localUsers):
+		// An empty listing while we hold Clerk users means Clerk misbehaved,
+		// not that everyone left. Purging here would be irreversible.
+		log.Warn().Msg("Clerk returned no users; skipping orphan cleanup")
+	default:
 		for i := range localUsers {
-			if !strings.HasPrefix(localUsers[i].ID, "user_") {
+			id := localUsers[i].ID
+			if !strings.HasPrefix(id, "user_") {
 				continue
 			}
-			if _, exists := clerkIDs[localUsers[i].ID]; exists {
+			if _, exists := clerkIDs[id]; exists {
 				continue
 			}
-			if _, derr := h.services.User.DeleteWithSpaces(ctx, localUsers[i].ID); derr != nil {
-				log.Warn().Err(derr).Str("user_id", localUsers[i].ID).Msg("Failed to delete orphaned Clerk user")
+			// Confirm the deletion with Clerk directly before purging.
+			if _, gerr := clerkuser.Get(ctx, id); !isClerkNotFound(gerr) {
+				if gerr != nil {
+					log.Warn().Err(gerr).Str("user_id", id).Msg("Could not confirm orphaned Clerk user; skipping")
+				}
+				continue
+			}
+			if _, perr := h.purgeUser(ctx, id); perr != nil {
+				log.Warn().Err(perr).Str("user_id", id).Msg("Failed to purge orphaned Clerk user")
 				continue
 			}
 			res.Deleted++
-			log.Warn().Str("user_id", localUsers[i].ID).Str("email", localUsers[i].Email).Msg("Deleted orphaned Clerk user not found in provider")
+			log.Warn().Str("user_id", id).Msg("Purged user deleted in Clerk")
 		}
 	}
 
@@ -214,4 +229,13 @@ func (h *Handlers) StartProviderSyncLoop(ctx context.Context, interval time.Dura
 			}
 		}
 	}()
+}
+
+func hasClerkManagedUser(users []repository.AdminUser) bool {
+	for i := range users {
+		if strings.HasPrefix(users[i].ID, "user_") {
+			return true
+		}
+	}
+	return false
 }

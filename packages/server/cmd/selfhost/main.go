@@ -821,7 +821,7 @@ func adminDeleteUser(username string) error {
 		if err != nil {
 			return fmt.Errorf("user not found: %s", username)
 		}
-		if _, err = services.User.DeleteWithSpaces(ctx, user.ID); err != nil {
+		if _, err = services.UserPurge.Purge(ctx, user.ID); err != nil {
 			return fmt.Errorf("failed to delete user: %w", err)
 		}
 		fmt.Printf("Deleted user %s (%s)\n", user.Name, user.Email)

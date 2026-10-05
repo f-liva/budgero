@@ -6,6 +6,7 @@ import { UserSearchCard } from './UserSearchCard';
 import { UsersTable } from './UsersTable';
 import { UserDetailsDialog } from './UserDetailsDialog';
 import { ActionDialog } from './ActionDialog';
+import { InactiveUsersCard } from './InactiveUsersCard';
 
 export default function AdminUsers() {
   // All hooks must be called before any early returns
@@ -54,6 +55,8 @@ export default function AdminUsers() {
         onAction={openActionDialog}
         onCopyId={copyUserId}
       />
+
+      <InactiveUsersCard onPurged={loadUsers} />
 
       <UserDetailsDialog
         user={selectedUser}
