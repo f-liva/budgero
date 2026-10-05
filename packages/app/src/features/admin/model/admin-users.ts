@@ -127,3 +127,50 @@ export interface ActionDialogState {
   type: ActionType;
   user: User | null;
 }
+
+/** A user with no sign of life (heartbeats, Clerk activity, sign-up) for a while. */
+export interface InactiveUser {
+  id: string;
+  email: string;
+  name: string;
+  created_at?: string;
+  last_heartbeat_day?: string;
+  subscription_status: string;
+  has_subscription: boolean;
+  is_founding_member: boolean;
+  is_blocked: boolean;
+  owned_spaces: number;
+  shared_spaces: number;
+  stored_bytes: number;
+  last_active_at: string;
+  clerk_last_active_at?: string;
+  clerk_last_sign_in_at?: string;
+  /** Absent when Clerk wasn't checked. */
+  in_clerk?: boolean;
+  /** Set when the user can't be purged (admin, paying subscriber, founding member, you). */
+  protected_reason?: string;
+}
+
+export interface InactiveUsersResponse {
+  days: number;
+  cutoff: string;
+  clerk_checked: boolean;
+  users: InactiveUser[];
+}
+
+export interface UserPurgeReport {
+  user_id: string;
+  email: string;
+  spaces_deleted: string[];
+  mutations_deleted: number;
+  mutations_anonymized: number;
+  activity_days_deleted: number;
+  files_removed: number;
+}
+
+export interface PurgeUserResult {
+  user_id: string;
+  status: 'purged' | 'skipped' | 'failed';
+  reason?: string;
+  report?: UserPurgeReport;
+}

@@ -66,3 +66,14 @@ type UserRepository interface {
 	// ClearDanglingPrimarySpaceIDs nullifies primary_space_id references to deleted spaces.
 	ClearDanglingPrimarySpaceIDs(ctx context.Context) error
 }
+
+// UserPurgeRepository permanently removes a user and everything tied to them.
+type UserPurgeRepository interface {
+	// Purge deletes the user and all their data in one transaction. It returns
+	// what was removed and the files (space blobs, legacy databases) the caller
+	// should delete from disk once the transaction has committed.
+	Purge(ctx context.Context, userID string) (*domain.UserPurgeReport, []string, error)
+
+	// ListActivity returns every user with the data needed to judge inactivity.
+	ListActivity(ctx context.Context) ([]domain.UserActivitySummary, error)
+}

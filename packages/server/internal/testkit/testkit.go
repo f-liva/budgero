@@ -114,6 +114,7 @@ func NewTestServices(t *testing.T, selfHost bool) (*sql.DB, *sqlc.Queries, *appl
 		DatabaseBrowser: sqlite.NewDatabaseBrowserRepository(sqlDB),
 		Feedback:        sqlite.NewFeedbackRepository(sqlDB),
 		UpdatePing:      sqlite.NewUpdatePingRepository(sqlDB),
+		UserPurge:       sqlite.NewUserPurgeRepository(sqlDB),
 		Queries:         queries,
 		// No CurrencyProvider: service-level tests exercise the cache path;
 		// provider behavior is covered by fakes in dedicated tests.

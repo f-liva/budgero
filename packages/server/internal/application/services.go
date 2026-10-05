@@ -22,6 +22,7 @@ type Services struct {
 	DatabaseBrowser driving.DatabaseBrowserService
 	Feedback        driving.FeedbackService
 	UpdatePing      driving.UpdatePingService
+	UserPurge       driving.UserPurgeService
 }
 
 // Repositories is a container for all repository dependencies.
@@ -43,6 +44,8 @@ type Repositories struct {
 	// UpdatePing aggregates anonymous update-check counts. Same deal as
 	// Feedback: wired in both modes, only ever written on SaaS.
 	UpdatePing repository.UpdatePingRepository
+	// UserPurge permanently deletes users and every row tied to them.
+	UserPurge repository.UserPurgeRepository
 	// CurrencyProvider fetches daily exchange rates from the external
 	// dataset (or a self-hosted mirror).
 	CurrencyProvider external.CurrencyProvider
@@ -64,5 +67,6 @@ func NewServices(repos *Repositories, cfg *config.Config) *Services {
 		DatabaseBrowser: NewDatabaseBrowserService(repos.DatabaseBrowser, repos.Queries),
 		Feedback:        NewFeedbackService(repos.Feedback),
 		UpdatePing:      NewUpdatePingService(repos.UpdatePing),
+		UserPurge:       NewUserPurgeService(repos.UserPurge),
 	}
 }

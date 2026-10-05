@@ -231,6 +231,11 @@ msgstr "{0, plural, one {# categorie heeft {1} nodig} other {# categorieën hebb
 msgid "{0, plural, one {# category} other {# categories}}"
 msgstr "{0, plural, one {# categorie} other {# categorieën}}"
 
+#. placeholder {0}: users.length
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "{0, plural, one {# inactive user} other {# inactive users}}"
+msgstr "{0, plural, one {# inactieve gebruiker} other {# inactieve gebruikers}}"
+
 #. placeholder {0}: filteredUsers.length
 #: src/pages/admin/SelfHostAdminUsers.tsx
 msgid "{0, plural, one {# matching user} other {# matching users}}"
@@ -276,6 +281,11 @@ msgstr "{0, plural, one {# gesplitste transactie gedetecteerd} other {# gesplits
 msgid "{0, plural, one {# user found} other {# users found}}"
 msgstr "{0, plural, one {# gebruiker gevonden} other {# gebruikers gevonden}}"
 
+#. placeholder {0}: notPurged.length
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "{0, plural, one {# user was not deleted} other {# users were not deleted}}"
+msgstr "{0, plural, one {# gebruiker is niet verwijderd} other {# gebruikers zijn niet verwijderd}}"
+
 #. placeholder {0}: data.deleted
 #: src/pages/settings/push-api/usePushApiState.ts
 msgid "{0, plural, one {Cleared # pending item from queue} other {Cleared # pending items from queue}}"
@@ -299,6 +309,11 @@ msgstr "{0, plural, one {# historische categorie uit transacties aangemaakt: {1}
 #: src/features/budget-management/ui/CreateBudgetForm.tsx
 msgid "{0, plural, one {Created # visible YNAB debt interest adjustment.} other {Created # visible YNAB debt interest adjustments.}}"
 msgstr "{0, plural, one {# zichtbare aanpassing voor YNAB-schuldrente aangemaakt.} other {# zichtbare aanpassingen voor YNAB-schuldrente aangemaakt.}}"
+
+#. placeholder {0}: selectedUsers.length
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "{0, plural, one {Delete # user permanently?} other {Delete # users permanently?}}"
+msgstr "{0, plural, one {# gebruiker definitief verwijderen?} other {# gebruikers definitief verwijderen?}}"
 
 #. placeholder {0}: activeAccounts.length
 #: src/features/account-management/ui/DevSeedTransactionsButton.tsx
@@ -983,6 +998,10 @@ msgstr "{normalized, plural, one {Hoofdwachtwoord wordt # dag onthouden op dit a
 msgid "{numSelected} selected"
 msgstr "{numSelected} geselecteerd"
 
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "{option, plural, one {Inactive # day} other {Inactive # days}}"
+msgstr "{option, plural, one {# dag inactief} other {# dagen inactief}}"
+
 #: src/features/bank-sync/lib/provider.ts
 msgid "{org} needs attention in SimpleFIN Bridge. Sign in there and fix the connection, then sync again."
 msgstr "{org} heeft aandacht nodig in SimpleFIN Bridge. Log daar in, herstel de koppeling en synchroniseer opnieuw."
@@ -999,6 +1018,10 @@ msgstr "{progress}% voltooid"
 #: src/pages/settings/CurrencySettingsPage.tsx
 msgid "{pruned, plural, one {# cached rate older than {days} days removed.} other {# cached rates older than {days} days removed.}}"
 msgstr "{pruned, plural, one {# gecachte wisselkoers ouder dan {days} dagen verwijderd.} other {# gecachte wisselkoersen ouder dan {days} dagen verwijderd.}}"
+
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "{purged, plural, one {Deleted # user permanently} other {Deleted # users permanently}}"
+msgstr "{purged, plural, one {# gebruiker definitief verwijderd} other {# gebruikers definitief verwijderd}}"
 
 #. placeholder {0}: formatMilli(globalLocalizer, resetAssignedTotal)
 #. placeholder {1}: formatMilli(globalLocalizer, resetAssignedTotal)
@@ -1129,6 +1152,11 @@ msgstr "+{0} wijzigingen daarna"
 #: src/pages/accounts/components/RecurringTransactionsPanel.tsx
 #~ msgid "+{0} more scheduled"
 #~ msgstr "+{0} meer gepland"
+
+#. placeholder {0}: user.shared_spaces
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "+{0} shared"
+msgstr "+{0} gedeeld"
 
 #: src/features/transactions/ui/form/DatePickerQuick.tsx
 msgid "+1 day"
@@ -2743,6 +2771,10 @@ msgstr "Rekeningen"
 msgid "Accounts Created"
 msgstr "Aangemaakte rekeningen"
 
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "Accounts with no heartbeat, Clerk activity or sign-up in the chosen period. Deleting removes everything: budgets, sync history, activity and, optionally, the Clerk account. Admins, paying subscribers and founding members can't be deleted."
+msgstr "Accounts zonder heartbeat, Clerk-activiteit of registratie in de gekozen periode. Verwijderen wist alles: budgetten, synchronisatiegeschiedenis, activiteit en optioneel het Clerk-account. Beheerders, betalende abonnees en founding members kunnen niet worden verwijderd."
+
 #: src/pages/onboarding/steps/StartModeStep.tsx
 msgid "Accounts, categories, and balances come with you"
 msgstr "Rekeningen, categorieën en saldo's gaan met je mee"
@@ -3298,6 +3330,10 @@ msgstr "Ook Europese banken koppelen (Enable Banking)"
 #: src/features/bank-sync/ui/ConnectBankCard.tsx
 msgid "Also connect US & Canada banks (SimpleFIN)"
 msgstr "Ook banken uit de VS & Canada koppelen (SimpleFIN)"
+
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "Also delete their Clerk accounts"
+msgstr "Ook hun Clerk-accounts verwijderen"
 
 #: src/shared/lib/analytics/klaro-config.ts
 msgid "Always on"
@@ -4073,6 +4109,7 @@ msgstr "Gebruiker blokkeren"
 msgid "Block User"
 msgstr "Gebruiker blokkeren"
 
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
 #: src/pages/admin/admin-users/useAdminUsersState.ts
 #: src/pages/admin/admin-users/UserDetailsDialog.tsx
 #: src/pages/admin/SelfHostAdminUsers.tsx
@@ -4397,6 +4434,7 @@ msgstr "Waardering in het budget"
 msgid "Budgeting"
 msgstr "Budgetteren"
 
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
 #: src/pages/settings/push-api/IdReferencePanel.tsx
 msgid "Budgets"
 msgstr "Budgetten"
@@ -4519,6 +4557,7 @@ msgstr "Canadese dollar"
 #: src/features/transactions/ui/desktop-table/SplitDetailsDialog.tsx
 #: src/features/transactions/ui/mobile-transaction-card/TransactionCardDetails.tsx
 #: src/pages/admin/admin-users/ActionDialog.tsx
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
 #: src/pages/admin/SelfHostAdminUsers.tsx
 #: src/pages/custom-dashboards/components/AddWidgetDialog.tsx
 #: src/pages/custom-dashboards/components/DashboardSwitcher.tsx
@@ -5107,6 +5146,11 @@ msgstr "Bevestigingsstatus (toets {CLEARED_SHORTCUT_KEY})"
 msgid "Cleared stored data for {0}"
 msgstr "Opgeslagen gegevens gewist voor {0}"
 
+#. placeholder {0}: ago(user.clerk_last_active_at)
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "Clerk {0}"
+msgstr "Clerk {0}"
+
 #: src/pages/admin/admin-users/user-details/ActivityTab.tsx
 msgid "Clerk Session Activity"
 msgstr "Clerk-sessieactiviteit"
@@ -5126,6 +5170,10 @@ msgstr "Clerk-token"
 #: src/pages/admin/admin-users/useAdminUsersState.ts
 msgid "Clerk users synchronized"
 msgstr "Clerk-gebruikers gesynchroniseerd"
+
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "Clerk wasn't checked, so activity comes from heartbeats and sign-up dates only."
+msgstr "Clerk is niet gecontroleerd, dus activiteit komt alleen uit heartbeats en registratiedatums."
 
 #: src/pages/onboarding/steps/DoneStep.tsx
 msgid "Click below and we’ll redeem the invite, decrypt the shared workspace key on this device, and drop you into the budget."
@@ -5699,6 +5747,10 @@ msgstr "Kon niet koppelen met SimpleFIN"
 msgid "Couldn't copy to the clipboard"
 msgstr "Kon niet naar het klembord kopiëren"
 
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "Couldn't delete the selected users"
+msgstr "De geselecteerde gebruikers konden niet worden verwijderd"
+
 #: src/features/sync-diagnostics/ui/SyncActions.tsx
 msgid "Couldn't download from the server"
 msgstr "Kon niet downloaden van de server"
@@ -5723,6 +5775,10 @@ msgstr "Rekeningen konden niet worden geladen van {provider}"
 #: src/features/bank-sync/ui/EnableBankingBanksCard.tsx
 msgid "Couldn't load banks from Enable Banking"
 msgstr "Banken konden niet worden geladen van Enable Banking"
+
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "Couldn't load inactive users"
+msgstr "Inactieve gebruikers konden niet worden geladen"
 
 #: src/features/sync-diagnostics/ui/MutationLogCard.tsx
 msgid "Couldn't load the mutation log"
@@ -6243,6 +6299,10 @@ msgstr "Dashboardnaam"
 msgid "Dashboard name cannot be empty"
 msgstr "Dashboardnaam mag niet leeg zijn"
 
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "Data"
+msgstr "Gegevens"
+
 #: src/pages/settings/DataManagementPage.tsx
 #: src/shared/model/nav-registry.ts
 msgid "Data Management"
@@ -6524,6 +6584,15 @@ msgstr "Geschiedenisitem verwijderen?"
 #: src/features/budget-planning/ui/CCPaymentActivityDialog.tsx
 msgid "Delete payment"
 msgstr "Betaling verwijderen"
+
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "Delete permanently"
+msgstr "Definitief verwijderen"
+
+#. placeholder {0}: selectedUsers.length
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "Delete permanently ({0})"
+msgstr "Definitief verwijderen ({0})"
 
 #: src/pages/settings/automation-rules/RuleRow.tsx
 msgid "Delete rule"
@@ -8580,6 +8649,11 @@ msgstr "Gezondheid & Medisch"
 msgid "Healthcare"
 msgstr "Gezondheidszorg"
 
+#. placeholder {0}: user.last_heartbeat_day
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "Heartbeat {0}"
+msgstr "Heartbeat {0}"
+
 #. placeholder {0}: details?.appActivity?.windowDays ?? 365
 #: src/pages/admin/admin-users/user-details/ActivityTab.tsx
 msgid "Heartbeat-backed app usage across the last {0} days."
@@ -8998,6 +9072,14 @@ msgstr "In YNAB: <0>Bestand › Budget exporteren</0>. Sleep de .zip hierheen �
 #: src/pages/admin/AdminDashboard.tsx
 msgid "Inactive"
 msgstr "Inactief"
+
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "Inactive for"
+msgstr "Inactief sinds"
+
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "Inactive users"
+msgstr "Inactieve gebruikers"
 
 #: src/features/import/ui/steps/configure/MappingTab.tsx
 msgid "Include this row in import"
@@ -9500,6 +9582,10 @@ msgstr "Laatste 30 dagen"
 #: src/pages/analytics/analytics-state.ts
 msgid "Last 6 months"
 msgstr "Laatste 6 maanden"
+
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "Last active"
+msgstr "Laatst actief"
 
 #: src/pages/admin/admin-users/user-details/ActivityTab.tsx
 msgid "Last Active"
@@ -11193,6 +11279,10 @@ msgstr "Nog geen doelen"
 msgid "No groups available"
 msgstr "Geen groepen beschikbaar"
 
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "No heartbeat"
+msgstr "Geen heartbeat"
+
 #: src/pages/accounts/components/AssetLiabilityHistoryChart.tsx
 msgid "No historical data available"
 msgstr "Geen historische gegevens beschikbaar"
@@ -11200,6 +11290,10 @@ msgstr "Geen historische gegevens beschikbaar"
 #: src/pages/settings/ImportsPage.tsx
 msgid "No imports yet. When you import transactions they will appear here for quick undo or cleanup."
 msgstr "Nog geen imports. Wanneer je transacties importeert, verschijnen ze hier voor snel ongedaan maken of opschonen."
+
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "No inactive users for this period."
+msgstr "Geen inactieve gebruikers in deze periode."
 
 #: src/features/analytics/ui/IncomeExpenseByGroupChart.tsx
 msgid "No income or expense activity for the selected range."
@@ -11560,6 +11654,14 @@ msgstr "Niet toegewezen"
 #: src/pages/settings/components/PrivacySettingsCard.tsx
 msgid "Not available in self-hosted builds."
 msgstr "Niet beschikbaar in zelf-gehoste versies."
+
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "Not deleted"
+msgstr "Niet verwijderd"
+
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "Not in Clerk"
+msgstr "Niet in Clerk"
 
 #: src/pages/settings/subscription/SubscriptionStatusCard.tsx
 msgid "Not set"
@@ -12526,6 +12628,7 @@ msgid "Pie Chart"
 msgstr "Taartdiagram"
 
 #: src/features/debt/ui/PayoffSimulator.tsx
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
 #: src/pages/admin/admin-users/user-details/BillingTab.tsx
 msgid "Plan"
 msgstr "Abonnement"
@@ -13010,6 +13113,11 @@ msgstr "Beleggingen in onroerend goed en vastgoedbezit"
 #: src/pages/settings/components/GoalFundingSettingsCard.tsx
 msgid "Proportional shortfalls (default)"
 msgstr "Naar verhouding van het tekort (standaard)"
+
+#. placeholder {0}: user.protected_reason
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "Protected: {0}"
+msgstr "Beschermd: {0}"
 
 #: src/features/rules/ui/rule-editor/rule-editor.utils.ts
 msgid "Provide a numeric delta for the adjust value action."
@@ -13508,6 +13616,7 @@ msgid "Reduction failed"
 msgstr "Vermindering mislukt"
 
 #: src/features/sync-diagnostics/ui/SyncActions.tsx
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
 #: src/pages/admin/StickinessAnalyticsSection.tsx
 msgid "Refresh"
 msgstr "Vernieuwen"
@@ -14668,6 +14777,8 @@ msgid "Select"
 msgstr "Selecteren"
 
 #. placeholder {0}: item.Name
+#. placeholder {0}: user.email
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
 #: src/pages/settings/PayeesPage.tsx
 msgid "Select {0}"
 msgstr "Selecteer {0}"
@@ -14740,6 +14851,10 @@ msgstr "Selecteer actie"
 #: src/features/settings/directory-manager/DirectoryTable.tsx
 msgid "Select all"
 msgstr "Alles selecteren"
+
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "Select all deletable users"
+msgstr "Alle verwijderbare gebruikers selecteren"
 
 #: src/features/transactions/ui/desktop-table/TransactionTableHeader.tsx
 msgid "Select all transactions on this page"
@@ -16583,6 +16698,11 @@ msgstr "Deze wijziging zorgt voor een negatief Beschikbaar in toekomstige maande
 msgid "This clears the selected payees from your transactions in this budget.{0} You can add them back later if needed."
 msgstr "Dit wist de geselecteerde begunstigden uit jouw transacties in dit budget.{0} Je kunt ze later indien nodig weer toevoegen."
 
+#. placeholder {0}: formatBytes(totalBytes)
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "This deletes {totalSpaces} budgets ({0}), their sync history, activity records and every other trace of these accounts. It can't be undone. Budgets they only shared with others stay with their owners."
+msgstr "Dit verwijdert {totalSpaces} budgetten ({0}), hun synchronisatiegeschiedenis, activiteitsgegevens en elk ander spoor van deze accounts. Dit kan niet ongedaan worden gemaakt. Budgetten die ze alleen met anderen deelden, blijven bij hun eigenaren."
+
 #: src/features/sync-diagnostics/ui/SyncOverviewCards.tsx
 msgid "This device"
 msgstr "Dit apparaat"
@@ -17316,6 +17436,10 @@ msgstr "tx #{0}"
 msgid "Type"
 msgstr "Type"
 
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
+msgid "Type {CONFIRM_WORD} to confirm"
+msgstr "Typ {CONFIRM_WORD} om te bevestigen"
+
 #: src/widgets/command-palette/CommandPalette.tsx
 msgid "Type a command or search..."
 msgstr "Typ een opdracht of zoek..."
@@ -17871,6 +17995,7 @@ msgstr "Alleen voor deze import gebruikt"
 msgid "Used in memory for this import and never saved to Budgero or browser storage."
 msgstr "Wordt voor deze import in het geheugen gebruikt en nooit opgeslagen in Budgero of de browseropslag."
 
+#: src/pages/admin/admin-users/InactiveUsersCard.tsx
 #: src/pages/admin/admin-users/UsersTable.tsx
 #: src/pages/admin/SelfHostAdminUsers.tsx
 msgid "User"

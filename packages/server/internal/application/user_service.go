@@ -181,39 +181,6 @@ func (s *UserService) ResetData(ctx context.Context, id string) ([]string, error
 	return spaceIDs, nil
 }
 
-// DeleteWithSpaces deletes a user and their owned spaces, returning deleted space IDs.
-func (s *UserService) DeleteWithSpaces(ctx context.Context, id string) ([]string, error) {
-	// First verify user exists
-	if _, err := s.userRepo.GetByID(ctx, id); err != nil {
-		return nil, err
-	}
-
-	blobs, err := s.spaceRepo.ListBlobsByOwner(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	spaceIDs := make([]string, 0, len(blobs))
-	for _, blob := range blobs {
-		spaceIDs = append(spaceIDs, blob.SpaceID)
-	}
-
-	if err := s.userRepo.Delete(ctx, id); err != nil {
-		return nil, err
-	}
-
-	// Remove blob files
-	for _, blob := range blobs {
-		if blob.BlobPath != "" {
-			if err := os.Remove(blob.BlobPath); err != nil {
-				log.Warn().Err(err).Str("path", blob.BlobPath).Msg("failed to remove blob file during delete")
-			}
-		}
-	}
-
-	return spaceIDs, nil
-}
-
 // SetAnalyticsDisabled sets the analytics opt-out flag for a user.
 func (s *UserService) SetAnalyticsDisabled(ctx context.Context, id string, disabled bool) error {
 	return s.userRepo.SetAnalyticsDisabled(ctx, id, disabled)

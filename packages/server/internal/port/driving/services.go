@@ -52,8 +52,6 @@ type UserService interface {
 	// ResetData clears user data and returns affected space IDs.
 	ResetData(ctx context.Context, id string) ([]string, error)
 
-	// DeleteWithSpaces deletes a user and their owned spaces.
-	DeleteWithSpaces(ctx context.Context, id string) ([]string, error)
 
 	// SetAnalyticsDisabled sets the analytics opt-out flag for a user.
 	SetAnalyticsDisabled(ctx context.Context, id string, disabled bool) error
@@ -393,4 +391,14 @@ type DatabaseBrowserService interface {
 
 	// DeleteSavedQuery removes a saved query.
 	DeleteSavedQuery(ctx context.Context, name string) error
+}
+
+// UserPurgeService permanently deletes users and all their data.
+type UserPurgeService interface {
+	// Purge deletes the user, their owned spaces, mutation log, activity and
+	// every other row tied to them, plus their files on disk.
+	Purge(ctx context.Context, userID string) (*domain.UserPurgeReport, error)
+
+	// ListActivity returns every user with activity data for inactivity checks.
+	ListActivity(ctx context.Context) ([]domain.UserActivitySummary, error)
 }

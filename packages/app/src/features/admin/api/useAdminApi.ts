@@ -14,7 +14,11 @@ import type {
   SelfHostAdminStats,
   SelfHostAdminUser,
 } from '@features/admin/model/admin-self-host';
-import type { AdminUserDetails } from '@features/admin/model/admin-users';
+import type {
+  AdminUserDetails,
+  InactiveUsersResponse,
+  PurgeUserResult,
+} from '@features/admin/model/admin-users';
 import type {
   AdminStats,
   ClerkSyncResult,
@@ -48,6 +52,14 @@ export function useAdminApi() {
       resetUserData: (userId: string) => apiClient.post(`/admin/users/${userId}/reset-data`),
       blockUser: (userId: string) => apiClient.post(`/admin/users/${userId}/block`),
       unblockUser: (userId: string) => apiClient.post(`/admin/users/${userId}/unblock`),
+      getInactiveUsers: (days: number) =>
+        apiClient.get<InactiveUsersResponse>(`/admin/users/inactive?days=${days}`),
+      purgeUsers: (userIds: string[], deleteFromClerk: boolean) =>
+        apiClient.post<{ results: PurgeUserResult[] }>(
+          '/admin/users/purge',
+          { user_ids: userIds, delete_from_clerk: deleteFromClerk, confirm: 'DELETE' },
+          120_000
+        ),
 
       getSelfHostRegistration: () =>
         apiClient.get<SelfHostRegistrationSettings>('/admin/selfhost/registration'),
