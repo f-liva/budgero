@@ -39,6 +39,8 @@ const ALLOW = [
   /^Is Budgero open source\?$/, // identical in idiomatic Dutch
   /^Keep it secret, keep it safe\.$/, // LOTR quote under the Gandalf gif, kept in English
   /^VS Code → Terminal → New Terminal\.$/, // UI menu path, kept as the app shows it
+  // Enable Banking's control panel is English-only; guides quote its labels verbatim.
+  /^(Enable Banking control panel|Allowed redirect URLs|Generate in the browser|Activate by linking accounts)$/,
   /^(Budgero|YNAB|Monarch( Money)?|PocketGuard|EveryDollar|Goodbudget|Quicken( Simplifi)?|Firefly III|Actual( Budget)?|GoCardless|Plaid|Docker|GitHub|SQLite|CSV|API|FAQ|RSS|Changelog|Blog|Cloud|Self-Host(ed|able)?)[\s\d\p{P}\p{S}]*$/iu,
   /^(AES-256(-GCM)?|PBKDF2(-HMAC-SHA256)?|AGPL-3\.0|JWT|LLM|SQL( Explorer)?|iPhone|Android|Windows|Mac(OS)?|Linux|Unix|iOS|Web)[\s\d\p{P}\p{S}]*$/iu,
   /^https?:\/\//,
