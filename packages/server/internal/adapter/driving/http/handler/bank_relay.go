@@ -29,8 +29,18 @@ func (h *Handlers) IssueBankRelayTicket(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]any{
 		"ticket":     ticket,
 		"expires_at": expires.UTC(),
-		"client_ip":  c.RealIP(),
+		"client_ip":  resolveClientIP(h.cfg.Server.SelfHostPublicIP, c.RealIP()),
 	})
+}
+
+// resolveClientIP prefers an operator-configured public IP (SELF_HOST_PUBLIC_IP)
+// over RealIP(), for reverse-proxy chains that never forward the end user's
+// true public IP down to the app (see SELF_HOST_PUBLIC_IP in docs/build-flags.md).
+func resolveClientIP(override, realIP string) string {
+	if override != "" {
+		return override
+	}
+	return realIP
 }
 
 // BankRelay upgrades to a Wisp WebSocket that only reaches the bank

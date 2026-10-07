@@ -31,6 +31,14 @@ type ServerConfig struct {
 	AppURL     string `env:"APP_URL"`
 	AppBaseURL string `env:"APP_BASE_URL"`
 	AppVersion string `env:"APP_VERSION"`
+
+	// SelfHostPublicIP overrides RealIP() for the bank-relay PSU-IP-Address
+	// header. Some self-host reverse-proxy chains (e.g. cloud-tunnel NAS
+	// appliances) never forward the end user's real public IP, so RealIP()
+	// resolves to an internal hop and banks reject the sync as "no PSU IP".
+	// A single self-hosted instance has one admin on one known IP, so they
+	// can set it explicitly instead.
+	SelfHostPublicIP string `env:"SELF_HOST_PUBLIC_IP"`
 }
 
 // AuthConfig contains authentication and authorization settings.
