@@ -36,7 +36,8 @@ type ServerConfig struct {
 	// header. Some self-host reverse-proxy chains (e.g. cloud-tunnel NAS
 	// appliances) never forward the end user's real public IP, so RealIP()
 	// resolves to an internal hop and banks reject the sync as "no PSU IP".
-	// A single self-hosted instance has one admin on one known IP, so they
+	// A single self-hosted instance has one admin on one known IP (or DDNS
+	// hostname, for residential connections with a rotating IP), so they
 	// can set it explicitly instead.
 	SelfHostPublicIP string `env:"SELF_HOST_PUBLIC_IP"`
 }

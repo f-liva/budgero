@@ -9,6 +9,8 @@ func TestResolveClientIP(t *testing.T) {
 		{"", "203.0.113.5", "203.0.113.5"},
 		{"203.0.113.9", "172.28.3.3", "203.0.113.9"},
 		{"", "", ""},
+		{"localhost", "172.28.3.3", "127.0.0.1"},
+		{"this-hostname-does-not-resolve.invalid", "172.28.3.3", "172.28.3.3"},
 	}
 	for _, tc := range cases {
 		if got := resolveClientIP(tc.override, tc.realIP); got != tc.want {

@@ -62,6 +62,7 @@ This reference tracks the feature flags and environment toggles that change how 
 ### `SELF_HOST_PUBLIC_IP`
 - **Key usage**: `packages/server/internal/adapter/driving/http/handler/bank_relay.go` (`IssueBankRelayTicket`) uses it instead of `c.RealIP()` when set.
 - **Purpose**: Bank-sync (Enable Banking) needs a real public IP for the `Psu-Ip-Address` header, or PSD2 ASPSPs reject the request. Behind reverse-proxy chains that never forward the true client IP (cloud-tunnel NAS appliances, some CDNs), `RealIP()` resolves to an internal hop and the frontend's `isPublicIp()` check (`packages/app/src/features/bank-sync/lib/enable-banking/tunnel.ts`) drops the header entirely. A self-hosted instance has one admin on one known IP, so they can set it explicitly as a fallback.
+- Accepts either a literal IP or a DDNS hostname (e.g. `myhouse.ddns.net`) — a hostname is resolved fresh on every ticket request rather than cached, since residential connections rotate IPs and DDNS is how operators without a static IP track their own address.
 
 ### `SELFHOST_CLI_STATE_PATH`
 - **Key usage**: Overrides where `budgero daemon` stores its process registry (`packages/server/cmd/selfhost/daemon.go`).
