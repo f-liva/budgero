@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"net"
 	"net/http"
 
 	"budgero-server/internal/adapter/driving/http/bankrelay"
@@ -29,8 +30,34 @@ func (h *Handlers) IssueBankRelayTicket(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]any{
 		"ticket":     ticket,
 		"expires_at": expires.UTC(),
-		"client_ip":  c.RealIP(),
+		"client_ip":  resolveClientIP(h.cfg.Server.SelfHostPublicIP, c.RealIP()),
 	})
+}
+
+// resolveClientIP prefers an operator-configured public IP (SELF_HOST_PUBLIC_IP)
+// over RealIP(), for reverse-proxy chains that never forward the end user's
+// true public IP down to the app (see SELF_HOST_PUBLIC_IP in docs/build-flags.md).
+// The override may be a DDNS hostname (common for residential connections
+// with a rotating IP) — it's resolved fresh on every call rather than once
+// at startup, since a cached value would go stale the next time the ISP
+// reassigns the address.
+func resolveClientIP(override, realIP string) string {
+	if override == "" {
+		return realIP
+	}
+	if net.ParseIP(override) != nil {
+		return override
+	}
+	addrs, err := net.LookupHost(override)
+	if err != nil || len(addrs) == 0 {
+		return realIP
+	}
+	for _, addr := range addrs {
+		if ip := net.ParseIP(addr); ip != nil && ip.To4() != nil {
+			return addr
+		}
+	}
+	return addrs[0]
 }
 
 // BankRelay upgrades to a Wisp WebSocket that only reaches the bank
