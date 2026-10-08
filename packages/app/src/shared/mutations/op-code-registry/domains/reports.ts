@@ -1,10 +1,43 @@
+import type { UnifiedReport } from '@budgero/core/browser';
 import {
   S,
+  safeCapture,
   type NewReportChart,
   type OpCodeEntry,
   type ReportChart,
   type ReportSaveInput,
 } from '../shared';
+
+const captureReport = (id: unknown) => safeCapture(() => S().reports!.getReport(id as string));
+
+function reportFields(report: UnifiedReport) {
+  return {
+    name: report.name,
+    description: report.description ?? '',
+    query: report.query,
+    charts: report.charts,
+    tags: report.tags ?? [],
+    isFavorite: Boolean(report.isFavorite),
+  };
+}
+
+const deleteResultReport: NonNullable<OpCodeEntry['undo']> = {
+  build: (_args, result) => {
+    const id = (result as UnifiedReport | undefined)?.id;
+    return id ? [{ op: 'reports.delete', args: { id } }] : [];
+  },
+};
+
+/** Chart edits restore the report's previous chart list in one update. */
+const restoreChartsUndo: NonNullable<OpCodeEntry['undo']> = {
+  capture: async (args) => captureReport(args.reportId),
+  build: (args, _result, before) => {
+    const report = before as UnifiedReport | null;
+    return report
+      ? [{ op: 'reports.update', args: { id: args.reportId, charts: report.charts } }]
+      : [];
+  },
+};
 
 export const reportOps = {
   'reports.create': {
@@ -20,6 +53,7 @@ export const reportOps = {
       });
     },
     invalidates: [['reports']],
+    undo: deleteResultReport,
   },
 
   // useUpdateReport
@@ -39,6 +73,15 @@ export const reportOps = {
       return await S().reports!.updateReport(args.id as string, updates);
     },
     invalidates: [['reports'], ['report', '*']],
+    undo: {
+      capture: async (args) => captureReport(args.id),
+      build: (args, _result, before) => {
+        const report = before as UnifiedReport | null;
+        return report
+          ? [{ op: 'reports.update', args: { id: args.id, ...reportFields(report) } }]
+          : [];
+      },
+    },
   },
 
   // useDeleteReport
@@ -47,6 +90,15 @@ export const reportOps = {
       await S().reports!.deleteReport(args.id as string);
     },
     invalidates: [['reports'], ['report', '*']],
+    undo: {
+      capture: async (args) => captureReport(args.id),
+      build: (_args, _result, before) => {
+        const report = before as UnifiedReport | null;
+        return report
+          ? [{ op: 'reports.create', args: { id: report.id, ...reportFields(report) } }]
+          : [];
+      },
+    },
   },
 
   // useToggleReportFavorite
@@ -55,6 +107,9 @@ export const reportOps = {
       return await S().reports!.toggleFavorite(args.id as string);
     },
     invalidates: [['reports'], ['report', '*']],
+    undo: {
+      build: (args) => [{ op: 'reports.toggleFavorite', args: { id: args.id } }],
+    },
   },
 
   // useAddChartToReport
@@ -66,6 +121,7 @@ export const reportOps = {
       );
     },
     invalidates: [['reports'], ['report', '*']],
+    undo: restoreChartsUndo,
   },
 
   // useUpdateChartInReport
@@ -78,6 +134,7 @@ export const reportOps = {
       );
     },
     invalidates: [['reports'], ['report', '*']],
+    undo: restoreChartsUndo,
   },
 
   // useRemoveChartFromReport
@@ -89,6 +146,7 @@ export const reportOps = {
       );
     },
     invalidates: [['reports'], ['report', '*']],
+    undo: restoreChartsUndo,
   },
 
   // useDuplicateReport
@@ -104,5 +162,6 @@ export const reportOps = {
       return await S().reports!.duplicateReport(args.id as string, args.newName as string);
     },
     invalidates: [['reports']],
+    undo: deleteResultReport,
   },
 } satisfies Record<string, OpCodeEntry>;
