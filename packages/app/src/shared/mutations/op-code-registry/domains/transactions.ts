@@ -796,6 +796,94 @@ export const transactionOps = {
     },
   },
 
+  // Copies rows as new uncleared transactions. A transfer copies both legs
+  // under a new transfer ID (supplied by the caller so replays match).
+  'transactions.duplicate': {
+    execute: async (args) => {
+      const { ids } = args;
+      if (!Array.isArray(ids) || !ids.every((id) => Number.isSafeInteger(id) && id > 0)) {
+        throw new Error('ids must be a list of transaction ids.');
+      }
+      const transferIds = (args.transferIds ?? {}) as Record<string, string>;
+      const reuseIds = Array.isArray(args.createdIds) ? (args.createdIds as number[]) : [];
+      const created: number[] = [];
+      const copied = new Set<string>();
+
+      const copy = async (row: TransactionSnapshot, transferId?: string) => {
+        const {
+          id: _id,
+          importIdentities: _identities,
+          ...addArgs
+        } = transactionSnapshotToAddOp(row).args;
+        const newId = await addTransactionFromArgs({
+          ...addArgs,
+          transferId,
+          cleared: false,
+          id: reuseIds[created.length],
+        });
+        created.push(newId);
+        return newId;
+      };
+
+      for (const id of ids as number[]) {
+        const row = (await S().transactions!.getTransactionByID(id)) as TransactionSnapshot;
+        const sourceTransferId = row.TransferID?.trim();
+        if (sourceTransferId) {
+          // Split-transfer rows belong to their split parent; copy the parent instead.
+          if (sourceTransferId.startsWith('split_transfer_') || copied.has(sourceTransferId)) {
+            continue;
+          }
+          const newTransferId = transferIds[sourceTransferId];
+          if (!newTransferId) throw new Error('A new transferId is required for each transfer.');
+          copied.add(sourceTransferId);
+          const legs = sortTransactionSnapshots(
+            await S().transactions!.getTransactionsByTransferID(sourceTransferId)
+          );
+          for (const leg of legs) await copy(leg, newTransferId);
+          continue;
+        }
+
+        const splits = S().splits.getSplits(id);
+        const newId = await copy(row);
+        if (splits.length) {
+          await S().splits.upsertSplits(
+            newId,
+            splits.map((line, index) => ({
+              CategoryID: line.CategoryID ?? null,
+              TransferAccountID: line.TransferAccountID ?? null,
+              Memo: line.Memo,
+              Payee: line.Payee ?? '',
+              InflowConverted: line.InflowConverted,
+              OutflowConverted: line.OutflowConverted,
+              InflowNative: line.InflowNative ?? null,
+              OutflowNative: line.OutflowNative ?? null,
+              PairID: null,
+              OrderIndex: line.OrderIndex ?? index,
+            }))
+          );
+        }
+      }
+      return { created };
+    },
+    invalidates: [...TX_WRITE_INVALIDATION_KEYS, ...SPLIT_INVALIDATION_KEYS],
+    undo: {
+      build: (_args, result) =>
+        ((result as { created?: number[] } | undefined)?.created ?? []).map((id) => ({
+          op: 'transactions.delete',
+          args: { id },
+        })),
+    },
+    // Redo recreates the copies under the IDs they first got.
+    redo: {
+      build: (args, result) => {
+        const created = (result as { created?: number[] } | undefined)?.created ?? [];
+        return created.length
+          ? [{ op: 'transactions.duplicate', args: { ...args, createdIds: created } }]
+          : [];
+      },
+    },
+  },
+
   // upsert split transaction
   'transactions.upsertSplits': {
     execute: async (args) => {

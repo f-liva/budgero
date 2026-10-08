@@ -309,6 +309,24 @@ export function useSetTransactionsCleared() {
   });
 }
 
+export type DuplicateTransactionsInput = {
+  ids: number[];
+  /** New transfer ID for each copied transfer, keyed by the source transfer ID. */
+  transferIds: Record<string, string>;
+};
+
+export function useDuplicateTransactions() {
+  const runtime = useRuntime();
+  return useMutation<{ created: number[] }, Error, DuplicateTransactionsInput>({
+    mutationFn: (input) =>
+      executeSpaceMutation<{ created: number[] }>(runtime, {
+        op: 'transactions.duplicate',
+        payload: { ids: input.ids, transferIds: input.transferIds },
+        meta: { label: 'useDuplicateTransactions' },
+      }),
+  });
+}
+
 /**
  * Delete a transaction.
  */

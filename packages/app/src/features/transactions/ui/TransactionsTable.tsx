@@ -8,6 +8,7 @@ import { TransactionsToolbar } from '@features/transactions/ui/TransactionsToolb
 import type { GetTransactionsByAccountRow, Category } from '@budgero/core/browser';
 import { useTransactionTable } from '@features/transactions/api/useTransactionTable';
 import { useClearedShortcut } from '@features/transactions/api/useClearedShortcut';
+import { useDuplicateShortcut } from '@features/transactions/api/useDuplicateShortcut';
 import { useQuickFilterShortcuts } from '@features/transactions/api/useQuickFilterShortcuts';
 import {
   useTransactionSearch,
@@ -433,6 +434,7 @@ export function TransactionsTable({
   const hasPreviousPage = page > 0;
 
   useClearedShortcut(selectedRowIds, rawData);
+  useDuplicateShortcut(selectedRowIds, rawData);
 
   const numSelected = selectedRowIds.length;
 
@@ -583,6 +585,7 @@ export function TransactionsTable({
               selectedRowIds={selectedRowIds}
               clearSelection={() => setRowSelection({})}
               onCreateRecurring={onCreateRecurringFromSelection}
+              rows={rawData}
             />
           </div>
         </div>

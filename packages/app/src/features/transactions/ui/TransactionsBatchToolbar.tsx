@@ -15,6 +15,7 @@ import {
   AlertCircle,
   RefreshCw,
   CircleCheck,
+  Copy,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -33,6 +34,11 @@ import {
   useUpdateTransactionColumn,
 } from '@entities/transaction/api/useTransactions';
 import { CLEARED_SHORTCUT_KEY } from '@features/transactions/api/useClearedShortcut';
+import {
+  DUPLICATE_SHORTCUT_KEY,
+  useDuplicateSelected,
+} from '@features/transactions/api/useDuplicateShortcut';
+import { getKeyboardShortcutLabels } from '@shared/lib/keyboard-shortcuts';
 import { PayeeCombobox } from '@features/payees/ui/PayeeCombobox';
 import type { GetTransactionsByAccountRow } from '@budgero/core/browser';
 import { useActiveAccounts } from '@entities/account/api/useActiveAccounts';
@@ -47,12 +53,15 @@ interface TransactionsBatchToolbarProps {
   selectedRowIds: number[];
   clearSelection: () => void;
   onCreateRecurring?: (transaction: GetTransactionsByAccountRow) => void;
+  /** Register rows the selection refers to (used to duplicate them). */
+  rows: GetTransactionsByAccountRow[];
 }
 
 export function TransactionsBatchToolbar({
   selectedRowIds,
   clearSelection,
   onCreateRecurring,
+  rows,
 }: TransactionsBatchToolbarProps) {
   const { t } = useLingui();
 
@@ -77,6 +86,8 @@ export function TransactionsBatchToolbar({
   const moveToNewAccountMutation = useMoveTransactionToNewAccount();
   const updateTransactionColumnMutation = useUpdateTransactionColumn();
   const setClearedMutation = useSetTransactionsCleared();
+  const { duplicateRows, isPending: isDuplicating } = useDuplicateSelected();
+  const duplicateShortcut = getKeyboardShortcutLabels().shift(DUPLICATE_SHORTCUT_KEY);
 
   const { data: allTransactions = [] } = useTransactions(selectedAccount?.ID || 0);
 
@@ -276,6 +287,17 @@ export function TransactionsBatchToolbar({
             <RefreshCw className="h-3 w-3" />
           </Button>
         )}
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 px-2"
+          aria-label={t`Duplicate`}
+          title={t`Duplicate (press ${duplicateShortcut})`}
+          disabled={isDuplicating}
+          onClick={() => duplicateRows(rows.filter((row) => selectedRowIdSet.has(row.ID)))}
+        >
+          <Copy className="h-3 w-3" />
+        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
