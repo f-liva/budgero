@@ -1,6 +1,6 @@
 import { ImportDuplicateService, type ImportIdentity } from '../import/duplicate-planner.js';
 import { DatabaseAdapter } from '../../database/interface.js';
-import { getRow, run } from '../../database/sql.js';
+import { allRows, getRow, run } from '../../database/sql.js';
 import {
   Transaction,
   GetTransactionsByAccountRow,
@@ -57,6 +57,13 @@ export {
   transferInvolvesOffBudgetAccount,
 } from './transfer-payee.js';
 const debugLog = createLogger('services:transactions');
+
+export interface ReconcileResult {
+  reconciledIds: number[];
+  /** Rows the reconcile also had to mark cleared (legacy lock-everything mode). */
+  newlyClearedIds: number[];
+  previousReconciledAt: string | null;
+}
 
 /**
  * A single-column amount edit returns [edited, other]. A negative entry means
@@ -1933,13 +1940,44 @@ export class TransactionService {
     accountId: number,
     reconcileDate?: string,
     options: { clearedOnly?: boolean } = {}
-  ): void {
+  ): ReconcileResult {
     const date = reconcileDate || getLocalDateString();
     const timestamp = new Date().toISOString();
+    const clearedOnly = options.clearedOnly ?? false;
 
-    this.db.transaction(() => {
-      this.queries.markTransactionsAsReconciled(accountId, date, options.clearedOnly ?? false);
+    return this.db.transaction(() => {
+      const previous = getRow<{ ReconciledAt: string | null }>(
+        this.db,
+        `SELECT ReconciledAt FROM accounts WHERE ID = ?`,
+        accountId
+      );
+      const affected = allRows<{ ID: number; Cleared: number }>(
+        this.db,
+        `SELECT ID, Cleared FROM transactions
+          WHERE AccountID = ? AND Date <= ? AND Reconciled = FALSE
+          ${clearedOnly ? 'AND Cleared = TRUE' : ''}`,
+        accountId,
+        date
+      );
+      this.queries.markTransactionsAsReconciled(accountId, date, clearedOnly);
       this.queries.updateAccountReconciledAt(accountId, timestamp);
+      return {
+        reconciledIds: affected.map((row) => row.ID),
+        newlyClearedIds: affected.filter((row) => !row.Cleared).map((row) => row.ID),
+        previousReconciledAt: previous?.ReconciledAt ?? null,
+      };
+    });
+  }
+
+  /**
+   * Reverse a reconcile: unlock exactly the rows it locked, unclear the ones it
+   * cleared, and restore the account's previous ReconciledAt.
+   */
+  unreconcileAccount(accountId: number, reconcile: ReconcileResult): void {
+    this.db.transaction(() => {
+      this.queries.unmarkTransactionsAsReconciled(accountId, reconcile.reconciledIds);
+      this.queries.setTransactionsCleared(reconcile.newlyClearedIds, false);
+      this.queries.updateAccountReconciledAt(accountId, reconcile.previousReconciledAt);
     });
   }
 

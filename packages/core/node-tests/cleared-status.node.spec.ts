@@ -85,6 +85,33 @@ describe('transaction cleared status', () => {
     expect(status(pending)).toEqual({ Cleared: 1, Reconciled: 1 });
   });
 
+  it('unreconciles exactly what a reconcile locked', async () => {
+    const { adapter, services, accountId, add, status } = await setup();
+    const earlier = await add('2026-08-01', 500, true);
+    services.transactions.reconcileAccount(accountId, '2026-08-01', { clearedOnly: true });
+    const reconciledAt = () =>
+      (
+        adapter.prepare('SELECT ReconciledAt FROM accounts WHERE ID = ?').get(accountId) as {
+          ReconciledAt: string | null;
+        }
+      ).ReconciledAt;
+    const firstStamp = reconciledAt();
+
+    const cleared = await add('2026-09-01', 1_000, true);
+    const pending = await add('2026-09-02', 2_000);
+
+    const legacy = services.transactions.reconcileAccount(accountId, '2026-09-10');
+    expect(legacy.reconciledIds.sort()).toEqual([cleared, pending].sort());
+    expect(legacy.newlyClearedIds).toEqual([pending]);
+    expect(legacy.previousReconciledAt).toBe(firstStamp);
+
+    services.transactions.unreconcileAccount(accountId, legacy);
+    expect(status(earlier)).toEqual({ Cleared: 1, Reconciled: 1 });
+    expect(status(cleared)).toEqual({ Cleared: 1, Reconciled: 0 });
+    expect(status(pending)).toEqual({ Cleared: 0, Reconciled: 0 });
+    expect(reconciledAt()).toBe(firstStamp);
+  });
+
   it('reports the uncleared total so the cleared balance can be derived', async () => {
     const { services, add, account } = await setup();
     await add('2026-09-01', 1_000, true);

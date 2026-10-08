@@ -1676,6 +1676,19 @@ export class TransactionQueries {
     );
   }
 
+  /** Unlock specific reconciled rows of an account (undo of a reconcile). */
+  unmarkTransactionsAsReconciled(accountId: number, ids: number[]): void {
+    for (const chunk of chunkValues(ids)) {
+      run(
+        this.db,
+        `UPDATE transactions SET Reconciled = FALSE
+          WHERE AccountID = ? AND ID IN (${chunk.map(() => '?').join(', ')})`,
+        accountId,
+        ...chunk
+      );
+    }
+  }
+
   /**
    * Mark transactions cleared or uncleared. Reconciled rows are locked and
    * left untouched. Returns the IDs whose status actually changed.
@@ -1708,7 +1721,7 @@ export class TransactionQueries {
    * UpdateAccountReconciledAt - Updates the reconciled_at timestamp for an account
    * SQL: UPDATE accounts SET reconciled_at = ? WHERE id = ?
    */
-  updateAccountReconciledAt(accountId: number, reconciledAt: string): void {
+  updateAccountReconciledAt(accountId: number, reconciledAt: string | null): void {
     run(
       this.db,
       `

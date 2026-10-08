@@ -1,4 +1,4 @@
-import { type ImportIdentity, asMilli } from '@budgero/core/browser';
+import { type ImportIdentity, type ReconcileResult, asMilli } from '@budgero/core/browser';
 import {
   S,
   sortTransactionSnapshots,
@@ -7,6 +7,7 @@ import {
   ACCOUNT_TRANSACTION_INVALIDATION_KEYS,
   RECURRING_TEMPLATE_INVALIDATIONS,
   type NormalizedSplit,
+  type OpCall,
   type OpCodeEntry,
   type TransactionRowWithColumns,
   type TransactionSnapshot,
@@ -40,6 +41,12 @@ const AMOUNT_COLUMN_PARTNER: Record<string, string> = {
   InflowNative: 'OutflowNative',
   OutflowNative: 'InflowNative',
 };
+
+function reconcileUndo(accountId: unknown, result: unknown): OpCall[] {
+  const reconcile = result as ReconcileResult | undefined;
+  if (!reconcile) return [];
+  return [{ op: 'transactions.unreconcile', args: { accountId, ...reconcile } }];
+}
 
 // Shared by transactions.delete (exact) and transactions.updateColumn (which also
 // invalidates payees). Invalidation order is irrelevant — these are set operations.
@@ -669,6 +676,9 @@ export const transactionOps = {
       ['labels', '*'],
       ['labelDirectory', '*'],
     ],
+    undo: {
+      build: (args, result) => reconcileUndo(args.accountId, result),
+    },
   },
   // Locks only cleared transactions; uncleared ones stay open. Kept separate
   // from transactions.reconcile so older ops replay with their original meaning.
@@ -679,6 +689,26 @@ export const transactionOps = {
         args.reconcileDate as string | undefined,
         { clearedOnly: true }
       );
+    },
+    invalidates: [
+      ...ACCOUNT_TRANSACTION_INVALIDATION_KEYS,
+      ['accounts', '*'],
+      ['allTransactions', '*'],
+      ['allTransactionsDetailed', '*'],
+      ['allTransactionsAnalytics', '*'],
+      ['monthlyTransactions', '*'],
+    ],
+    undo: {
+      build: (args, result) => reconcileUndo(args.accountId, result),
+    },
+  },
+  'transactions.unreconcile': {
+    execute: async (args) => {
+      S().transactions!.unreconcileAccount(args.accountId as number, {
+        reconciledIds: (args.reconciledIds as number[]) ?? [],
+        newlyClearedIds: (args.newlyClearedIds as number[]) ?? [],
+        previousReconciledAt: (args.previousReconciledAt as string | null) ?? null,
+      });
     },
     invalidates: [
       ...ACCOUNT_TRANSACTION_INVALIDATION_KEYS,

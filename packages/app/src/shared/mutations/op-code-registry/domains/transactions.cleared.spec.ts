@@ -5,6 +5,7 @@ const transactionMocks = vi.hoisted(() => ({
   addTransaction: vi.fn(),
   setTransactionsCleared: vi.fn(),
   reconcileAccount: vi.fn(),
+  unreconcileAccount: vi.fn(),
 }));
 const importMocks = vi.hoisted(() => ({ findOperation: vi.fn() }));
 
@@ -99,5 +100,21 @@ describe('cleared status ops', () => {
       reconcileDate: '2026-09-29',
     });
     expect(transactionMocks.reconcileAccount).toHaveBeenLastCalledWith(3, '2026-09-29');
+  });
+
+  it('undoes a reconcile by unlocking exactly what it locked', async () => {
+    const reconcile = {
+      reconciledIds: [11, 12],
+      newlyClearedIds: [],
+      previousReconciledAt: '2026-08-01T00:00:00.000Z',
+    };
+    const args = { accountId: 3, reconcileDate: '2026-09-29' };
+    const undo = getUndoSpec('transactions.reconcileCleared')!.build(args, reconcile, undefined);
+    expect(undo).toEqual([
+      { op: 'transactions.unreconcile', args: { accountId: 3, ...reconcile } },
+    ]);
+
+    await executeMutationOp(undo[0].op, undo[0].args);
+    expect(transactionMocks.unreconcileAccount).toHaveBeenCalledWith(3, reconcile);
   });
 });

@@ -23,6 +23,7 @@ export { CategoryService } from './services/categories/index.js';
 export { AccountService } from './services/accounts/index.js';
 export {
   TransactionService,
+  type ReconcileResult,
   isAccountOnBudget,
   resolveTransferPayees,
   transferInvolvesOffBudgetAccount,
