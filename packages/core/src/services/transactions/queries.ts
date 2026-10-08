@@ -1798,7 +1798,8 @@ export class TransactionQueries {
   /**
    * UpdateTransferMemosForAccountRename - Updates all transfer memos when an account is renamed
    * Replaces "Transfer from {oldName}" with "Transfer from {newName}"
-   * and "to {oldName}" with "to {newName}" (for destination account in "Transfer from X to Y" format)
+   * and "to {oldName}" with "to {newName}" (legacy "Transfer from X to Y" memos),
+   * plus either side of the current "X → Y: memo" format on transfer rows.
    */
   updateTransferMemosForAccountRename(budgetId: number, oldName: string, newName: string): number {
     // Two patterns: "Transfer from {name}" (source side) and " to {name}"
@@ -1825,6 +1826,43 @@ export class TransactionQueries {
       // Matches previous behavior: the returned count is the last pattern's.
       changes = result.changes || 0;
     }
+
+    // Current format: "{source} → {destination}[: memo][ (conversion)]".
+    const rows = allRows<{ ID: number; Memo: string }>(
+      this.db,
+      `
+        SELECT ID, Memo FROM transactions
+        WHERE BudgetID = ? AND TransferID IS NOT NULL AND TransferID != ''
+          AND instr(Memo, ?) > 0
+      `,
+      budgetId,
+      TRANSFER_MEMO_ARROW
+    );
+    for (const row of rows) {
+      const memo = renameInTransferMemo(row.Memo, oldName, newName);
+      if (memo === row.Memo) continue;
+      run(this.db, 'UPDATE transactions SET Memo = ? WHERE ID = ?', memo, row.ID);
+      changes += 1;
+    }
     return changes;
   }
+}
+
+const TRANSFER_MEMO_ARROW = ' → ';
+
+/** Swaps an account name in a "{source} → {destination}: memo" transfer memo. */
+export function renameInTransferMemo(memo: string, oldName: string, newName: string): string {
+  const arrow = memo.indexOf(TRANSFER_MEMO_ARROW);
+  if (arrow < 0) return memo;
+  let source = memo.slice(0, arrow);
+  let rest = memo.slice(arrow + TRANSFER_MEMO_ARROW.length);
+  if (source === oldName) source = newName;
+  const after = rest.slice(oldName.length);
+  if (
+    rest.startsWith(oldName) &&
+    (after === '' || after.startsWith(':') || after.startsWith(' ('))
+  ) {
+    rest = newName + after;
+  }
+  return `${source}${TRANSFER_MEMO_ARROW}${rest}`;
 }
