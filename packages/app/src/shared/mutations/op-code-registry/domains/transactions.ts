@@ -39,15 +39,6 @@ const SPLIT_INVALIDATION_KEYS: [string, ...string[]][] = [
   ['labelDirectory', '*'],
 ];
 
-// An amount edit can rewrite the opposite side too (a negative entry flips
-// sides), so undo has to restore both columns of the edited pair.
-const AMOUNT_COLUMN_PARTNER: Record<string, string> = {
-  InflowConverted: 'OutflowConverted',
-  OutflowConverted: 'InflowConverted',
-  InflowNative: 'OutflowNative',
-  OutflowNative: 'InflowNative',
-};
-
 function restoreSnapshotsUndo(before: unknown): OpCall[] {
   const snaps = (before as { snapshots?: TransactionSnapshot[] } | undefined)?.snapshots || [];
   return snaps.length ? sortTransactionSnapshots(snaps).map(transactionSnapshotToAddOp) : [];
@@ -488,32 +479,15 @@ export const transactionOps = {
           col.toLowerCase().replace(/_/g, '') === 'exchangerate'
             ? Boolean(tx.ExchangeRateOverride)
             : undefined;
-        const partnerColumn = AMOUNT_COLUMN_PARTNER[col];
-        const partner = partnerColumn
-          ? { column: partnerColumn, oldValue: tx[partnerColumn] }
-          : undefined;
-        return { oldValue, oldExchangeRateOverride, partner };
+        return { oldValue, oldExchangeRateOverride };
       },
       build: (args, _result, before) => {
         const previous = before as
           | {
               oldValue?: string | number | null;
               oldExchangeRateOverride?: boolean;
-              partner?: { column: string; oldValue?: string | number | null };
             }
           | undefined;
-        const restorePartner = previous?.partner
-          ? [
-              {
-                op: 'transactions.updateColumn',
-                args: {
-                  id: args.id,
-                  columnName: previous.partner.column,
-                  newValue: previous.partner.oldValue,
-                },
-              },
-            ]
-          : [];
         return [
           {
             op: 'transactions.updateColumn',
@@ -526,7 +500,6 @@ export const transactionOps = {
                 : {}),
             },
           },
-          ...restorePartner,
         ];
       },
     },
