@@ -1,4 +1,9 @@
-import { type ImportIdentity, type ReconcileResult, asMilli } from '@budgero/core/browser';
+import {
+  type ImportIdentity,
+  type ReconcileResult,
+  type TransactionSplit,
+  asMilli,
+} from '@budgero/core/browser';
 import {
   S,
   sortTransactionSnapshots,
@@ -6,6 +11,7 @@ import {
   TRANSACTION_INVALIDATION_KEYS,
   ACCOUNT_TRANSACTION_INVALIDATION_KEYS,
   RECURRING_TEMPLATE_INVALIDATIONS,
+  safeCapture,
   type NormalizedSplit,
   type OpCall,
   type OpCodeEntry,
@@ -40,6 +46,28 @@ const AMOUNT_COLUMN_PARTNER: Record<string, string> = {
   OutflowConverted: 'InflowConverted',
   InflowNative: 'OutflowNative',
   OutflowNative: 'InflowNative',
+};
+
+function restoreSnapshotsUndo(before: unknown): OpCall[] {
+  const snaps = (before as { snapshots?: TransactionSnapshot[] } | undefined)?.snapshots || [];
+  return snaps.length ? sortTransactionSnapshots(snaps).map(transactionSnapshotToAddOp) : [];
+}
+
+/** Undo for split edits: put back the previous lines, or clear if there were none. */
+const splitsUndo: NonNullable<OpCodeEntry['undo']> = {
+  capture: async (args) => safeCapture(() => S().splits.getSplits(args.transactionId as number)),
+  build: (args, _result, before) => {
+    const previous = before as TransactionSplit[] | null;
+    if (!previous) return [];
+    return previous.length
+      ? [
+          {
+            op: 'transactions.upsertSplits',
+            args: { transactionId: args.transactionId, splits: previous },
+          },
+        ]
+      : [{ op: 'transactions.clearSplits', args: { transactionId: args.transactionId } }];
+  },
 };
 
 function reconcileUndo(accountId: unknown, result: unknown): OpCall[] {
@@ -387,6 +415,15 @@ export const transactionOps = {
       await S().transactions!.deleteTransaction(first.ID);
     },
     invalidates: TX_WRITE_INVALIDATION_KEYS,
+    undo: {
+      capture: async (args) => {
+        const group = await safeCapture(() =>
+          S().transactions!.getTransactionsByTransferID(args.transferId as string)
+        );
+        return { snapshots: (group ?? []).map(withImportIdentities) };
+      },
+      build: (_args, _result, before) => restoreSnapshotsUndo(before),
+    },
   },
 
   // useUpdateTransactionColumn
@@ -487,12 +524,7 @@ export const transactionOps = {
           return { snapshots: [] };
         }
       },
-      build: (_args, _result, before) => {
-        const beforeState = before as { snapshots?: TransactionSnapshot[] } | undefined;
-        const snaps = beforeState?.snapshots || [];
-        if (!snaps.length) return [];
-        return sortTransactionSnapshots(snaps).map(transactionSnapshotToAddOp);
-      },
+      build: (_args, _result, before) => restoreSnapshotsUndo(before),
     },
   },
 
@@ -773,11 +805,13 @@ export const transactionOps = {
       return S().splits.upsertSplits(args.transactionId as number, normalized);
     },
     invalidates: SPLIT_INVALIDATION_KEYS,
+    undo: splitsUndo,
   },
   'transactions.clearSplits': {
     execute: async (args) => {
       return await S().splits.clearSplits(args.transactionId as number);
     },
     invalidates: SPLIT_INVALIDATION_KEYS,
+    undo: splitsUndo,
   },
 } satisfies Record<string, OpCodeEntry>;
