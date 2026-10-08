@@ -289,6 +289,20 @@ export const categoryOps = {
       ['categoryGroups', '*'],
       ['monthlyBudget', '*'],
     ],
+    undo: {
+      capture: async (args) =>
+        safeCapture(() =>
+          S()
+            .categories.getAllCategoryGroups(args.budgetId as number)
+            .map((group) => group.ID)
+        ),
+      build: (args, _result, before) => {
+        const orderedGroupIds = before as number[] | null;
+        return orderedGroupIds?.length
+          ? [{ op: 'categoryGroups.reorder', args: { budgetId: args.budgetId, orderedGroupIds } }]
+          : [];
+      },
+    },
   },
 
   // useReorderCategories
@@ -309,5 +323,26 @@ export const categoryOps = {
       ['categories', '*'],
       ['monthlyBudget', '*'],
     ],
+    undo: {
+      capture: async (args) =>
+        safeCapture(() => {
+          const groupId = args.categoryGroupId as number;
+          const { BudgetID } = S().categories.getCategoryGroup(groupId);
+          return S()
+            .categories.getCategoriesByGroup(BudgetID, groupId)
+            .map((category) => category.ID);
+        }),
+      build: (args, _result, before) => {
+        const orderedCategoryIds = before as number[] | null;
+        return orderedCategoryIds?.length
+          ? [
+              {
+                op: 'categories.reorder',
+                args: { categoryGroupId: args.categoryGroupId, orderedCategoryIds },
+              },
+            ]
+          : [];
+      },
+    },
   },
 } satisfies Record<string, OpCodeEntry>;
