@@ -71,22 +71,11 @@ function computeCellCommit(
     const nativeColumn: DbTransactionColumn =
       columnId === 'InflowConverted' ? 'InflowNative' : 'OutflowNative';
     const dbColumn: DbTransactionColumn = display === 'budget' ? columnId : nativeColumn;
-    const partner: DbTransactionColumn =
-      display === 'budget'
-        ? columnId === 'InflowConverted'
-          ? 'OutflowConverted'
-          : 'InflowConverted'
-        : columnId === 'InflowConverted'
-          ? 'OutflowNative'
-          : 'InflowNative';
 
-    // Core saves a negative entry as the opposite flow (-20000 outflow is a
-    // 20000 inflow); show the row that way right away.
-    if (value < 0) {
-      patch[dbColumn] = 0;
-      patch[partner] = -value;
+    if (display === 'budget') {
+      patch[columnId] = newVal;
     } else {
-      patch[dbColumn] = newVal;
+      patch[nativeColumn] = newVal;
     }
 
     return {
