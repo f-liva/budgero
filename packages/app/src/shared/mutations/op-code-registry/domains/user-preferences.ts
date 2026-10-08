@@ -7,7 +7,8 @@ type UserMetaGetter =
   | 'getSuggestCategoryFromPayee'
   | 'getShowGroupPercent'
   | 'getPlanningNumberAnimations'
-  | 'getDialogBackgroundBlur';
+  | 'getDialogBackgroundBlur'
+  | 'getHideZeroAmounts';
 
 /** Undo for single-value preference setters: re-issue the op with the old value. */
 function preferenceUndo(op: string, getter: UserMetaGetter): NonNullable<OpCodeEntry['undo']> {
@@ -121,5 +122,19 @@ export const userPreferenceOps = {
     },
     invalidates: [['dialogBackgroundBlur'], ['userPreferences']],
     undo: preferenceUndo('userPreferences.setDialogBackgroundBlur', 'getDialogBackgroundBlur'),
+  },
+  'userPreferences.setHideZeroAmounts': {
+    execute: async (args) => {
+      const services = S() as {
+        userMeta?: { setHideZeroAmounts(value: boolean): void };
+      };
+      if (!services.userMeta) {
+        throw new Error('userMeta service not available');
+      }
+      services.userMeta.setHideZeroAmounts(args.value as boolean);
+      return { success: true };
+    },
+    invalidates: [['hideZeroAmounts'], ['userPreferences']],
+    undo: preferenceUndo('userPreferences.setHideZeroAmounts', 'getHideZeroAmounts'),
   },
 } satisfies Record<string, OpCodeEntry>;

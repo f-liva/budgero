@@ -33,6 +33,7 @@ import { withEditPrecision } from '@shared/lib/number-format';
 import { TransferRateDialog } from '@features/transactions/ui/transfer-rate/TransferRateDialog';
 import { validateTransactionExchangeRate } from '@features/transactions/lib/exchange-rate-validation';
 import { transferHasOffBudgetLeg } from '@features/transactions/lib/transfer-category';
+import { useHideZeroAmountsEnabled } from '@shared/contexts/HideZeroAmountsContext';
 import type { SplitLine } from './useMobileTransactionCardState';
 import { extractSplitFlows, type SplitLike } from '../desktop-table/table-utils';
 
@@ -140,6 +141,7 @@ export const TransactionCardDetails = React.memo(function TransactionCardDetails
   onSaveSplits,
 }: TransactionCardDetailsProps) {
   const { t } = useLingui();
+  const hideZeroAmounts = useHideZeroAmountsEnabled();
 
   const selectedAccount = useUiStore((state) => state.selectedAccount);
   const selectedBudget = useUiStore((state) => state.selectedBudget);
@@ -174,6 +176,7 @@ export const TransactionCardDetails = React.memo(function TransactionCardDetails
                 <div className="[&>div]:w-full">
                   <CalculatorCell
                     value={asMilli(getPrimaryInflow(transaction) || 0)}
+                    zeroAsEmpty={hideZeroAmounts}
                     currencyCode={editCurrencyCode}
                     onCommit={(newVal) => onCellCommit(transaction.ID, 'InflowConverted', newVal)}
                     formatter={(val) => currentFormatter.format(val)}
@@ -211,6 +214,7 @@ export const TransactionCardDetails = React.memo(function TransactionCardDetails
                 <div className="[&>div]:w-full">
                   <CalculatorCell
                     value={asMilli(getPrimaryOutflow(transaction) || 0)}
+                    zeroAsEmpty={hideZeroAmounts}
                     currencyCode={editCurrencyCode}
                     onCommit={(newVal) => onCellCommit(transaction.ID, 'OutflowConverted', newVal)}
                     formatter={(val) => currentFormatter.format(val)}

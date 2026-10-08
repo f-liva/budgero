@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
     getWeekStartsOn: vi.fn(() => 0),
     getAllowOverAssignment: vi.fn(() => false),
     getDuplicateHintSettings: vi.fn(() => ({ enabled: true, windowDays: 3 })),
+    getHideZeroAmounts: vi.fn(() => false),
   },
 }));
 
@@ -51,6 +52,9 @@ describe('settings undo', () => {
     ]);
     expect(await undoFor('userPreferences.setAllowOverAssignment', { value: true })).toEqual([
       { op: 'userPreferences.setAllowOverAssignment', args: { value: false } },
+    ]);
+    expect(await undoFor('userPreferences.setHideZeroAmounts', { value: true })).toEqual([
+      { op: 'userPreferences.setHideZeroAmounts', args: { value: false } },
     ]);
     expect(
       await undoFor('userPreferences.setDuplicateHintSettings', { settings: { enabled: false } })

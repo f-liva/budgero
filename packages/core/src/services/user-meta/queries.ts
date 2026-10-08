@@ -128,6 +128,21 @@ export class UserMetaQueries {
     run(this.db, `UPDATE user_meta SET DialogBackgroundBlur = ? WHERE ID = 1`, value ? 1 : 0);
   }
 
+  /** Show zero transaction amounts as empty cells. Off by default. */
+  getHideZeroAmounts(): boolean {
+    this.ensureRow();
+    const row = getRow<{ HideZeroAmounts: boolean | number | null }>(
+      this.db,
+      `SELECT HideZeroAmounts FROM user_meta WHERE ID = 1`
+    );
+    return row?.HideZeroAmounts === true || row?.HideZeroAmounts === 1;
+  }
+
+  setHideZeroAmounts(value: boolean): void {
+    this.ensureRow();
+    run(this.db, `UPDATE user_meta SET HideZeroAmounts = ? WHERE ID = 1`, value ? 1 : 0);
+  }
+
   /** First calendar weekday: Sunday (0) or Monday (1). */
   getWeekStartsOn(): 0 | 1 {
     this.ensureRow();
