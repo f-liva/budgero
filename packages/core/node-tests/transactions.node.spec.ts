@@ -915,6 +915,54 @@ describe('Transactions (Node/sql.js)', () => {
       updated = services.transactions.getTransactionByID(txnId);
       expect(updated.CategoryID).toBe(newCat);
     });
+
+    it('flips a negative amount edit to the opposite side', async () => {
+      const today = getLocalDateString();
+      const txnId = await services.transactions.addTransaction(
+        0,
+        5000,
+        accountId,
+        categoryId,
+        budgetId,
+        today,
+        'Groceries'
+      );
+
+      await services.transactions.updateTransactionColumn(txnId, 'OutflowConverted', -20000);
+      let updated = services.transactions.getTransactionByID(txnId);
+      expect(updated.InflowConverted).toBe(20000);
+      expect(updated.OutflowConverted).toBe(0);
+      expect(updated.InflowNative).toBe(20000);
+      expect(updated.OutflowNative).toBe(0);
+      expect(services.accounts.getAccount(accountId).BalanceNative).toBe(25000);
+
+      await services.transactions.updateTransactionColumn(txnId, 'InflowNative', -300);
+      updated = services.transactions.getTransactionByID(txnId);
+      expect(updated.InflowNative).toBe(0);
+      expect(updated.OutflowNative).toBe(300);
+      expect(updated.OutflowConverted).toBe(300);
+    });
+
+    it('clears a stray negative on the untouched side', async () => {
+      const today = getLocalDateString();
+      const txnId = await services.transactions.addTransaction(
+        0,
+        5000,
+        accountId,
+        categoryId,
+        budgetId,
+        today,
+        'Legacy row'
+      );
+      adapter.exec(
+        `UPDATE transactions SET OutflowConverted = -20000, OutflowNative = -20000 WHERE ID = ${txnId}`
+      );
+
+      await services.transactions.updateTransactionColumn(txnId, 'InflowConverted', 20000);
+      const updated = services.transactions.getTransactionByID(txnId);
+      expect(updated.InflowConverted).toBe(20000);
+      expect(updated.OutflowConverted).toBe(0);
+    });
   });
 
   // Transfer Transactions Tests

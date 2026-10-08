@@ -59,6 +59,16 @@ export {
 const debugLog = createLogger('services:transactions');
 
 /**
+ * A single-column amount edit returns [edited, other]. A negative entry means
+ * money moving the other way (-20000 typed as outflow is a 20000 inflow), and a
+ * stray negative already stored on the untouched side is cleared.
+ */
+function normalizeAmountEdit(edited: MilliUnits, other: MilliUnits): [MilliUnits, MilliUnits] {
+  if (edited < 0) return [ZERO_MILLI, asMilli(Math.abs(edited))];
+  return [edited, other < 0 ? ZERO_MILLI : other];
+}
+
+/**
  * TransactionService - Port of Go transactions service
  * Handles complex transaction management with running balance calculations
  */
@@ -1620,59 +1630,83 @@ export class TransactionService {
 
     switch (col) {
       case 'inflowconverted':
-      case 'inflow': // legacy pre-045 name
+      case 'inflow': {
+        // legacy pre-045 name
         // When updating the converted amount (budget currency), we need to back-calculate the original.
         // asMilli doubles as the op-boundary guard: a decimal amount arriving in
         // an op payload throws here instead of being written to an integer column.
+        const [inflow, outflow] = normalizeAmountEdit(
+          asMilli(Number(newValue ?? 0)),
+          transaction.OutflowConverted ?? ZERO_MILLI
+        );
         await this.updateTransactionFromBudgetCurrency(
           transactionId,
-          asMilli(Number(newValue ?? 0)),
-          transaction.OutflowConverted ?? ZERO_MILLI,
+          inflow,
+          outflow,
           transaction.AccountID,
           transaction.CategoryID,
           transaction.Date,
           transaction.Memo ?? ''
         );
         break;
+      }
       case 'outflowconverted':
-      case 'outflow': // legacy pre-045 name
+      case 'outflow': {
+        // legacy pre-045 name
         // When updating the converted amount (budget currency), we need to back-calculate the original
+        const [outflow, inflow] = normalizeAmountEdit(
+          asMilli(Number(newValue ?? 0)),
+          transaction.InflowConverted ?? ZERO_MILLI
+        );
         await this.updateTransactionFromBudgetCurrency(
           transactionId,
-          transaction.InflowConverted ?? ZERO_MILLI,
-          asMilli(Number(newValue ?? 0)),
+          inflow,
+          outflow,
           transaction.AccountID,
           transaction.CategoryID,
           transaction.Date,
           transaction.Memo ?? ''
         );
         break;
+      }
       case 'inflownative':
-      case 'infloworiginal': // legacy pre-045 name
+      case 'infloworiginal': {
+        // legacy pre-045 name
         // When updating original amount, we need to recalculate the converted amount
+        const [inflow, outflow] = normalizeAmountEdit(
+          asMilli(Number(newValue ?? 0)),
+          transaction.OutflowNative ?? transaction.OutflowConverted ?? ZERO_MILLI
+        );
         await this.updateTransactionOriginal(
           transactionId,
-          asMilli(Number(newValue ?? 0)),
-          transaction.OutflowNative ?? transaction.OutflowConverted ?? ZERO_MILLI,
+          inflow,
+          outflow,
           transaction.AccountID,
           transaction.CategoryID,
           transaction.Date,
           transaction.Memo ?? ''
         );
         break;
+      }
       case 'outflownative':
-      case 'outfloworiginal': // legacy pre-045 name
+      case 'outfloworiginal': {
+        // legacy pre-045 name
         // When updating original amount, we need to recalculate the converted amount
+        const [outflow, inflow] = normalizeAmountEdit(
+          asMilli(Number(newValue ?? 0)),
+          transaction.InflowNative ?? transaction.InflowConverted ?? ZERO_MILLI
+        );
         await this.updateTransactionOriginal(
           transactionId,
-          transaction.InflowNative ?? transaction.InflowConverted ?? ZERO_MILLI,
-          asMilli(Number(newValue ?? 0)),
+          inflow,
+          outflow,
           transaction.AccountID,
           transaction.CategoryID,
           transaction.Date,
           transaction.Memo ?? ''
         );
         break;
+      }
       case 'categoryid':
         if (this.queries.isOnBudgetToOnBudgetTransfer(transactionId)) {
           throw new ValidationError(
