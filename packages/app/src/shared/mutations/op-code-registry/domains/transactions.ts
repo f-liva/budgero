@@ -140,6 +140,11 @@ const TX_MOVE_INVALIDATION_KEYS: string[][] = [
   ['labelDirectory', '*'],
 ];
 
+/** Undo/redo pass the row's original ID so history entries that reference it stay valid. */
+function explicitId(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : undefined;
+}
+
 async function addTransactionFromArgs(args: Record<string, unknown>): Promise<number> {
   const parameters = [
     asMilli(Number(args.inflow ?? 0)),
@@ -159,7 +164,8 @@ async function addTransactionFromArgs(args: Record<string, unknown>): Promise<nu
     ...parameters,
     false,
     (args.importIdentities as ImportIdentity[] | undefined) ?? [],
-    args.cleared === true
+    args.cleared === true,
+    explicitId(args.id)
   );
 }
 
@@ -241,6 +247,14 @@ export const transactionOps = {
           : [];
       },
     },
+    redo: {
+      build: (args, result) => {
+        const imported = result as { transactionId: number; created: boolean };
+        return imported.created
+          ? [{ op: 'transactions.import', args: { ...args, id: imported.transactionId } }]
+          : [];
+      },
+    },
   },
   'transactions.add': {
     execute: async (args) => {
@@ -283,14 +297,12 @@ export const transactionOps = {
           : [];
       },
     },
-    // Customize redo to also restore the snapshots (useful for multi-leg transfers)
+    // Redo recreates the row under the ID it first got.
     redo: {
-      build: (_args, _result, before) => {
-        const beforeState = before as { snapshots?: TransactionSnapshot[] } | undefined;
-        const snaps = beforeState?.snapshots || [];
-        if (!snaps.length) return [];
-        return sortTransactionSnapshots(snaps).map(transactionSnapshotToAddOp);
-      },
+      build: (args, result) =>
+        typeof result === 'number'
+          ? [{ op: 'transactions.add', args: { ...args, id: result } }]
+          : [],
     },
   },
 
@@ -352,6 +364,24 @@ export const transactionOps = {
         return typeof transferId === 'string' && transferId
           ? [{ op: 'transactions.deleteTransfer', args: { transferId } }]
           : [];
+      },
+    },
+    // Redo recreates both legs under the IDs they first got.
+    redo: {
+      build: (args, result) => {
+        const ids = result as { sourceId: number; destinationId: number } | undefined;
+        if (!ids) return [];
+        const leg = (value: unknown, id: number) => ({ ...(value as object), id });
+        return [
+          {
+            op: 'transactions.addTransfer',
+            args: {
+              ...args,
+              source: leg(args.source, ids.sourceId),
+              destination: leg(args.destination, ids.destinationId),
+            },
+          },
+        ];
       },
     },
   },

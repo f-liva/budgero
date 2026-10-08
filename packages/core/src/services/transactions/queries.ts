@@ -175,17 +175,19 @@ export class TransactionQueries {
     labelId?: number | null,
     exchangeRateOverride = false,
     excludeFromReadyToAssign = false,
-    cleared = false
+    cleared = false,
+    id?: number
   ): number {
     const result = run(
       this.db,
       `
       INSERT INTO transactions (
-        InflowConverted, OutflowConverted, InflowNative, OutflowNative, CategoryID, AccountID,
+        ID, InflowConverted, OutflowConverted, InflowNative, OutflowNative, CategoryID, AccountID,
         Date, Memo, Payee, BudgetID, RunningBalanceConverted, RunningBalanceNative, TransferID,
         ExchangeRate, LabelID, ExchangeRateOverride, ExcludeFromReadyToAssign, Cleared
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
+      id ?? null,
       inflow,
       outflow,
       inflowOriginal,

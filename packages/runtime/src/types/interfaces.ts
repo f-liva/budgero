@@ -266,6 +266,12 @@ export interface UndoSpec {
     result: unknown,
     beforeState: unknown
   ): { op: string; args: Record<string, unknown> }[] | null;
+  /** Redo ops; defaults to re-running the original op with its payload. */
+  buildRedo?(
+    payload: Record<string, unknown>,
+    result: unknown,
+    beforeState: unknown
+  ): { op: string; args: Record<string, unknown> }[] | null;
 }
 
 /**

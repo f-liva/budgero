@@ -136,7 +136,9 @@ export class TransactionService {
     exchangeRateOverride?: number | null,
     excludeFromReadyToAssign = false,
     importIdentities: ImportIdentity[] = [],
-    cleared = false
+    cleared = false,
+    // Undo/redo re-inserts a row under its original ID so older history entries stay valid.
+    explicitId?: number
   ): Promise<number> {
     debugLog('🔵 TransactionService.addTransaction called with:', {
       inflowOriginal,
@@ -476,15 +478,17 @@ export class TransactionService {
       let prevBalanceOriginal: number;
       if (!transferId) {
         const latest = this.queries.getLatestRunningBalances(accountId);
-        plainAppendOnly = latest === null || latest.Date <= date;
+        plainAppendOnly = explicitId === undefined && (latest === null || latest.Date <= date);
         const previous = plainAppendOnly
           ? latest
-          : this.queries.getRunningBalancesBefore(accountId, date);
+          : this.queries.getRunningBalancesBefore(accountId, date, explicitId);
         prevBalanceConverted = previous?.RunningBalanceConverted ?? 0;
         prevBalanceOriginal = previous?.RunningBalanceNative ?? 0;
       } else {
-        prevBalanceConverted = this.queries.getRunningBalanceBefore(accountId, date) || 0;
-        prevBalanceOriginal = this.queries.getRunningBalanceOriginalBefore(accountId, date) || 0;
+        prevBalanceConverted =
+          this.queries.getRunningBalanceBefore(accountId, date, explicitId) || 0;
+        prevBalanceOriginal =
+          this.queries.getRunningBalanceOriginalBefore(accountId, date, explicitId) || 0;
       }
 
       // 4. Compute new balances
@@ -517,7 +521,8 @@ export class TransactionService {
         normalizedLabelId,
         usesPinnedExchangeRate,
         excludeFromReadyToAssign,
-        cleared
+        cleared,
+        explicitId
       );
 
       // If rate was manual/adjacent/1:1, mark pending for later recalc

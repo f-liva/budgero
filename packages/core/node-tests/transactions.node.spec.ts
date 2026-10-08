@@ -963,6 +963,42 @@ describe('Transactions (Node/sql.js)', () => {
       expect(updated.InflowConverted).toBe(20000);
       expect(updated.OutflowConverted).toBe(0);
     });
+
+    it('re-inserts a deleted row under its original ID with the same running balances', async () => {
+      const add = (outflow: number, memo: string, id?: number) =>
+        services.transactions.addTransaction(
+          0,
+          outflow,
+          accountId,
+          categoryId,
+          budgetId,
+          '2026-03-05',
+          memo,
+          '',
+          undefined,
+          null,
+          null,
+          false,
+          [],
+          false,
+          id
+        );
+      const balances = () =>
+        services.transactions
+          .getTransactionsByAccount(accountId)
+          .map((t) => [t.ID, t.RunningBalanceConverted, t.RunningBalanceNative]);
+      const first = await add(100, 'first');
+      const middle = await add(200, 'middle');
+      await add(300, 'last');
+      const before = balances();
+
+      services.transactions.deleteTransaction(middle);
+      expect(await add(200, 'middle', middle)).toBe(middle);
+      expect(balances()).toEqual(before);
+      expect(services.accounts.getAccount(accountId).BalanceNative).toBe(5000 - 600);
+
+      await expect(add(1, 'taken', first)).rejects.toThrow();
+    });
   });
 
   // Transfer Transactions Tests

@@ -121,6 +121,7 @@ export function transactionSnapshotToAddOp(snapshot: TransactionSnapshot): OpCal
   return {
     op: 'transactions.add',
     args: {
+      id: snapshot.ID,
       importIdentities: snapshot.importIdentities,
       inflow:
         snapshot.InflowNative ??

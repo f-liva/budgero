@@ -29,7 +29,7 @@ const addArgs = {
   memo: '',
   payee: 'Shop',
 };
-const clearedArg = () => transactionMocks.addTransaction.mock.calls[0].at(-1);
+const clearedArg = () => transactionMocks.addTransaction.mock.calls[0][13];
 
 describe('cleared status ops', () => {
   beforeEach(() => {
