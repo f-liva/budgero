@@ -20,18 +20,8 @@ export function useUncategorizedTransactions(budgetId: number) {
   const { data: accounts = [], isLoading: accountsLoading } = useAccounts(budgetId);
 
   const data = useMemo<UncategorizedCount>(() => {
-    // Off-budget accounts never use categories, and on-budget ↔ on-budget
-    // transfers have a system-managed one, so neither needs categorizing.
+    // Off-budget accounts never use categories.
     const onBudget = new Map(accounts.map((a) => [a.ID, Number(a.OnBudget) !== 0]));
-    const transferLegs = new Map<string, { id: number; accountId: number }[]>();
-    for (const transaction of allTransactions) {
-      const transferId = transaction.TransferID?.trim();
-      if (!transferId) continue;
-      transferLegs.set(transferId, [
-        ...(transferLegs.get(transferId) ?? []),
-        { id: transaction.ID, accountId: transaction.AccountId },
-      ]);
-    }
 
     const uncategorized = allTransactions.filter((transaction) => {
       // Check if category is null, undefined, 0, or named "Uncategorized"
@@ -39,11 +29,6 @@ export function useUncategorizedTransactions(budgetId: number) {
       const isSplitParent = transaction.Category === 'Split';
       if (isSplitParent) return false;
       if (onBudget.get(transaction.AccountId) === false) return false;
-      const transferId = transaction.TransferID?.trim();
-      if (transferId) {
-        const otherLeg = transferLegs.get(transferId)?.find((leg) => leg.id !== transaction.ID);
-        if (otherLeg && onBudget.get(otherLeg.accountId) === true) return false;
-      }
 
       return (
         !transaction.CategoryID ||
