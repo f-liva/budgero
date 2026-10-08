@@ -5,6 +5,7 @@ import { executeSpaceMutation } from '@shared/runtime/mutation-router';
 import { applyOpInvalidations, resolveSpaceKey } from '@shared/lib/query-utils';
 import { getTodayISO } from '@shared/lib/date-utils';
 import type { MilliUnits } from '@shared/lib/currency/milli';
+import { ACCOUNT_TRANSACTION_INVALIDATION_KEYS } from '@shared/mutations/op-code-registry/shared';
 import { patchPlainAddTransactionCaches } from './plain-add-cache';
 
 // Query invalidation for these mutations is driven centrally by the
@@ -210,7 +211,7 @@ const AMOUNT_COLUMNS = new Set([
 // payee or label directories. Keeping those active queries out of this hot path
 // avoids rebuilding every row's editor data after each numeric commit.
 const AMOUNT_UPDATE_INVALIDATIONS: string[][] = [
-  ['transactions'],
+  ...ACCOUNT_TRANSACTION_INVALIDATION_KEYS,
   ['transactionsByCategoryAndMonth', '*'],
   ['allTransactions', '*'],
   ['allTransactionsDetailed', '*'],
