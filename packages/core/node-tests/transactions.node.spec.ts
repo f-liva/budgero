@@ -1003,6 +1003,35 @@ describe('Transactions (Node/sql.js)', () => {
 
   // Transfer Transactions Tests
   describe('Transfer Transactions', () => {
+    it('names the other account on each leg of a transfer', async () => {
+      const savings = await services.accounts.createAccount(
+        'Savings',
+        budgetId,
+        'savings',
+        'USD',
+        0
+      );
+      const leg = (account: number, inflow: number, outflow: number) =>
+        services.transactions.addTransaction(
+          inflow,
+          outflow,
+          account,
+          categoryId,
+          budgetId,
+          '2026-03-05',
+          'Long memo',
+          'tr-names'
+        );
+      const source = await leg(accountId, 0, 500);
+      const destination = await leg(savings.ID, 500, 0);
+      const nameOf = (account: number, id: number) =>
+        services.transactions.getTransactionsByAccount(account).find((t) => t.ID === id)
+          ?.TransferAccountName;
+
+      expect(nameOf(accountId, source)).toBe('Savings');
+      expect(nameOf(savings.ID, destination)).toBe('Test Checking');
+    });
+
     it('should create a transfer between accounts', async () => {
       const today = getLocalDateString();
       const savingsAccount = await services.accounts.createAccount(

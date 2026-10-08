@@ -56,7 +56,16 @@ const TX_ROW_COLUMNS = `
               AND transfer_partner.ID != t.ID
             ORDER BY transfer_partner.ID
             LIMIT 1)
-        ELSE NULL END AS TransferAccountOnBudget`;
+        ELSE NULL END AS TransferAccountOnBudget,
+        CASE WHEN t.TransferID IS NOT NULL AND t.TransferID != '' THEN
+          (SELECT partner_account.Name
+             FROM transactions transfer_partner
+             JOIN accounts partner_account ON partner_account.ID = transfer_partner.AccountID
+            WHERE transfer_partner.TransferID = t.TransferID
+              AND transfer_partner.ID != t.ID
+            ORDER BY transfer_partner.ID
+            LIMIT 1)
+        ELSE NULL END AS TransferAccountName`;
 
 const SQLITE_BIND_CHUNK_SIZE = 500;
 const DEFAULT_ACCOUNT_PAGE_SIZE = 200;

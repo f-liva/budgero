@@ -31,6 +31,7 @@ import { getRunningBalance } from '@features/transactions/lib/running-balance';
 import {
   hasReadOnlyTransferCategory,
   transferHasOffBudgetLeg,
+  transferPayeeLabel,
 } from '@features/transactions/lib/transfer-category';
 import { formatExchangeRate } from '@entities/currency/lib/exchange-rate-format';
 import { TransferRateDialog } from '@features/transactions/ui/transfer-rate/TransferRateDialog';
@@ -152,6 +153,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   const isTransfer = !!transaction.TransferID && transaction.TransferID.trim() !== '';
   const isTransferCategoryReadOnly = hasReadOnlyTransferCategory(transaction);
   const includeTransfersInCategoryPicker = transferHasOffBudgetLeg(transaction);
+  const transferLabel = transferPayeeLabel(transaction);
   const hasUnsafeMoney = hasUnsafeTransactionMoney(transaction);
   const activateCell = (column: TransactionEditableColumn) =>
     onActivateCell(transaction.ID, column);
@@ -305,7 +307,9 @@ export const TransactionRow = React.memo(function TransactionRow({
           </TableCell>
         )}
         <TableCell className="max-w-[200px]">
-          <span className="px-2 text-xs xl:text-sm">{transaction.Payee}</span>
+          <span className="px-2 text-xs xl:text-sm">
+            {transaction.Payee || transferPayeeLabel(transaction)}
+          </span>
         </TableCell>
         {showLabelColumn && (
           <TableCell className="max-w-[180px]">
@@ -450,9 +454,10 @@ export const TransactionRow = React.memo(function TransactionRow({
           />
         ) : (
           <CellDisplayButton
-            value={transaction.Payee || '—'}
-            title={transaction.Payee || t`Edit payee`}
+            value={transaction.Payee || transferLabel || '—'}
+            title={transaction.Payee || transferLabel || t`Edit payee`}
             onClick={() => activateCell('payee')}
+            className={transferLabel ? 'text-muted-foreground' : undefined}
           />
         )}
       </TableCell>

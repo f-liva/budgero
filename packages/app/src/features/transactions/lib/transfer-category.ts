@@ -9,8 +9,8 @@ type TransferBudgetState = Pick<
 export function hasReadOnlyTransferCategory(transaction: TransferBudgetState): boolean {
   return Boolean(
     transaction.TransferID?.trim() &&
-      transaction.AccountOnBudget &&
-      transaction.TransferAccountOnBudget
+    transaction.AccountOnBudget &&
+    transaction.TransferAccountOnBudget
   );
 }
 
@@ -22,4 +22,22 @@ export function transferHasOffBudgetLeg(transaction: TransferBudgetState): boole
   return (
     isOffBudget(transaction.AccountOnBudget) || isOffBudget(transaction.TransferAccountOnBudget)
   );
+}
+
+type TransferPayeeSource = Pick<
+  GetTransactionsByAccountRow,
+  'TransferID' | 'TransferAccountName' | 'Payee' | 'OutflowConverted'
+>;
+
+/**
+ * What the payee cell shows for a transfer without a payee: the other account,
+ * with an arrow for direction ("→ Savings" sent, "← Checking" received), so the
+ * destination stays visible however long the memo is.
+ */
+export function transferPayeeLabel(transaction: TransferPayeeSource): string | null {
+  if (!transaction.TransferID?.trim() || transaction.Payee || !transaction.TransferAccountName) {
+    return null;
+  }
+  const arrow = Number(transaction.OutflowConverted) > 0 ? '→' : '←';
+  return `${arrow} ${transaction.TransferAccountName}`;
 }
