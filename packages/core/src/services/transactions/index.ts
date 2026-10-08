@@ -66,14 +66,12 @@ export interface ReconcileResult {
 }
 
 /**
- * A single-column amount edit returns [edited, other]. A transaction is either
- * an inflow or an outflow, so entering an amount clears the other side, and a
- * negative entry means money moving the other way (-20000 typed as outflow is a
- * 20000 inflow). Clearing the field to zero leaves the other side alone.
+ * A single-column amount edit returns [edited, other]. A negative entry means
+ * money moving the other way (-20000 typed as outflow is a 20000 inflow), and a
+ * stray negative already stored on the untouched side is cleared.
  */
 function normalizeAmountEdit(edited: MilliUnits, other: MilliUnits): [MilliUnits, MilliUnits] {
   if (edited < 0) return [ZERO_MILLI, asMilli(Math.abs(edited))];
-  if (edited > 0) return [edited, ZERO_MILLI];
   return [edited, other < 0 ? ZERO_MILLI : other];
 }
 
