@@ -138,6 +138,7 @@ export type {
 export type * from './services/transactions/types.js';
 export type { TransferRateDetails } from './services/transactions/transfer-rate.js';
 export type * from './services/warranties/types.js';
+export type { CustomCurrencyRate } from './services/currency/types.js';
 
 // Goal enums and pure calculations (values, browser-safe)
 export {

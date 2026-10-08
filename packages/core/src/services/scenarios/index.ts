@@ -65,7 +65,8 @@ export class ScenarioService {
     const now = new Date().toISOString();
 
     try {
-      if (input.id) {
+      // An ID that no longer exists (undo of a delete) is re-inserted under that ID.
+      if (input.id && this.getScenario(input.id)) {
         run(
           this.db,
           `UPDATE scenarios SET Name = ?, Payload = ?, UpdatedAt = ? WHERE ID = ?`,
@@ -78,7 +79,7 @@ export class ScenarioService {
         if (!updated) throw new Error('Scenario not found after update');
         return updated;
       }
-      const id = createId();
+      const id = input.id ?? createId();
       run(
         this.db,
         `INSERT INTO scenarios (ID, BudgetID, Name, Payload, CreatedAt, UpdatedAt)
