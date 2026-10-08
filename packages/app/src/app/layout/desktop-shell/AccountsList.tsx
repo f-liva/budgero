@@ -1,3 +1,4 @@
+import { plural } from '@lingui/core/macro';
 import { Trans, useLingui } from '@lingui/react/macro';
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
@@ -5,6 +6,7 @@ import { Search } from 'lucide-react';
 import { cn } from '@shared/lib/utils';
 import { Badge } from '@shared/ui/badge';
 import { Input } from '@shared/ui/input';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui/tooltip';
 import { SidebarMenuButton } from '@shared/ui/sidebar';
 import { getAccountTypeDefinition } from '@entities/account/model/accountTypes';
 import { AccountGlyph } from '@entities/account/ui/AccountGlyph';
@@ -67,9 +69,19 @@ const AccountItem = React.memo(function AccountItem({
           className="flex items-center gap-2 px-3 py-2 transition-colors min-w-0"
         >
           {uncategorizedCount > 0 ? (
-            <Badge variant="destructive" className="h-4 px-1 text-xs flex-shrink-0">
-              {uncategorizedCount}
-            </Badge>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="destructive" className="h-4 px-1 text-xs flex-shrink-0">
+                  {uncategorizedCount}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {plural(uncategorizedCount, {
+                  one: '# uncategorized transaction',
+                  other: '# uncategorized transactions',
+                })}
+              </TooltipContent>
+            </Tooltip>
           ) : (
             <AccountGlyph
               type={account.Type}
