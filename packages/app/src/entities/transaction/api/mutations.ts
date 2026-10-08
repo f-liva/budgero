@@ -2,7 +2,6 @@ import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-quer
 // Use runtime services directly instead of db-ops wrappers
 import { useActiveSpaceId, useRuntime } from '@shared/runtime/runtime-provider';
 import { executeSpaceMutation } from '@shared/runtime/mutation-router';
-import { useLoading } from '@shared/contexts/LoadingContext';
 import { applyOpInvalidations, resolveSpaceKey } from '@shared/lib/query-utils';
 import { getTodayISO } from '@shared/lib/date-utils';
 import type { MilliUnits } from '@shared/lib/currency/milli';
@@ -65,17 +64,12 @@ export type AddTransferResult = {
 };
 
 export function useAddTransaction() {
-  const { showTransferLoading, hideTransferLoading } = useLoading();
   const runtime = useRuntime();
   const spaceId = useActiveSpaceId();
   const queryClient = useQueryClient();
 
   return useMutation<number, Error, AddTransactionInput>({
     mutationFn: async (input) => {
-      if (input.transferId) {
-        showTransferLoading();
-      }
-
       const transactionId = await executeSpaceMutation<number>(runtime, {
         op: 'transactions.add',
         payload: {
@@ -126,9 +120,7 @@ export function useAddTransaction() {
       return transactionId;
     },
     onSuccess: (_newId, vars) => {
-      if (vars.transferId) {
-        hideTransferLoading();
-      } else {
+      if (!vars.transferId) {
         applyOpInvalidations(queryClient, 'transactions.add', {
           excludeRoots: [
             'transactions',
@@ -141,8 +133,7 @@ export function useAddTransaction() {
         });
       }
     },
-    onError: (error, vars) => {
-      if (vars.transferId) hideTransferLoading();
+    onError: (error) => {
       console.error('Transaction failed:', error);
     },
   });
@@ -152,12 +143,11 @@ export function useAddTransaction() {
  * Add both linked legs of a transfer as one mutation/undo item.
  */
 export function useAddTransfer() {
-  const { showTransferLoading, hideTransferLoading } = useLoading();
   const runtime = useRuntime();
+  const queryClient = useQueryClient();
 
   return useMutation<AddTransferResult, Error, AddTransferInput>({
     mutationFn: async (input) => {
-      showTransferLoading();
       return executeSpaceMutation<AddTransferResult>(runtime, {
         op: 'transactions.addTransfer',
         payload: {
@@ -166,12 +156,13 @@ export function useAddTransfer() {
           source: input.source,
           destination: input.destination,
         },
-        meta: { label: 'useAddTransfer' },
+        // Refresh in the background (onSuccess) so the add dialog doesn't wait
+        // on a full register refetch, same as plain adds.
+        meta: { label: 'useAddTransfer', skipInvalidate: true },
       });
     },
-    onSuccess: () => hideTransferLoading(),
+    onSuccess: () => applyOpInvalidations(queryClient, 'transactions.addTransfer'),
     onError: (error) => {
-      hideTransferLoading();
       console.error('Transfer failed:', error);
     },
   });

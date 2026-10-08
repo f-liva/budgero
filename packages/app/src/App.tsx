@@ -10,7 +10,6 @@ import { CurrencyConversionOverlay } from '@features/currencies/ui/CurrencyConve
 import { useUiStore } from '@shared/store/useUiStore';
 import { ClerkTokenSetup } from '@app/system/ClerkTokenSetup';
 import { useUser } from '@clerk/clerk-react';
-import { LoadingProvider } from '@shared/contexts/LoadingContext';
 import { ClerkSignoutHandler } from '@features/auth/ui/ClerkSignoutHandler';
 import { GlobalUndoHotkeys } from '@app/system/GlobalUndoHotkeys';
 import { ThemePresetProvider } from '@shared/contexts/ThemePresetContext';
@@ -255,9 +254,7 @@ function CommonProviders({ children }: { children: React.ReactNode }) {
       <PersistedCalendarPreferencesProvider>
         <PersistedDialogAppearanceProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <ThemePresetProvider>
-              <LoadingProvider>{children}</LoadingProvider>
-            </ThemePresetProvider>
+            <ThemePresetProvider>{children}</ThemePresetProvider>
           </ThemeProvider>
         </PersistedDialogAppearanceProvider>
       </PersistedCalendarPreferencesProvider>
