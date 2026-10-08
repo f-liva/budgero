@@ -1,5 +1,22 @@
 import type { DuplicateHintSettings } from '@budgero/core/browser';
-import { S, type OpCodeEntry } from '../shared';
+import { S, safeCapture, type OpCodeEntry } from '../shared';
+
+type UserMetaGetter =
+  | 'getWeekStartsOn'
+  | 'getAllowOverAssignment'
+  | 'getSuggestCategoryFromPayee'
+  | 'getShowGroupPercent'
+  | 'getPlanningNumberAnimations'
+  | 'getDialogBackgroundBlur';
+
+/** Undo for single-value preference setters: re-issue the op with the old value. */
+function preferenceUndo(op: string, getter: UserMetaGetter): NonNullable<OpCodeEntry['undo']> {
+  return {
+    capture: async () => safeCapture(() => S().userMeta[getter]()),
+    build: (_args, _result, before) =>
+      before === null || before === undefined ? [] : [{ op, args: { value: before } }],
+  };
+}
 
 export const userPreferenceOps = {
   'userPreferences.setDuplicateHintSettings': {
@@ -12,6 +29,13 @@ export const userPreferenceOps = {
       return { success: true };
     },
     invalidates: [['duplicateHintSettings'], ['userPreferences']],
+    undo: {
+      capture: async () => safeCapture(() => S().userMeta.getDuplicateHintSettings()),
+      build: (_args, _result, before) =>
+        before
+          ? [{ op: 'userPreferences.setDuplicateHintSettings', args: { settings: before } }]
+          : [],
+    },
   },
   'userPreferences.setWeekStartsOn': {
     execute: async (args) => {
@@ -24,6 +48,7 @@ export const userPreferenceOps = {
       return { success: true };
     },
     invalidates: [['weekStartsOn'], ['userPreferences']],
+    undo: preferenceUndo('userPreferences.setWeekStartsOn', 'getWeekStartsOn'),
   },
   'userPreferences.setAllowOverAssignment': {
     execute: async (args) => {
@@ -35,6 +60,7 @@ export const userPreferenceOps = {
       return { success: true };
     },
     invalidates: [['allowOverAssignment'], ['userPreferences']],
+    undo: preferenceUndo('userPreferences.setAllowOverAssignment', 'getAllowOverAssignment'),
   },
   'userPreferences.setSuggestCategoryFromPayee': {
     execute: async (args) => {
@@ -48,6 +74,10 @@ export const userPreferenceOps = {
       return { success: true };
     },
     invalidates: [['suggestCategoryFromPayee'], ['userPreferences']],
+    undo: preferenceUndo(
+      'userPreferences.setSuggestCategoryFromPayee',
+      'getSuggestCategoryFromPayee'
+    ),
   },
   'userPreferences.setShowGroupPercent': {
     execute: async (args) => {
@@ -59,6 +89,7 @@ export const userPreferenceOps = {
       return { success: true };
     },
     invalidates: [['showGroupPercent'], ['userPreferences']],
+    undo: preferenceUndo('userPreferences.setShowGroupPercent', 'getShowGroupPercent'),
   },
   'userPreferences.setPlanningNumberAnimations': {
     execute: async (args) => {
@@ -72,6 +103,10 @@ export const userPreferenceOps = {
       return { success: true };
     },
     invalidates: [['planningNumberAnimations'], ['userPreferences']],
+    undo: preferenceUndo(
+      'userPreferences.setPlanningNumberAnimations',
+      'getPlanningNumberAnimations'
+    ),
   },
   'userPreferences.setDialogBackgroundBlur': {
     execute: async (args) => {
@@ -85,5 +120,6 @@ export const userPreferenceOps = {
       return { success: true };
     },
     invalidates: [['dialogBackgroundBlur'], ['userPreferences']],
+    undo: preferenceUndo('userPreferences.setDialogBackgroundBlur', 'getDialogBackgroundBlur'),
   },
 } satisfies Record<string, OpCodeEntry>;
