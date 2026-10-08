@@ -70,10 +70,19 @@ const splitsUndo: NonNullable<OpCodeEntry['undo']> = {
   },
 };
 
+type ReconcileWithAdjustment = ReconcileResult & { adjustmentId?: number };
+
 function reconcileUndo(accountId: unknown, result: unknown): OpCall[] {
-  const reconcile = result as ReconcileResult | undefined;
+  const reconcile = result as ReconcileWithAdjustment | undefined;
   if (!reconcile) return [];
-  return [{ op: 'transactions.unreconcile', args: { accountId, ...reconcile } }];
+  const { adjustmentId, ...locked } = reconcile;
+  // Unlock first: the adjustment was locked by this reconcile.
+  return [
+    { op: 'transactions.unreconcile', args: { accountId, ...locked } },
+    ...(adjustmentId === undefined
+      ? []
+      : [{ op: 'transactions.delete', args: { id: adjustmentId } }]),
+  ];
 }
 
 // Shared by transactions.delete (exact) and transactions.updateColumn (which also
@@ -715,14 +724,22 @@ export const transactionOps = {
   // Locks only cleared transactions; uncleared ones stay open. Kept separate
   // from transactions.reconcile so older ops replay with their original meaning.
   'transactions.reconcileCleared': {
-    execute: async (args) => {
-      return await S().transactions!.reconcileAccount(
+    execute: async (args): Promise<ReconcileWithAdjustment> => {
+      // The balance adjustment is created inside the op (cleared, so it is
+      // locked too) so one undo removes both.
+      const adjustment = args.adjustment as Record<string, unknown> | undefined;
+      const adjustmentId = adjustment
+        ? await addTransactionFromArgs({ ...adjustment, cleared: true })
+        : undefined;
+      const result = S().transactions!.reconcileAccount(
         args.accountId as number,
         args.reconcileDate as string | undefined,
         { clearedOnly: true }
       );
+      return adjustmentId === undefined ? result : { ...result, adjustmentId };
     },
     invalidates: [
+      ...TRANSACTION_INVALIDATION_KEYS,
       ...ACCOUNT_TRANSACTION_INVALIDATION_KEYS,
       ['accounts', '*'],
       ['allTransactions', '*'],

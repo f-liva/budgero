@@ -16,7 +16,7 @@ import { CalculatorCell } from '@shared/ui/calculator-cell';
 import { useIsMobile } from '@shared/hooks/useIsMobile';
 import { cn } from '@shared/lib/utils';
 import { getTodayISO } from '@shared/lib/date-utils';
-import { useAddTransaction, useReconcileAccount } from '@entities/transaction/api/useTransactions';
+import { useReconcileAccount } from '@entities/transaction/api/useTransactions';
 import { useCategories } from '@entities/category/api/useCategories';
 import { findCategoryByName } from '@entities/category/lib/find-category';
 import { useUiStore } from '@shared/store/useUiStore';
@@ -44,7 +44,6 @@ export function ReconcileAccountDialog({ account, budgetId }: ReconcileAccountDi
 
   const { accountLocalizer } = useUiStore();
   const isMobile = useIsMobile();
-  const addTransactionMutation = useAddTransaction();
   const reconcileAccountMutation = useReconcileAccount();
   const { data: categories = [] } = useCategories(budgetId);
 
@@ -87,38 +86,31 @@ export function ReconcileAccountDialog({ account, budgetId }: ReconcileAccountDi
     try {
       const todayDate = getTodayISO();
 
-      if (needsAdjustment) {
-        const isInflow = difference > 0;
-        const amount = asMilli(Math.abs(difference));
-
-        // incomeCategory is guaranteed to exist here because we checked for it above
-        // (the needsAdjustment && !incomeCategory guard) and returned early if missing.
-        await addTransactionMutation.mutateAsync({
-          inflow: isInflow ? amount : ZERO_MILLI,
-          outflow: isInflow ? ZERO_MILLI : amount,
-          accountId: account.ID,
-          categoryId: incomeCategory!.ID,
-          budgetId,
-          date: todayDate,
-          memo: 'Account Reconciliation',
-          payee: 'Budgero',
-          transferId: '',
-          // Cleared so the reconcile below locks it with everything else.
-          cleared: true,
-        });
-      }
-
-      // Lock cleared transactions up to today; uncleared ones stay open.
+      // One op adds the cleared adjustment and locks cleared transactions up to
+      // today (uncleared ones stay open), so a single undo reverts both.
+      const isInflow = difference > 0;
+      const adjustmentAmount = asMilli(Math.abs(difference));
       await reconcileAccountMutation.mutateAsync({
         accountId: account.ID,
         reconcileDate: todayDate,
+        // incomeCategory is guaranteed to exist here because of the
+        // needsAdjustment && !incomeCategory guard above.
+        adjustment: needsAdjustment
+          ? {
+              inflow: isInflow ? adjustmentAmount : ZERO_MILLI,
+              outflow: isInflow ? ZERO_MILLI : adjustmentAmount,
+              categoryId: incomeCategory!.ID,
+              budgetId,
+              date: todayDate,
+              memo: 'Account Reconciliation',
+              payee: 'Budgero',
+            }
+          : undefined,
       });
 
       if (needsAdjustment) {
-        const isInflow = difference > 0;
-        const amount = asMilli(Math.abs(difference));
         toast.success(
-          t`Account reconciled successfully. ${isInflow ? 'Added' : 'Removed'} ${formatMilli(accountLocalizer, amount)}`
+          t`Account reconciled successfully. ${isInflow ? 'Added' : 'Removed'} ${formatMilli(accountLocalizer, adjustmentAmount)}`
         );
       } else {
         toast.success(t`Account reconciled successfully. Balance matches - no adjustment needed.`);

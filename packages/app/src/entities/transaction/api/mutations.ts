@@ -5,6 +5,7 @@ import { executeSpaceMutation } from '@shared/runtime/mutation-router';
 import { useLoading } from '@shared/contexts/LoadingContext';
 import { applyOpInvalidations, resolveSpaceKey } from '@shared/lib/query-utils';
 import { getTodayISO } from '@shared/lib/date-utils';
+import type { MilliUnits } from '@shared/lib/currency/milli';
 import { patchPlainAddTransactionCaches } from './plain-add-cache';
 
 // Query invalidation for these mutations is driven centrally by the
@@ -267,6 +268,16 @@ export function useUpdateTransactionColumn() {
 export type ReconcileAccountInput = {
   accountId: number;
   reconcileDate?: string;
+  /** Balance adjustment to add (cleared) and lock in the same undoable step. */
+  adjustment?: {
+    inflow: MilliUnits;
+    outflow: MilliUnits;
+    categoryId: number;
+    budgetId: number;
+    date: string;
+    memo: string;
+    payee: string;
+  };
 };
 
 export function useReconcileAccount() {
@@ -278,6 +289,9 @@ export function useReconcileAccount() {
         payload: {
           accountId: input.accountId,
           reconcileDate: input.reconcileDate,
+          ...(input.adjustment
+            ? { adjustment: { ...input.adjustment, accountId: input.accountId } }
+            : {}),
         },
         meta: { label: 'useReconcileAccount' },
       });
