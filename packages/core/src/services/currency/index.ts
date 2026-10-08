@@ -718,7 +718,9 @@ export class CurrencyService {
     /** Also store the explicit reverse pair (to→from at 1/rate) as its own
      * visible row. Lookups derive the reverse either way; this makes it
      * editable and listed. */
-    alsoReverse = false
+    alsoReverse = false,
+    /** Only passed by undo/redo, to recreate rows under their original IDs. */
+    ids?: { id?: number; reverseId?: number | null }
   ): Promise<{ id: number; reverseId: number | null; recalculated: number }> {
     assertValidExchangeRate(rate);
     const id = this.queries.insertCustomCurrencyRate(
@@ -727,7 +729,8 @@ export class CurrencyService {
       rate,
       startDate,
       endDate,
-      budgetId
+      budgetId,
+      ids?.id
     );
     let reverseId: number | null = null;
     if (alsoReverse && isFinite(rate) && rate > 0) {
@@ -737,7 +740,8 @@ export class CurrencyService {
         1 / rate,
         startDate,
         endDate,
-        budgetId
+        budgetId,
+        ids?.reverseId ?? undefined
       );
     }
     const recalculated = await this.recalculateTransactionsForDateRange(

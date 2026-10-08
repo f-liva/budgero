@@ -17,6 +17,8 @@ export interface Warranty {
 }
 
 export interface CreateWarrantyInput {
+  /** Only passed by undo/redo, to recreate a warranty under its original ID. */
+  id?: number;
   budgetId: number;
   name: string;
   expiresAt: string; // YYYY-MM-DD

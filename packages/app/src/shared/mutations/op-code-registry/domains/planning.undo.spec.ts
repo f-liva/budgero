@@ -81,7 +81,7 @@ describe('recurring, warranty, custom-rate and scenario undo', () => {
       { op: 'warranties.update', args: { id: 6, ...fields } },
     ]);
     expect(await undoFor('warranties.delete', { id: 6 })).toEqual([
-      { op: 'warranties.create', args: { budgetId: 1, ...fields } },
+      { op: 'warranties.create', args: { id: 6, budgetId: 1, ...fields } },
     ]);
   });
 
@@ -113,6 +113,7 @@ describe('recurring, warranty, custom-rate and scenario undo', () => {
       {
         op: 'currency.customRates.add',
         args: {
+          id: 4,
           fromCurrency: 'EUR',
           toCurrency: 'HUF',
           rate: 400,

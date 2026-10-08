@@ -284,6 +284,26 @@ export interface OpCodeEntry {
   };
 }
 
+/**
+ * Redo for a create: re-run the op with the ID(s) the first run produced, so undo
+ * entries that reference the row stay valid. `withIds` returns null to fall back.
+ */
+export function redoWithIds(
+  op: string,
+  withIds: (
+    args: Record<string, unknown>,
+    result: unknown,
+    before: unknown
+  ) => Record<string, unknown> | null
+): NonNullable<OpCodeEntry['redo']> {
+  return {
+    build: (args, result, before) => {
+      const next = withIds(args, result, before);
+      return next ? [{ op, args: next }] : [];
+    },
+  };
+}
+
 /** Run an undo-capture snapshot, returning null when it throws. */
 export async function safeCapture<T>(fn: () => T | Promise<T>): Promise<T | null> {
   try {

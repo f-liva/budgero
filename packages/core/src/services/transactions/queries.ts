@@ -1575,13 +1575,14 @@ export class TransactionQueries {
     );
   }
 
-  insertLabel(budgetId: number, name: string, color: string): number {
+  insertLabel(budgetId: number, name: string, color: string, id?: number): number {
     const result = run(
       this.db,
       `
-      INSERT INTO labels (BudgetID, Name, Color)
-      VALUES (?, ?, ?)
+      INSERT INTO labels (ID, BudgetID, Name, Color)
+      VALUES (?, ?, ?, ?)
     `,
+      id ?? null,
       budgetId,
       name,
       color

@@ -12,9 +12,10 @@ export class WarrantyQueries {
     const result = run(
       this.db,
       `
-      INSERT INTO warranties (BudgetID, Name, ExpiresAt, Amount, TransactionID, ReceiptImage, Notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO warranties (ID, BudgetID, Name, ExpiresAt, Amount, TransactionID, ReceiptImage, Notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `,
+      input.id ?? null,
       input.budgetId,
       input.name,
       input.expiresAt,

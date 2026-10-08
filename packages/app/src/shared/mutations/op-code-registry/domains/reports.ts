@@ -1,6 +1,7 @@
 import type { UnifiedReport } from '@budgero/core/browser';
 import {
   S,
+  redoWithIds,
   safeCapture,
   type NewReportChart,
   type OpCodeEntry,
@@ -54,6 +55,10 @@ export const reportOps = {
     },
     invalidates: [['reports']],
     undo: deleteResultReport,
+    redo: redoWithIds('reports.create', (args, result) => {
+      const id = (result as UnifiedReport | undefined)?.id;
+      return id ? { ...args, id } : null;
+    }),
   },
 
   // useUpdateReport

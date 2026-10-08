@@ -3,7 +3,7 @@ import type {
   CustomDashboardWidget,
   CustomDashboardWithWidgets,
 } from '@budgero/core/browser';
-import { S, safeCapture, type OpCall, type OpCodeEntry } from '../shared';
+import { S, redoWithIds, safeCapture, type OpCall, type OpCodeEntry } from '../shared';
 
 function addWidgetOp(widget: CustomDashboardWidget): OpCall {
   return {
@@ -18,6 +18,14 @@ function addWidgetOp(widget: CustomDashboardWidget): OpCall {
       titleOverride: widget.titleOverride,
     },
   };
+}
+
+/** The widget an add created: the one missing from the captured list of IDs. */
+function addedWidgetId(result: unknown, before: unknown): string | undefined {
+  const existing = new Set((before as string[] | null) ?? []);
+  return (result as CustomDashboardWithWidgets | undefined)?.widgets.find(
+    (widget) => !existing.has(widget.id)
+  )?.id;
 }
 
 const captureWidget = (args: Record<string, unknown>) =>
@@ -39,6 +47,10 @@ export const customDashboardOps = {
         return id ? [{ op: 'customDashboards.delete', args: { id } }] : [];
       },
     },
+    redo: redoWithIds('customDashboards.create', (args, result) => {
+      const id = (result as CustomDashboard | undefined)?.id;
+      return id ? { ...args, id } : null;
+    }),
   },
 
   'customDashboards.update': {
@@ -148,13 +160,14 @@ export const customDashboardOps = {
           )
         ),
       build: (_args, result, before) => {
-        const existing = new Set((before as string[] | null) ?? []);
-        const added = (result as CustomDashboardWithWidgets | undefined)?.widgets.find(
-          (widget) => !existing.has(widget.id)
-        );
-        return added ? [{ op: 'customDashboardWidgets.delete', args: { id: added.id } }] : [];
+        const id = addedWidgetId(result, before);
+        return id ? [{ op: 'customDashboardWidgets.delete', args: { id } }] : [];
       },
     },
+    redo: redoWithIds('customDashboardWidgets.add', (args, result, before) => {
+      const id = addedWidgetId(result, before);
+      return id ? { ...args, id } : null;
+    }),
   },
 
   'customDashboardWidgets.update': {

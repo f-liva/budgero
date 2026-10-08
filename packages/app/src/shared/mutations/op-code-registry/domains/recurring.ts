@@ -7,6 +7,7 @@ import type {
 } from '@budgero/core/browser';
 import {
   S,
+  redoWithIds,
   safeCapture,
   RECURRING_OCCURRENCE_INVALIDATIONS,
   RECURRING_TEMPLATE_INVALIDATIONS,
@@ -47,6 +48,12 @@ export const recurringOps = {
         return typeof id === 'number' ? [{ op: 'recurring.delete', args: { id } }] : [];
       },
     },
+    redo: redoWithIds('recurring.create', (args, result) => {
+      const id = (result as RecurringTransaction | undefined)?.id;
+      return typeof id === 'number'
+        ? { ...args, input: { ...(args.input as CreateRecurringTransactionInput), id } }
+        : null;
+    }),
   },
   'recurring.update': {
     execute: async (args) => {

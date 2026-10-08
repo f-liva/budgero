@@ -2,6 +2,7 @@ import {
   S,
   TRANSACTION_INVALIDATION_KEYS,
   makeRestoreUndo,
+  redoWithIds,
   safeCapture,
   type OpCodeEntry,
 } from '../shared';
@@ -12,7 +13,8 @@ export const labelOps = {
       return await S().labels.addLabel(
         args.budgetId as number,
         args.name as string,
-        args.color as string
+        args.color as string,
+        (args.id as number | undefined) ?? undefined
       );
     },
     invalidates: [...TRANSACTION_INVALIDATION_KEYS],
@@ -24,6 +26,9 @@ export const labelOps = {
           : [];
       },
     },
+    redo: redoWithIds('labels.add', (args, result) =>
+      typeof result === 'number' ? { ...args, id: result } : null
+    ),
   },
 
   'labels.update': {
@@ -61,6 +66,7 @@ export const labelOps = {
         safeCapture(async () => {
           const label = await S().labels.getLabelById(args.id as number, args.budgetId as number);
           return {
+            id: label?.ID,
             name: label?.Name,
             color: label?.Color,
             budgetId: label?.BudgetID,
@@ -69,6 +75,7 @@ export const labelOps = {
       build: (_args, _result, before) => {
         const snapshot = before as
           | {
+              id?: number;
               budgetId?: number;
               name?: string;
               color?: string;
@@ -80,6 +87,7 @@ export const labelOps = {
           {
             op: 'labels.add',
             args: {
+              id: snapshot.id,
               budgetId: snapshot.budgetId,
               name: snapshot.name,
               color: snapshot.color,

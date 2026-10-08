@@ -1,5 +1,5 @@
 import type { ScenarioRecord } from '@budgero/core/browser';
-import { S, safeCapture, type OpCodeEntry } from '../shared';
+import { S, redoWithIds, safeCapture, type OpCodeEntry } from '../shared';
 
 const captureScenario = (args: Record<string, unknown>) =>
   safeCapture(() => (args.id ? S().scenarios!.getScenario(args.id as string) : null));
@@ -34,6 +34,10 @@ export const scenarioOps = {
         return created ? [{ op: 'scenarios.delete', args: { id: created.ID } }] : [];
       },
     },
+    redo: redoWithIds('scenarios.save', (args, result) => {
+      const saved = result as ScenarioRecord | undefined;
+      return saved ? { ...args, id: saved.ID } : null;
+    }),
   },
 
   'scenarios.delete': {

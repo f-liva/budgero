@@ -1,5 +1,11 @@
 import type { CustomCurrencyRate } from '@budgero/core/browser';
-import { S, TRANSACTION_INVALIDATION_KEYS, safeCapture, type OpCodeEntry } from '../shared';
+import {
+  S,
+  TRANSACTION_INVALIDATION_KEYS,
+  redoWithIds,
+  safeCapture,
+  type OpCodeEntry,
+} from '../shared';
 
 const captureRate = (args: Record<string, unknown>) =>
   safeCapture(
@@ -28,7 +34,11 @@ export const currencyOps = {
         args.startDate as string,
         (args.endDate as string | null) ?? null,
         args.budgetId as number,
-        (args.alsoReverse as boolean | undefined) ?? false
+        (args.alsoReverse as boolean | undefined) ?? false,
+        {
+          id: (args.id as number | undefined) ?? undefined,
+          reverseId: (args.reverseId as number | null | undefined) ?? undefined,
+        }
       );
     },
     invalidates: CURRENCY_INVALIDATION_KEYS,
@@ -43,6 +53,10 @@ export const currencyOps = {
           }));
       },
     },
+    redo: redoWithIds('currency.customRates.add', (args, result) => {
+      const { id, reverseId } = (result ?? {}) as { id?: number; reverseId?: number | null };
+      return typeof id === 'number' ? { ...args, id, reverseId } : null;
+    }),
   },
 
   'currency.customRates.update': {
@@ -92,6 +106,7 @@ export const currencyOps = {
               {
                 op: 'currency.customRates.add',
                 args: {
+                  id: rate.ID,
                   fromCurrency: rate.FromCurrency,
                   toCurrency: rate.ToCurrency,
                   rate: rate.Rate,

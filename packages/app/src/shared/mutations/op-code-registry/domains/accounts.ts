@@ -2,7 +2,13 @@ import { t } from '@lingui/core/macro';
 import { asMilli, ZERO_MILLI, type Account } from '@budgero/core/browser';
 import { capitalize } from '@shared/lib/utils';
 import { getTodayISO } from '@shared/lib/date-utils';
-import { S, ACCOUNT_TRANSACTION_INVALIDATION_KEYS, safeCapture, type OpCodeEntry } from '../shared';
+import {
+  S,
+  ACCOUNT_TRANSACTION_INVALIDATION_KEYS,
+  redoWithIds,
+  safeCapture,
+  type OpCodeEntry,
+} from '../shared';
 
 function parseMetadata(metadata: unknown): Record<string, unknown> | undefined {
   if (!metadata) return undefined;
@@ -26,7 +32,8 @@ export const accountOps = {
         (args.metadata as Record<string, unknown>) || undefined,
         !!args.onBudget,
         t`Initial Balance`,
-        (args.initialBalanceDate as string | undefined) ?? undefined
+        (args.initialBalanceDate as string | undefined) ?? undefined,
+        (args.id as number | undefined) ?? undefined
       );
     },
     invalidates: [
@@ -46,6 +53,10 @@ export const accountOps = {
         return typeof id === 'number' ? [{ op: 'accounts.delete', args: { id } }] : [];
       },
     },
+    redo: redoWithIds('accounts.create', (args, result) => {
+      const id = (result as { ID?: number } | undefined)?.ID;
+      return typeof id === 'number' ? { ...args, id } : null;
+    }),
   },
 
   // useEditAccount

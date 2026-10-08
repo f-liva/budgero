@@ -56,7 +56,9 @@ export class AccountService {
     onBudget?: boolean,
     /** Memo written on the opening transaction; app passes a localized string. */
     initialBalanceMemo = 'Initial Balance',
-    initialBalanceDate?: string
+    initialBalanceDate?: string,
+    /** Only passed by redo, to recreate the account under its original ID. */
+    id?: number
   ): Promise<Account> {
     if (!name.trim()) {
       throw new Error('account name cannot be empty');
@@ -84,7 +86,8 @@ export class AccountService {
       0,
       budgetId,
       metadataJson,
-      isOnBudget
+      isOnBudget,
+      id
     );
 
     const transfersCategoryId = ensureCategoryWithGroup(

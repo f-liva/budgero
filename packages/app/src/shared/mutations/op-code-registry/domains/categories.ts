@@ -1,5 +1,12 @@
 import type { FundingPriorityUpdate } from '@budgero/core/browser';
-import { S, makeRestoreUndo, safeCapture, type CategoryRow, type OpCodeEntry } from '../shared';
+import {
+  S,
+  makeRestoreUndo,
+  redoWithIds,
+  safeCapture,
+  type CategoryRow,
+  type OpCodeEntry,
+} from '../shared';
 
 export const categoryOps = {
   'categories.updateFundingPriorities': {
@@ -58,7 +65,11 @@ export const categoryOps = {
   },
   'categoryGroups.create': {
     execute: async (args) => {
-      return await S().categories!.addCategoryGroup(args.name as string, args.budgetId as number);
+      return await S().categories!.addCategoryGroup(
+        args.name as string,
+        args.budgetId as number,
+        (args.id as number | undefined) ?? undefined
+      );
     },
     invalidates: [
       ['categoryGroups', '*'], // Will match ["categoryGroups", budgetId]
@@ -71,6 +82,9 @@ export const categoryOps = {
         return Number.isFinite(id) ? [{ op: 'categoryGroups.delete', args: { id } }] : [];
       },
     },
+    redo: redoWithIds('categoryGroups.create', (args, result) =>
+      typeof result === 'number' ? { ...args, id: result } : null
+    ),
   },
 
   // useUpdateCategoryGroup
@@ -106,13 +120,13 @@ export const categoryOps = {
           const group = S().categories!.getCategoryGroup(args.id as number);
           return { name: group?.Name, budgetId: group?.BudgetID };
         }),
-      build: (_args, _result, before) => {
+      build: (args, _result, before) => {
         const snapshot = before as { name?: string; budgetId?: number } | null | undefined;
         if (!snapshot?.name || !snapshot?.budgetId) return [];
         return [
           {
             op: 'categoryGroups.create',
-            args: { name: snapshot.name, budgetId: snapshot.budgetId },
+            args: { id: args.id, name: snapshot.name, budgetId: snapshot.budgetId },
           },
         ];
       },
@@ -127,7 +141,8 @@ export const categoryOps = {
         args.budgetId as number,
         args.name as string,
         args.note as string,
-        (args.fundingPriority as number | undefined) ?? 3
+        (args.fundingPriority as number | undefined) ?? 3,
+        (args.id as number | undefined) ?? undefined
       );
     },
     invalidates: [
@@ -141,6 +156,9 @@ export const categoryOps = {
         return Number.isFinite(id) ? [{ op: 'categories.delete', args: { id } }] : [];
       },
     },
+    redo: redoWithIds('categories.create', (args, result) =>
+      typeof result === 'number' ? { ...args, id: result } : null
+    ),
   },
 
   // useUpdateCategoryName
@@ -221,7 +239,7 @@ export const categoryOps = {
             budgetId: category?.BudgetID,
           };
         }),
-      build: (_args, _result, before) => {
+      build: (args, _result, before) => {
         const snapshot = before as
           | {
               name?: string;
@@ -237,6 +255,7 @@ export const categoryOps = {
           {
             op: 'categories.create',
             args: {
+              id: args.id,
               parentId: snapshot.groupId,
               budgetId: snapshot.budgetId,
               name: snapshot.name,

@@ -1,5 +1,5 @@
 import { asMilli, type Warranty } from '@budgero/core/browser';
-import { S, safeCapture, type OpCodeEntry } from '../shared';
+import { S, redoWithIds, safeCapture, type OpCodeEntry } from '../shared';
 
 function warrantyFields(warranty: Warranty) {
   return {
@@ -19,6 +19,7 @@ export const warrantyOps = {
   'warranties.create': {
     execute: async (args) => {
       return await S().warranties.create({
+        id: (args.id as number | undefined) ?? undefined,
         budgetId: args.budgetId as number,
         name: args.name as string,
         expiresAt: args.expiresAt as string,
@@ -33,6 +34,9 @@ export const warrantyOps = {
       build: (_args, result) =>
         typeof result === 'number' ? [{ op: 'warranties.delete', args: { id: result } }] : [],
     },
+    redo: redoWithIds('warranties.create', (args, result) =>
+      typeof result === 'number' ? { ...args, id: result } : null
+    ),
   },
 
   'warranties.update': {
@@ -72,7 +76,7 @@ export const warrantyOps = {
           ? [
               {
                 op: 'warranties.create',
-                args: { budgetId: warranty.BudgetID, ...warrantyFields(warranty) },
+                args: { id: warranty.ID, budgetId: warranty.BudgetID, ...warrantyFields(warranty) },
               },
             ]
           : [];
