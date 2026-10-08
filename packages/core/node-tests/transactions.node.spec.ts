@@ -943,6 +943,35 @@ describe('Transactions (Node/sql.js)', () => {
       expect(updated.OutflowConverted).toBe(300);
     });
 
+    it('entering an amount on one side clears the other', async () => {
+      const today = getLocalDateString();
+      const txnId = await services.transactions.addTransaction(
+        0,
+        123000,
+        accountId,
+        categoryId,
+        budgetId,
+        today,
+        'Rent'
+      );
+
+      await services.transactions.updateTransactionColumn(txnId, 'InflowConverted', 123000);
+      let updated = services.transactions.getTransactionByID(txnId);
+      expect(updated.InflowConverted).toBe(123000);
+      expect(updated.OutflowConverted).toBe(0);
+      expect(updated.OutflowNative).toBe(0);
+
+      await services.transactions.updateTransactionColumn(txnId, 'OutflowNative', 5000);
+      updated = services.transactions.getTransactionByID(txnId);
+      expect(updated.OutflowNative).toBe(5000);
+      expect(updated.InflowNative).toBe(0);
+      expect(updated.InflowConverted).toBe(0);
+
+      await services.transactions.updateTransactionColumn(txnId, 'InflowConverted', 0);
+      updated = services.transactions.getTransactionByID(txnId);
+      expect(updated.OutflowConverted).toBe(5000);
+    });
+
     it('clears a stray negative on the untouched side', async () => {
       const today = getLocalDateString();
       const txnId = await services.transactions.addTransaction(

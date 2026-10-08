@@ -80,13 +80,14 @@ function computeCellCommit(
           ? 'OutflowNative'
           : 'InflowNative';
 
-    // Core saves a negative entry as the opposite flow (-20000 outflow is a
-    // 20000 inflow); show the row that way right away.
+    // Mirror core: an amount clears the other side, and a negative entry is the
+    // opposite flow (-20000 outflow is a 20000 inflow). Show that right away.
     if (value < 0) {
       patch[dbColumn] = 0;
       patch[partner] = -value;
     } else {
       patch[dbColumn] = newVal;
+      if (value > 0) patch[partner] = 0;
     }
 
     return {
