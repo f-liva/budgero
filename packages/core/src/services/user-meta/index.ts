@@ -61,6 +61,14 @@ export class UserMetaService {
     this.queries.setDialogBackgroundBlur(value);
   }
 
+  getHideZeroAmounts(): boolean {
+    return this.queries.getHideZeroAmounts();
+  }
+
+  setHideZeroAmounts(value: boolean): void {
+    this.queries.setHideZeroAmounts(value);
+  }
+
   getDuplicateHintSettings(): DuplicateHintSettings {
     return this.queries.getDuplicateHintSettings();
   }

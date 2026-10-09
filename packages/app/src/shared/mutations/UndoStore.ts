@@ -62,6 +62,10 @@ export const useUndoStore = create<UndoState>((set, get) => ({
         await manager.execute(spec);
       }
       set({ past: past.slice(0, -1), future: [...future, item] });
+    } catch (error) {
+      // Drop the entry so one failed step doesn't block everything older.
+      set({ past: past.slice(0, -1) });
+      throw error;
     } finally {
       set({ isReplaying: false });
     }
@@ -87,6 +91,9 @@ export const useUndoStore = create<UndoState>((set, get) => ({
         await manager.execute(spec);
       }
       set({ future: future.slice(0, -1), past: [...past, item] });
+    } catch (error) {
+      set({ future: future.slice(0, -1) });
+      throw error;
     } finally {
       set({ isReplaying: false });
     }

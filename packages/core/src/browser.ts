@@ -23,6 +23,7 @@ export { CategoryService } from './services/categories/index.js';
 export { AccountService } from './services/accounts/index.js';
 export {
   TransactionService,
+  type ReconcileResult,
   isAccountOnBudget,
   resolveTransferPayees,
   transferInvolvesOffBudgetAccount,
@@ -137,6 +138,7 @@ export type {
 export type * from './services/transactions/types.js';
 export type { TransferRateDetails } from './services/transactions/transfer-rate.js';
 export type * from './services/warranties/types.js';
+export type { CustomCurrencyRate } from './services/currency/types.js';
 
 // Goal enums and pure calculations (values, browser-safe)
 export {

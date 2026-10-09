@@ -78,7 +78,9 @@ export class CategoryService {
     budgetId: number,
     name: string,
     note = '',
-    fundingPriority = 3
+    fundingPriority = 3,
+    /** Only passed by undo/redo, to recreate a category under its original ID. */
+    id?: number
   ): number {
     // Validate the category group exists
     if (!this.queries.categoryGroupExists(categoryGroupId)) {
@@ -101,7 +103,8 @@ export class CategoryService {
         note,
         categoryGroupId,
         budgetId,
-        fundingPriority
+        fundingPriority,
+        id
       );
       return categoryId;
     } catch (error) {
@@ -213,9 +216,10 @@ export class CategoryService {
    *
    * Note: Go version doesn't have note parameter in the signature but it's in the query
    */
-  addCategoryGroup(name: string, budgetId: number): number {
+  /** `id` is only passed by undo/redo, to recreate a group under its original ID. */
+  addCategoryGroup(name: string, budgetId: number, id?: number): number {
     try {
-      const groupId = this.queries.insertCategoryGroup(name, '', budgetId);
+      const groupId = this.queries.insertCategoryGroup(name, '', budgetId, id);
       return groupId;
     } catch (error) {
       throw new BudgetError(

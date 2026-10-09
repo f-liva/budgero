@@ -121,6 +121,7 @@ export function transactionSnapshotToAddOp(snapshot: TransactionSnapshot): OpCal
   return {
     op: 'transactions.add',
     args: {
+      id: snapshot.ID,
       importIdentities: snapshot.importIdentities,
       inflow:
         snapshot.InflowNative ??
@@ -280,6 +281,26 @@ export interface OpCodeEntry {
   // Optional redo customization (defaults to re-applying the original op)
   redo?: {
     build: (args: Record<string, unknown>, result: unknown, before: unknown) => OpCall[];
+  };
+}
+
+/**
+ * Redo for a create: re-run the op with the ID(s) the first run produced, so undo
+ * entries that reference the row stay valid. `withIds` returns null to fall back.
+ */
+export function redoWithIds(
+  op: string,
+  withIds: (
+    args: Record<string, unknown>,
+    result: unknown,
+    before: unknown
+  ) => Record<string, unknown> | null
+): NonNullable<OpCodeEntry['redo']> {
+  return {
+    build: (args, result, before) => {
+      const next = withIds(args, result, before);
+      return next ? [{ op, args: next }] : [];
+    },
   };
 }
 

@@ -5,6 +5,7 @@ const transactionMocks = vi.hoisted(() => ({
   addTransaction: vi.fn(),
   setTransactionsCleared: vi.fn(),
   reconcileAccount: vi.fn(),
+  unreconcileAccount: vi.fn(),
 }));
 const importMocks = vi.hoisted(() => ({ findOperation: vi.fn() }));
 
@@ -28,7 +29,7 @@ const addArgs = {
   memo: '',
   payee: 'Shop',
 };
-const clearedArg = () => transactionMocks.addTransaction.mock.calls[0].at(-1);
+const clearedArg = () => transactionMocks.addTransaction.mock.calls[0][13];
 
 describe('cleared status ops', () => {
   beforeEach(() => {
@@ -99,5 +100,44 @@ describe('cleared status ops', () => {
       reconcileDate: '2026-09-29',
     });
     expect(transactionMocks.reconcileAccount).toHaveBeenLastCalledWith(3, '2026-09-29');
+  });
+
+  it('undoes a reconcile by unlocking exactly what it locked', async () => {
+    const reconcile = {
+      reconciledIds: [11, 12],
+      newlyClearedIds: [],
+      previousReconciledAt: '2026-08-01T00:00:00.000Z',
+    };
+    const args = { accountId: 3, reconcileDate: '2026-09-29' };
+    const undo = getUndoSpec('transactions.reconcileCleared')!.build(args, reconcile, undefined);
+    expect(undo).toEqual([
+      { op: 'transactions.unreconcile', args: { accountId: 3, ...reconcile } },
+    ]);
+
+    await executeMutationOp(undo[0].op, undo[0].args);
+    expect(transactionMocks.unreconcileAccount).toHaveBeenCalledWith(3, reconcile);
+  });
+
+  it('adds the adjustment inside the reconcile and removes it on undo', async () => {
+    const reconcile = { reconciledIds: [11, 20], newlyClearedIds: [], previousReconciledAt: null };
+    transactionMocks.addTransaction.mockResolvedValue(20);
+    transactionMocks.reconcileAccount.mockReturnValue(reconcile);
+    const args = {
+      accountId: 3,
+      reconcileDate: '2026-09-29',
+      adjustment: { ...addArgs, inflow: 1_500, outflow: 0, memo: 'Account Reconciliation' },
+    };
+
+    const result = await executeMutationOp('transactions.reconcileCleared', args);
+    expect(clearedArg()).toBe(true);
+    expect(transactionMocks.addTransaction.mock.invocationCallOrder[0]).toBeLessThan(
+      transactionMocks.reconcileAccount.mock.invocationCallOrder[0]
+    );
+    expect(result).toEqual({ ...reconcile, adjustmentId: 20 });
+
+    expect(getUndoSpec('transactions.reconcileCleared')!.build(args, result, undefined)).toEqual([
+      { op: 'transactions.unreconcile', args: { accountId: 3, ...reconcile } },
+      { op: 'transactions.delete', args: { id: 20 } },
+    ]);
   });
 });

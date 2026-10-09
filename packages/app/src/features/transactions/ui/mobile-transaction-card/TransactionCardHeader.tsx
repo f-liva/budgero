@@ -9,6 +9,7 @@ import { asMilli, formatMilli } from '@shared/lib/currency/milli';
 import { StatusIndicatorPopover } from '@features/transactions/ui/StatusIndicatorPopover';
 import { ClearedToggle } from '@features/transactions/ui/ClearedToggle';
 import { TransactionLabelBadge } from '@features/transactions/ui/TransactionLabelBadge';
+import { transferPayeeLabel } from '@features/transactions/lib/transfer-category';
 
 interface TransactionCardHeaderProps {
   transaction: GetTransactionsByAccountRow;
@@ -40,6 +41,7 @@ export const TransactionCardHeader = React.memo(function TransactionCardHeader({
   }, [transaction, t]);
 
   const categoryDisplay = displayCategoryOverride || transaction.Category || '';
+  const transferLabel = transferPayeeLabel(transaction);
   return (
     <div className="flex flex-1 items-center gap-2 min-w-0">
       {!hideSelection && (
@@ -90,6 +92,7 @@ export const TransactionCardHeader = React.memo(function TransactionCardHeader({
             <Tag className="h-3 w-3" />
             <span className="truncate">{categoryDisplay}</span>
           </span>
+          {transferLabel && <span className="truncate">{transferLabel}</span>}
           {transaction.Label && (
             <TransactionLabelBadge
               label={transaction.Label}

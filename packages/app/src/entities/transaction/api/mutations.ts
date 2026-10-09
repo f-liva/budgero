@@ -2,9 +2,10 @@ import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-quer
 // Use runtime services directly instead of db-ops wrappers
 import { useActiveSpaceId, useRuntime } from '@shared/runtime/runtime-provider';
 import { executeSpaceMutation } from '@shared/runtime/mutation-router';
-import { useLoading } from '@shared/contexts/LoadingContext';
 import { applyOpInvalidations, resolveSpaceKey } from '@shared/lib/query-utils';
 import { getTodayISO } from '@shared/lib/date-utils';
+import type { MilliUnits } from '@shared/lib/currency/milli';
+import { ACCOUNT_TRANSACTION_INVALIDATION_KEYS } from '@shared/mutations/op-code-registry/shared';
 import { patchPlainAddTransactionCaches } from './plain-add-cache';
 
 // Query invalidation for these mutations is driven centrally by the
@@ -64,17 +65,12 @@ export type AddTransferResult = {
 };
 
 export function useAddTransaction() {
-  const { showTransferLoading, hideTransferLoading } = useLoading();
   const runtime = useRuntime();
   const spaceId = useActiveSpaceId();
   const queryClient = useQueryClient();
 
   return useMutation<number, Error, AddTransactionInput>({
     mutationFn: async (input) => {
-      if (input.transferId) {
-        showTransferLoading();
-      }
-
       const transactionId = await executeSpaceMutation<number>(runtime, {
         op: 'transactions.add',
         payload: {
@@ -125,9 +121,7 @@ export function useAddTransaction() {
       return transactionId;
     },
     onSuccess: (_newId, vars) => {
-      if (vars.transferId) {
-        hideTransferLoading();
-      } else {
+      if (!vars.transferId) {
         applyOpInvalidations(queryClient, 'transactions.add', {
           excludeRoots: [
             'transactions',
@@ -140,8 +134,7 @@ export function useAddTransaction() {
         });
       }
     },
-    onError: (error, vars) => {
-      if (vars.transferId) hideTransferLoading();
+    onError: (error) => {
       console.error('Transaction failed:', error);
     },
   });
@@ -151,12 +144,11 @@ export function useAddTransaction() {
  * Add both linked legs of a transfer as one mutation/undo item.
  */
 export function useAddTransfer() {
-  const { showTransferLoading, hideTransferLoading } = useLoading();
   const runtime = useRuntime();
+  const queryClient = useQueryClient();
 
   return useMutation<AddTransferResult, Error, AddTransferInput>({
     mutationFn: async (input) => {
-      showTransferLoading();
       return executeSpaceMutation<AddTransferResult>(runtime, {
         op: 'transactions.addTransfer',
         payload: {
@@ -165,12 +157,13 @@ export function useAddTransfer() {
           source: input.source,
           destination: input.destination,
         },
-        meta: { label: 'useAddTransfer' },
+        // Refresh in the background (onSuccess) so the add dialog doesn't wait
+        // on a full register refetch, same as plain adds.
+        meta: { label: 'useAddTransfer', skipInvalidate: true },
       });
     },
-    onSuccess: () => hideTransferLoading(),
+    onSuccess: () => applyOpInvalidations(queryClient, 'transactions.addTransfer'),
     onError: (error) => {
-      hideTransferLoading();
       console.error('Transfer failed:', error);
     },
   });
@@ -218,7 +211,7 @@ const AMOUNT_COLUMNS = new Set([
 // payee or label directories. Keeping those active queries out of this hot path
 // avoids rebuilding every row's editor data after each numeric commit.
 const AMOUNT_UPDATE_INVALIDATIONS: string[][] = [
-  ['transactions'],
+  ...ACCOUNT_TRANSACTION_INVALIDATION_KEYS,
   ['transactionsByCategoryAndMonth', '*'],
   ['allTransactions', '*'],
   ['allTransactionsDetailed', '*'],
@@ -267,6 +260,16 @@ export function useUpdateTransactionColumn() {
 export type ReconcileAccountInput = {
   accountId: number;
   reconcileDate?: string;
+  /** Balance adjustment to add (cleared) and lock in the same undoable step. */
+  adjustment?: {
+    inflow: MilliUnits;
+    outflow: MilliUnits;
+    categoryId: number;
+    budgetId: number;
+    date: string;
+    memo: string;
+    payee: string;
+  };
 };
 
 export function useReconcileAccount() {
@@ -278,6 +281,9 @@ export function useReconcileAccount() {
         payload: {
           accountId: input.accountId,
           reconcileDate: input.reconcileDate,
+          ...(input.adjustment
+            ? { adjustment: { ...input.adjustment, accountId: input.accountId } }
+            : {}),
         },
         meta: { label: 'useReconcileAccount' },
       });
@@ -299,6 +305,24 @@ export function useSetTransactionsCleared() {
         op: 'transactions.setCleared',
         payload: { ids: input.ids, cleared: input.cleared },
         meta: { label: 'useSetTransactionsCleared' },
+      }),
+  });
+}
+
+export type DuplicateTransactionsInput = {
+  ids: number[];
+  /** New transfer ID for each copied transfer, keyed by the source transfer ID. */
+  transferIds: Record<string, string>;
+};
+
+export function useDuplicateTransactions() {
+  const runtime = useRuntime();
+  return useMutation<{ created: number[] }, Error, DuplicateTransactionsInput>({
+    mutationFn: (input) =>
+      executeSpaceMutation<{ created: number[] }>(runtime, {
+        op: 'transactions.duplicate',
+        payload: { ids: input.ids, transferIds: input.transferIds },
+        meta: { label: 'useDuplicateTransactions' },
       }),
   });
 }

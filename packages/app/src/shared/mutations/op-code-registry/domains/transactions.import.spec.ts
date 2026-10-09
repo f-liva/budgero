@@ -54,7 +54,7 @@ describe('import mutations', () => {
   it('passes provenance into the atomic add and returns a replay-safe result', async () => {
     const result = await executeMutationOp('transactions.import', args);
     expect(result).toEqual({ transactionId: 42, created: true });
-    expect(mocks.addTransaction.mock.calls[0].at(-2)).toEqual([identity]);
+    expect(mocks.addTransaction.mock.calls[0][12]).toEqual([identity]);
     expect(getUndoSpec('transactions.import')?.build?.(args, result, undefined)).toEqual([
       { op: 'transactions.delete', args: { id: 42 } },
     ]);
@@ -69,11 +69,12 @@ describe('import mutations', () => {
     const before = await undo.capture!({ id: 42 });
     const restore = undo.build!({ id: 42 }, undefined, before)[0];
     expect(restore.args).toMatchObject({
+      id: 42,
       payee: 'Edited payee',
       memo: 'Edited memo',
       importIdentities: [identity],
     });
     await executeMutationOp(restore.op, restore.args);
-    expect(mocks.addTransaction.mock.calls[0].at(-2)).toEqual([identity]);
+    expect(mocks.addTransaction.mock.calls[0][12]).toEqual([identity]);
   });
 });

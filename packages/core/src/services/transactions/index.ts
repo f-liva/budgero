@@ -1,6 +1,6 @@
 import { ImportDuplicateService, type ImportIdentity } from '../import/duplicate-planner.js';
 import { DatabaseAdapter } from '../../database/interface.js';
-import { getRow, run } from '../../database/sql.js';
+import { allRows, getRow, run } from '../../database/sql.js';
 import {
   Transaction,
   GetTransactionsByAccountRow,
@@ -57,6 +57,13 @@ export {
   transferInvolvesOffBudgetAccount,
 } from './transfer-payee.js';
 const debugLog = createLogger('services:transactions');
+
+export interface ReconcileResult {
+  reconciledIds: number[];
+  /** Rows the reconcile also had to mark cleared (legacy lock-everything mode). */
+  newlyClearedIds: number[];
+  previousReconciledAt: string | null;
+}
 
 /**
  * TransactionService - Port of Go transactions service
@@ -119,7 +126,9 @@ export class TransactionService {
     exchangeRateOverride?: number | null,
     excludeFromReadyToAssign = false,
     importIdentities: ImportIdentity[] = [],
-    cleared = false
+    cleared = false,
+    // Undo/redo re-inserts a row under its original ID so older history entries stay valid.
+    explicitId?: number
   ): Promise<number> {
     debugLog('🔵 TransactionService.addTransaction called with:', {
       inflowOriginal,
@@ -459,15 +468,17 @@ export class TransactionService {
       let prevBalanceOriginal: number;
       if (!transferId) {
         const latest = this.queries.getLatestRunningBalances(accountId);
-        plainAppendOnly = latest === null || latest.Date <= date;
+        plainAppendOnly = explicitId === undefined && (latest === null || latest.Date <= date);
         const previous = plainAppendOnly
           ? latest
-          : this.queries.getRunningBalancesBefore(accountId, date);
+          : this.queries.getRunningBalancesBefore(accountId, date, explicitId);
         prevBalanceConverted = previous?.RunningBalanceConverted ?? 0;
         prevBalanceOriginal = previous?.RunningBalanceNative ?? 0;
       } else {
-        prevBalanceConverted = this.queries.getRunningBalanceBefore(accountId, date) || 0;
-        prevBalanceOriginal = this.queries.getRunningBalanceOriginalBefore(accountId, date) || 0;
+        prevBalanceConverted =
+          this.queries.getRunningBalanceBefore(accountId, date, explicitId) || 0;
+        prevBalanceOriginal =
+          this.queries.getRunningBalanceOriginalBefore(accountId, date, explicitId) || 0;
       }
 
       // 4. Compute new balances
@@ -500,7 +511,8 @@ export class TransactionService {
         normalizedLabelId,
         usesPinnedExchangeRate,
         excludeFromReadyToAssign,
-        cleared
+        cleared,
+        explicitId
       );
 
       // If rate was manual/adjacent/1:1, mark pending for later recalc
@@ -1899,13 +1911,44 @@ export class TransactionService {
     accountId: number,
     reconcileDate?: string,
     options: { clearedOnly?: boolean } = {}
-  ): void {
+  ): ReconcileResult {
     const date = reconcileDate || getLocalDateString();
     const timestamp = new Date().toISOString();
+    const clearedOnly = options.clearedOnly ?? false;
 
-    this.db.transaction(() => {
-      this.queries.markTransactionsAsReconciled(accountId, date, options.clearedOnly ?? false);
+    return this.db.transaction(() => {
+      const previous = getRow<{ ReconciledAt: string | null }>(
+        this.db,
+        `SELECT ReconciledAt FROM accounts WHERE ID = ?`,
+        accountId
+      );
+      const affected = allRows<{ ID: number; Cleared: number }>(
+        this.db,
+        `SELECT ID, Cleared FROM transactions
+          WHERE AccountID = ? AND Date <= ? AND Reconciled = FALSE
+          ${clearedOnly ? 'AND Cleared = TRUE' : ''}`,
+        accountId,
+        date
+      );
+      this.queries.markTransactionsAsReconciled(accountId, date, clearedOnly);
       this.queries.updateAccountReconciledAt(accountId, timestamp);
+      return {
+        reconciledIds: affected.map((row) => row.ID),
+        newlyClearedIds: affected.filter((row) => !row.Cleared).map((row) => row.ID),
+        previousReconciledAt: previous?.ReconciledAt ?? null,
+      };
+    });
+  }
+
+  /**
+   * Reverse a reconcile: unlock exactly the rows it locked, unclear the ones it
+   * cleared, and restore the account's previous ReconciledAt.
+   */
+  unreconcileAccount(accountId: number, reconcile: ReconcileResult): void {
+    this.db.transaction(() => {
+      this.queries.unmarkTransactionsAsReconciled(accountId, reconcile.reconciledIds);
+      this.queries.setTransactionsCleared(reconcile.newlyClearedIds, false);
+      this.queries.updateAccountReconciledAt(accountId, reconcile.previousReconciledAt);
     });
   }
 

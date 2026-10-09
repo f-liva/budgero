@@ -1,8 +1,24 @@
 import { t } from '@lingui/core/macro';
-import { asMilli, ZERO_MILLI } from '@budgero/core/browser';
+import { asMilli, ZERO_MILLI, type Account } from '@budgero/core/browser';
 import { capitalize } from '@shared/lib/utils';
 import { getTodayISO } from '@shared/lib/date-utils';
-import { S, ACCOUNT_TRANSACTION_INVALIDATION_KEYS, type OpCodeEntry } from '../shared';
+import {
+  S,
+  ACCOUNT_TRANSACTION_INVALIDATION_KEYS,
+  redoWithIds,
+  safeCapture,
+  type OpCodeEntry,
+} from '../shared';
+
+function parseMetadata(metadata: unknown): Record<string, unknown> | undefined {
+  if (!metadata) return undefined;
+  if (typeof metadata === 'object') return metadata as Record<string, unknown>;
+  try {
+    return JSON.parse(String(metadata)) as Record<string, unknown>;
+  } catch {
+    return undefined;
+  }
+}
 
 export const accountOps = {
   'accounts.create': {
@@ -16,7 +32,8 @@ export const accountOps = {
         (args.metadata as Record<string, unknown>) || undefined,
         !!args.onBudget,
         t`Initial Balance`,
-        (args.initialBalanceDate as string | undefined) ?? undefined
+        (args.initialBalanceDate as string | undefined) ?? undefined,
+        (args.id as number | undefined) ?? undefined
       );
     },
     invalidates: [
@@ -30,6 +47,16 @@ export const accountOps = {
       ['onBudgetBalanceByDates'],
       ['readyToAssign', '*'], // Income calculations depend on on_budget accounts
     ],
+    undo: {
+      build: (_args, result) => {
+        const id = (result as { ID?: number } | undefined)?.ID;
+        return typeof id === 'number' ? [{ op: 'accounts.delete', args: { id } }] : [];
+      },
+    },
+    redo: redoWithIds('accounts.create', (args, result) => {
+      const id = (result as { ID?: number } | undefined)?.ID;
+      return typeof id === 'number' ? { ...args, id } : null;
+    }),
   },
 
   // useEditAccount
@@ -57,6 +84,27 @@ export const accountOps = {
       ['onBudgetBalanceByDates'],
       ['readyToAssign', '*'], // Income calculations depend on on_budget accounts
     ],
+    undo: {
+      capture: async (args) => safeCapture(() => S().accounts!.getAccount(args.id as number)),
+      build: (args, _result, before) => {
+        const account = before as Account | null;
+        // A currency change rewrote every amount; converting back would not be exact.
+        if (!account || account.Currency !== args.currency) return [];
+        return [
+          {
+            op: 'accounts.update',
+            args: {
+              id: account.ID,
+              name: account.Name,
+              type: account.Type,
+              currency: account.Currency,
+              metadata: parseMetadata(account.Metadata),
+              onBudget: Boolean(account.OnBudget),
+            },
+          },
+        ];
+      },
+    },
   },
 
   // useReorderAccounts — custom sidebar/nav ordering (Settings → Appearance)
@@ -76,6 +124,20 @@ export const accountOps = {
     invalidates: [
       ['accounts', '*'], // Will match ["accounts", budgetId]
     ],
+    undo: {
+      capture: async (args) =>
+        safeCapture(() =>
+          S()
+            .accounts!.listAccounts(args.budgetId as number)
+            .map((a) => a.ID)
+        ),
+      build: (args, _result, before) => {
+        const orderedAccountIds = before as number[] | null;
+        return orderedAccountIds?.length
+          ? [{ op: 'accounts.reorder', args: { budgetId: args.budgetId, orderedAccountIds } }]
+          : [];
+      },
+    },
   },
 
   // upsert liability starting transactions (initial debt and prior payments)
@@ -190,6 +252,14 @@ export const accountOps = {
       ['onBudgetBalanceByDates'],
       ['readyToAssign', '*'],
     ],
+    undo: {
+      capture: async (args) =>
+        safeCapture(() => Boolean(S().accounts!.getAccount(args.id as number).Archived)),
+      build: (args, _result, before) =>
+        typeof before === 'boolean' && before !== Boolean(args.archived)
+          ? [{ op: 'accounts.setArchived', args: { id: args.id, archived: before } }]
+          : [],
+    },
   },
 
   // useDeleteAccount

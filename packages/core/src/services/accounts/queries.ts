@@ -21,13 +21,14 @@ export class AccountQueries {
     balance: number,
     budgetId: number,
     metadata = '{}',
-    onBudget = true
+    onBudget = true,
+    id?: number
   ): number {
     const result = run(
       this.db,
       `
-      INSERT INTO accounts (Name, Type, Currency, ReconciledAt, BalanceNative, BudgetID, Metadata, OnBudget, Position)
-      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8,
+      INSERT INTO accounts (ID, Name, Type, Currency, ReconciledAt, BalanceNative, BudgetID, Metadata, OnBudget, Position)
+      VALUES (?9, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8,
         (SELECT COALESCE(MAX(Position), -1) + 1 FROM accounts WHERE BudgetID = ?6))
       RETURNING ID
     `,
@@ -38,7 +39,8 @@ export class AccountQueries {
       balance,
       budgetId,
       metadata,
-      onBudget
+      onBudget,
+      id ?? null
     );
     return result.lastInsertRowid as number;
   }

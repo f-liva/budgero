@@ -1,4 +1,9 @@
-import { type ImportIdentity, asMilli } from '@budgero/core/browser';
+import {
+  type ImportIdentity,
+  type ReconcileResult,
+  type TransactionSplit,
+  asMilli,
+} from '@budgero/core/browser';
 import {
   S,
   sortTransactionSnapshots,
@@ -6,7 +11,9 @@ import {
   TRANSACTION_INVALIDATION_KEYS,
   ACCOUNT_TRANSACTION_INVALIDATION_KEYS,
   RECURRING_TEMPLATE_INVALIDATIONS,
+  safeCapture,
   type NormalizedSplit,
+  type OpCall,
   type OpCodeEntry,
   type TransactionRowWithColumns,
   type TransactionSnapshot,
@@ -31,6 +38,43 @@ const SPLIT_INVALIDATION_KEYS: [string, ...string[]][] = [
   ['labels', '*'],
   ['labelDirectory', '*'],
 ];
+
+function restoreSnapshotsUndo(before: unknown): OpCall[] {
+  const snaps = (before as { snapshots?: TransactionSnapshot[] } | undefined)?.snapshots || [];
+  return snaps.length ? sortTransactionSnapshots(snaps).map(transactionSnapshotToAddOp) : [];
+}
+
+/** Undo for split edits: put back the previous lines, or clear if there were none. */
+const splitsUndo: NonNullable<OpCodeEntry['undo']> = {
+  capture: async (args) => safeCapture(() => S().splits.getSplits(args.transactionId as number)),
+  build: (args, _result, before) => {
+    const previous = before as TransactionSplit[] | null;
+    if (!previous) return [];
+    return previous.length
+      ? [
+          {
+            op: 'transactions.upsertSplits',
+            args: { transactionId: args.transactionId, splits: previous },
+          },
+        ]
+      : [{ op: 'transactions.clearSplits', args: { transactionId: args.transactionId } }];
+  },
+};
+
+type ReconcileWithAdjustment = ReconcileResult & { adjustmentId?: number };
+
+function reconcileUndo(accountId: unknown, result: unknown): OpCall[] {
+  const reconcile = result as ReconcileWithAdjustment | undefined;
+  if (!reconcile) return [];
+  const { adjustmentId, ...locked } = reconcile;
+  // Unlock first: the adjustment was locked by this reconcile.
+  return [
+    { op: 'transactions.unreconcile', args: { accountId, ...locked } },
+    ...(adjustmentId === undefined
+      ? []
+      : [{ op: 'transactions.delete', args: { id: adjustmentId } }]),
+  ];
+}
 
 // Shared by transactions.delete (exact) and transactions.updateColumn (which also
 // invalidates payees). Invalidation order is irrelevant — these are set operations.
@@ -87,6 +131,11 @@ const TX_MOVE_INVALIDATION_KEYS: string[][] = [
   ['labelDirectory', '*'],
 ];
 
+/** Undo/redo pass the row's original ID so history entries that reference it stay valid. */
+function explicitId(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : undefined;
+}
+
 async function addTransactionFromArgs(args: Record<string, unknown>): Promise<number> {
   const parameters = [
     asMilli(Number(args.inflow ?? 0)),
@@ -106,7 +155,8 @@ async function addTransactionFromArgs(args: Record<string, unknown>): Promise<nu
     ...parameters,
     false,
     (args.importIdentities as ImportIdentity[] | undefined) ?? [],
-    args.cleared === true
+    args.cleared === true,
+    explicitId(args.id)
   );
 }
 
@@ -188,6 +238,14 @@ export const transactionOps = {
           : [];
       },
     },
+    redo: {
+      build: (args, result) => {
+        const imported = result as { transactionId: number; created: boolean };
+        return imported.created
+          ? [{ op: 'transactions.import', args: { ...args, id: imported.transactionId } }]
+          : [];
+      },
+    },
   },
   'transactions.add': {
     execute: async (args) => {
@@ -230,14 +288,12 @@ export const transactionOps = {
           : [];
       },
     },
-    // Customize redo to also restore the snapshots (useful for multi-leg transfers)
+    // Redo recreates the row under the ID it first got.
     redo: {
-      build: (_args, _result, before) => {
-        const beforeState = before as { snapshots?: TransactionSnapshot[] } | undefined;
-        const snaps = beforeState?.snapshots || [];
-        if (!snaps.length) return [];
-        return sortTransactionSnapshots(snaps).map(transactionSnapshotToAddOp);
-      },
+      build: (args, result) =>
+        typeof result === 'number'
+          ? [{ op: 'transactions.add', args: { ...args, id: result } }]
+          : [],
     },
   },
 
@@ -299,6 +355,24 @@ export const transactionOps = {
         return typeof transferId === 'string' && transferId
           ? [{ op: 'transactions.deleteTransfer', args: { transferId } }]
           : [];
+      },
+    },
+    // Redo recreates both legs under the IDs they first got.
+    redo: {
+      build: (args, result) => {
+        const ids = result as { sourceId: number; destinationId: number } | undefined;
+        if (!ids) return [];
+        const leg = (value: unknown, id: number) => ({ ...(value as object), id });
+        return [
+          {
+            op: 'transactions.addTransfer',
+            args: {
+              ...args,
+              source: leg(args.source, ids.sourceId),
+              destination: leg(args.destination, ids.destinationId),
+            },
+          },
+        ];
       },
     },
   },
@@ -371,6 +445,15 @@ export const transactionOps = {
       await S().transactions!.deleteTransaction(first.ID);
     },
     invalidates: TX_WRITE_INVALIDATION_KEYS,
+    undo: {
+      capture: async (args) => {
+        const group = await safeCapture(() =>
+          S().transactions!.getTransactionsByTransferID(args.transferId as string)
+        );
+        return { snapshots: (group ?? []).map(withImportIdentities) };
+      },
+      build: (_args, _result, before) => restoreSnapshotsUndo(before),
+    },
   },
 
   // useUpdateTransactionColumn
@@ -453,12 +536,7 @@ export const transactionOps = {
           return { snapshots: [] };
         }
       },
-      build: (_args, _result, before) => {
-        const beforeState = before as { snapshots?: TransactionSnapshot[] } | undefined;
-        const snaps = beforeState?.snapshots || [];
-        if (!snaps.length) return [];
-        return sortTransactionSnapshots(snaps).map(transactionSnapshotToAddOp);
-      },
+      build: (_args, _result, before) => restoreSnapshotsUndo(before),
     },
   },
 
@@ -642,16 +720,47 @@ export const transactionOps = {
       ['labels', '*'],
       ['labelDirectory', '*'],
     ],
+    undo: {
+      build: (args, result) => reconcileUndo(args.accountId, result),
+    },
   },
   // Locks only cleared transactions; uncleared ones stay open. Kept separate
   // from transactions.reconcile so older ops replay with their original meaning.
   'transactions.reconcileCleared': {
-    execute: async (args) => {
-      return await S().transactions!.reconcileAccount(
+    execute: async (args): Promise<ReconcileWithAdjustment> => {
+      // The balance adjustment is created inside the op (cleared, so it is
+      // locked too) so one undo removes both.
+      const adjustment = args.adjustment as Record<string, unknown> | undefined;
+      const adjustmentId = adjustment
+        ? await addTransactionFromArgs({ ...adjustment, cleared: true })
+        : undefined;
+      const result = S().transactions!.reconcileAccount(
         args.accountId as number,
         args.reconcileDate as string | undefined,
         { clearedOnly: true }
       );
+      return adjustmentId === undefined ? result : { ...result, adjustmentId };
+    },
+    invalidates: [
+      ...TRANSACTION_INVALIDATION_KEYS,
+      ...ACCOUNT_TRANSACTION_INVALIDATION_KEYS,
+      ['accounts', '*'],
+      ['allTransactions', '*'],
+      ['allTransactionsDetailed', '*'],
+      ['allTransactionsAnalytics', '*'],
+      ['monthlyTransactions', '*'],
+    ],
+    undo: {
+      build: (args, result) => reconcileUndo(args.accountId, result),
+    },
+  },
+  'transactions.unreconcile': {
+    execute: async (args) => {
+      S().transactions!.unreconcileAccount(args.accountId as number, {
+        reconciledIds: (args.reconciledIds as number[]) ?? [],
+        newlyClearedIds: (args.newlyClearedIds as number[]) ?? [],
+        previousReconciledAt: (args.previousReconciledAt as string | null) ?? null,
+      });
     },
     invalidates: [
       ...ACCOUNT_TRANSACTION_INVALIDATION_KEYS,
@@ -687,6 +796,94 @@ export const transactionOps = {
     },
   },
 
+  // Copies rows as new uncleared transactions. A transfer copies both legs
+  // under a new transfer ID (supplied by the caller so replays match).
+  'transactions.duplicate': {
+    execute: async (args) => {
+      const { ids } = args;
+      if (!Array.isArray(ids) || !ids.every((id) => Number.isSafeInteger(id) && id > 0)) {
+        throw new Error('ids must be a list of transaction ids.');
+      }
+      const transferIds = (args.transferIds ?? {}) as Record<string, string>;
+      const reuseIds = Array.isArray(args.createdIds) ? (args.createdIds as number[]) : [];
+      const created: number[] = [];
+      const copied = new Set<string>();
+
+      const copy = async (row: TransactionSnapshot, transferId?: string) => {
+        const {
+          id: _id,
+          importIdentities: _identities,
+          ...addArgs
+        } = transactionSnapshotToAddOp(row).args;
+        const newId = await addTransactionFromArgs({
+          ...addArgs,
+          transferId,
+          cleared: false,
+          id: reuseIds[created.length],
+        });
+        created.push(newId);
+        return newId;
+      };
+
+      for (const id of ids as number[]) {
+        const row = (await S().transactions!.getTransactionByID(id)) as TransactionSnapshot;
+        const sourceTransferId = row.TransferID?.trim();
+        if (sourceTransferId) {
+          // Split-transfer rows belong to their split parent; copy the parent instead.
+          if (sourceTransferId.startsWith('split_transfer_') || copied.has(sourceTransferId)) {
+            continue;
+          }
+          const newTransferId = transferIds[sourceTransferId];
+          if (!newTransferId) throw new Error('A new transferId is required for each transfer.');
+          copied.add(sourceTransferId);
+          const legs = sortTransactionSnapshots(
+            await S().transactions!.getTransactionsByTransferID(sourceTransferId)
+          );
+          for (const leg of legs) await copy(leg, newTransferId);
+          continue;
+        }
+
+        const splits = S().splits.getSplits(id);
+        const newId = await copy(row);
+        if (splits.length) {
+          await S().splits.upsertSplits(
+            newId,
+            splits.map((line, index) => ({
+              CategoryID: line.CategoryID ?? null,
+              TransferAccountID: line.TransferAccountID ?? null,
+              Memo: line.Memo,
+              Payee: line.Payee ?? '',
+              InflowConverted: line.InflowConverted,
+              OutflowConverted: line.OutflowConverted,
+              InflowNative: line.InflowNative ?? null,
+              OutflowNative: line.OutflowNative ?? null,
+              PairID: null,
+              OrderIndex: line.OrderIndex ?? index,
+            }))
+          );
+        }
+      }
+      return { created };
+    },
+    invalidates: [...TX_WRITE_INVALIDATION_KEYS, ...SPLIT_INVALIDATION_KEYS],
+    undo: {
+      build: (_args, result) =>
+        ((result as { created?: number[] } | undefined)?.created ?? []).map((id) => ({
+          op: 'transactions.delete',
+          args: { id },
+        })),
+    },
+    // Redo recreates the copies under the IDs they first got.
+    redo: {
+      build: (args, result) => {
+        const created = (result as { created?: number[] } | undefined)?.created ?? [];
+        return created.length
+          ? [{ op: 'transactions.duplicate', args: { ...args, createdIds: created } }]
+          : [];
+      },
+    },
+  },
+
   // upsert split transaction
   'transactions.upsertSplits': {
     execute: async (args) => {
@@ -716,11 +913,13 @@ export const transactionOps = {
       return S().splits.upsertSplits(args.transactionId as number, normalized);
     },
     invalidates: SPLIT_INVALIDATION_KEYS,
+    undo: splitsUndo,
   },
   'transactions.clearSplits': {
     execute: async (args) => {
       return await S().splits.clearSplits(args.transactionId as number);
     },
     invalidates: SPLIT_INVALIDATION_KEYS,
+    undo: splitsUndo,
   },
 } satisfies Record<string, OpCodeEntry>;

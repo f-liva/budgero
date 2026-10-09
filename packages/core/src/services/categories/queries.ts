@@ -49,20 +49,21 @@ export class CategoryQueries {
    * InsertCategoryGroup - Creates a new category group
    * SQL: INSERT INTO category_groups (name, note, budget_id, position) VALUES (?1, ?2, ?3, ?4) RETURNING id;
    */
-  insertCategoryGroup(name: string, note: string, budgetId: number): number {
+  insertCategoryGroup(name: string, note: string, budgetId: number, id?: number): number {
     const maxPos = this.getMaxCategoryGroupPosition(budgetId);
     const position = maxPos + 1;
 
     const result = run(
       this.db,
       `
-      INSERT INTO category_groups (Name, Note, BudgetID, Position)
-      VALUES (?1, ?2, ?3, ?4)
+      INSERT INTO category_groups (ID, Name, Note, BudgetID, Position)
+      VALUES (?5, ?1, ?2, ?3, ?4)
     `,
       name,
       note,
       budgetId,
-      position
+      position,
+      id ?? null
     );
     return Number(result.lastInsertRowid);
   }
@@ -179,7 +180,8 @@ export class CategoryQueries {
     note: string,
     categoryGroupId: number,
     budgetId: number,
-    fundingPriority = 3
+    fundingPriority = 3,
+    id?: number
   ): number {
     const maxPos = this.getMaxCategoryPosition(categoryGroupId);
     const position = maxPos + 1;
@@ -187,15 +189,16 @@ export class CategoryQueries {
     const result = run(
       this.db,
       `
-      INSERT INTO categories (Name, Note, CategoryGroupID, BudgetID, ExcludeFromBudgetPace, Position, FundingPriority)
-      VALUES (?1, ?2, ?3, ?4, 0, ?5, ?6)
+      INSERT INTO categories (ID, Name, Note, CategoryGroupID, BudgetID, ExcludeFromBudgetPace, Position, FundingPriority)
+      VALUES (?7, ?1, ?2, ?3, ?4, 0, ?5, ?6)
     `,
       name,
       note,
       categoryGroupId,
       budgetId,
       position,
-      fundingPriority
+      fundingPriority,
+      id ?? null
     );
     return Number(result.lastInsertRowid);
   }

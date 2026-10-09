@@ -28,6 +28,8 @@ export interface Transaction {
   ExchangeRateOverride?: boolean;
   AccountOnBudget?: boolean;
   TransferAccountOnBudget?: boolean | null;
+  /** The other leg's account, for transfers. */
+  TransferAccountName?: string | null;
   RunningBalanceConverted: MilliUnits;
   RunningBalanceNative?: MilliUnits;
   BudgetID: number;
@@ -65,6 +67,8 @@ export interface GetTransactionsByAccountRow {
   ExchangeRateOverride?: boolean;
   AccountOnBudget?: boolean;
   TransferAccountOnBudget?: boolean | null;
+  /** The other leg's account, for transfers. */
+  TransferAccountName?: string | null;
   RunningBalanceConverted: MilliUnits | null;
   RunningBalanceNative?: MilliUnits | null;
   TransferID?: string;
@@ -171,6 +175,8 @@ export interface GetTransactionsByAccountAndMonthRow {
   ExchangeRateOverride?: boolean;
   AccountOnBudget?: boolean;
   TransferAccountOnBudget?: boolean | null;
+  /** The other leg's account, for transfers. */
+  TransferAccountName?: string | null;
   RunningBalanceConverted: MilliUnits | null;
   RunningBalanceNative?: MilliUnits | null;
   TransferID?: string;

@@ -3,7 +3,20 @@ import {
   type GoalFundingSettings,
   type FundingPriorityUpdate,
 } from '@budgero/core/browser';
-import { S, ACCOUNT_TRANSACTION_INVALIDATION_KEYS, type OpCodeEntry } from '../shared';
+import { S, ACCOUNT_TRANSACTION_INVALIDATION_KEYS, safeCapture, type OpCodeEntry } from '../shared';
+
+/** Undo for single-field budget setters: re-issue the op with the old value. */
+function budgetFieldUndo(
+  op: string,
+  argKey: string,
+  field: 'Name' | 'BadgeIcon' | 'NumberFormat' | 'RtaMode'
+): NonNullable<OpCodeEntry['undo']> {
+  return {
+    capture: async (args) => safeCapture(() => S().budgets.getBudget(args.id as number)[field]),
+    build: (args, _result, before) =>
+      before ? [{ op, args: { id: args.id, [argKey]: before } }] : [],
+  };
+}
 
 export const budgetOps = {
   'budgets.updateGoalFundingSettings': {
@@ -70,6 +83,7 @@ export const budgetOps = {
       return await S().budgets!.updateBudgetName(args.id as number, args.name as string);
     },
     invalidates: [['budgets']],
+    undo: budgetFieldUndo('budgets.updateName', 'name', 'Name'),
   },
 
   // useUpdateBudgetCurrency
@@ -86,6 +100,7 @@ export const budgetOps = {
       return await S().budgets!.updateBudgetIcon(args.id as number, args.icon as string);
     },
     invalidates: [['budgets']],
+    undo: budgetFieldUndo('budgets.updateIcon', 'icon', 'BadgeIcon'),
   },
 
   // useUpdateBudgetNumberFormat
@@ -94,6 +109,7 @@ export const budgetOps = {
       return await S().budgets!.updateBudgetNumberFormat(args.id as number, args.format as string);
     },
     invalidates: [['budgets']],
+    undo: budgetFieldUndo('budgets.updateNumberFormat', 'format', 'NumberFormat'),
   },
 
   // useUpdateBudgetRtaMode — switches Ready to Assign between cumulative/monthly
@@ -102,6 +118,7 @@ export const budgetOps = {
       return S().budgets!.updateRtaMode(args.id as number, args.mode as 'cumulative' | 'monthly');
     },
     invalidates: [['budgets'], ['readyToAssign', '*'], ['monthlyBudget', '*']],
+    undo: budgetFieldUndo('budgets.updateRtaMode', 'mode', 'RtaMode'),
   },
 
   // useDeleteBudget

@@ -915,10 +915,95 @@ describe('Transactions (Node/sql.js)', () => {
       updated = services.transactions.getTransactionByID(txnId);
       expect(updated.CategoryID).toBe(newCat);
     });
+    it('keeps a signed amount edit exactly as typed', async () => {
+      const today = getLocalDateString();
+      const txnId = await services.transactions.addTransaction(
+        0,
+        5000,
+        accountId,
+        categoryId,
+        budgetId,
+        today,
+        'Groceries'
+      );
+      const before = services.accounts.getAccount(accountId).BalanceNative;
+
+      await services.transactions.updateTransactionColumn(txnId, 'OutflowConverted', -20000);
+      const updated = services.transactions.getTransactionByID(txnId);
+      expect(updated.OutflowConverted).toBe(-20000);
+      expect(updated.OutflowNative).toBe(-20000);
+      expect(updated.InflowConverted).toBe(0);
+      expect(services.accounts.getAccount(accountId).BalanceNative).toBe(before + 25000);
+    });
+
+    it('re-inserts a deleted row under its original ID with the same running balances', async () => {
+      const add = (outflow: number, memo: string, id?: number) =>
+        services.transactions.addTransaction(
+          0,
+          outflow,
+          accountId,
+          categoryId,
+          budgetId,
+          '2026-03-05',
+          memo,
+          '',
+          undefined,
+          null,
+          null,
+          false,
+          [],
+          false,
+          id
+        );
+      const balances = () =>
+        services.transactions
+          .getTransactionsByAccount(accountId)
+          .map((t) => [t.ID, t.RunningBalanceConverted, t.RunningBalanceNative]);
+      const first = await add(100, 'first');
+      const middle = await add(200, 'middle');
+      await add(300, 'last');
+      const before = balances();
+
+      services.transactions.deleteTransaction(middle);
+      expect(await add(200, 'middle', middle)).toBe(middle);
+      expect(balances()).toEqual(before);
+      expect(services.accounts.getAccount(accountId).BalanceNative).toBe(5000 - 600);
+
+      await expect(add(1, 'taken', first)).rejects.toThrow();
+    });
   });
 
   // Transfer Transactions Tests
   describe('Transfer Transactions', () => {
+    it('names the other account on each leg of a transfer', async () => {
+      const savings = await services.accounts.createAccount(
+        'Savings',
+        budgetId,
+        'savings',
+        'USD',
+        0
+      );
+      const leg = (account: number, inflow: number, outflow: number) =>
+        services.transactions.addTransaction(
+          inflow,
+          outflow,
+          account,
+          categoryId,
+          budgetId,
+          '2026-03-05',
+          'Long memo',
+          'tr-names'
+        );
+      const source = await leg(accountId, 0, 500);
+      const destination = await leg(savings.ID, 500, 0);
+      const nameOf = (account: number, id: number) =>
+        services.transactions.getTransactionsByAccount(account).find((t) => t.ID === id)
+          ?.TransferAccountName;
+
+      expect(nameOf(accountId, source)).toBe('Savings');
+      expect(nameOf(savings.ID, destination)).toBe('Test Checking');
+    });
+
     it('should create a transfer between accounts', async () => {
       const today = getLocalDateString();
       const savingsAccount = await services.accounts.createAccount(
