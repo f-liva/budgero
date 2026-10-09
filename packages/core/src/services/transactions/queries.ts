@@ -56,7 +56,16 @@ const TX_ROW_COLUMNS = `
               AND transfer_partner.ID != t.ID
             ORDER BY transfer_partner.ID
             LIMIT 1)
-        ELSE NULL END AS TransferAccountOnBudget`;
+        ELSE NULL END AS TransferAccountOnBudget,
+        CASE WHEN t.TransferID IS NOT NULL AND t.TransferID != '' THEN
+          (SELECT partner_account.Name
+             FROM transactions transfer_partner
+             JOIN accounts partner_account ON partner_account.ID = transfer_partner.AccountID
+            WHERE transfer_partner.TransferID = t.TransferID
+              AND transfer_partner.ID != t.ID
+            ORDER BY transfer_partner.ID
+            LIMIT 1)
+        ELSE NULL END AS TransferAccountName`;
 
 const SQLITE_BIND_CHUNK_SIZE = 500;
 const DEFAULT_ACCOUNT_PAGE_SIZE = 200;
@@ -175,17 +184,19 @@ export class TransactionQueries {
     labelId?: number | null,
     exchangeRateOverride = false,
     excludeFromReadyToAssign = false,
-    cleared = false
+    cleared = false,
+    id?: number
   ): number {
     const result = run(
       this.db,
       `
       INSERT INTO transactions (
-        InflowConverted, OutflowConverted, InflowNative, OutflowNative, CategoryID, AccountID,
+        ID, InflowConverted, OutflowConverted, InflowNative, OutflowNative, CategoryID, AccountID,
         Date, Memo, Payee, BudgetID, RunningBalanceConverted, RunningBalanceNative, TransferID,
         ExchangeRate, LabelID, ExchangeRateOverride, ExcludeFromReadyToAssign, Cleared
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
+      id ?? null,
       inflow,
       outflow,
       inflowOriginal,
@@ -1573,13 +1584,14 @@ export class TransactionQueries {
     );
   }
 
-  insertLabel(budgetId: number, name: string, color: string): number {
+  insertLabel(budgetId: number, name: string, color: string, id?: number): number {
     const result = run(
       this.db,
       `
-      INSERT INTO labels (BudgetID, Name, Color)
-      VALUES (?, ?, ?)
+      INSERT INTO labels (ID, BudgetID, Name, Color)
+      VALUES (?, ?, ?, ?)
     `,
+      id ?? null,
       budgetId,
       name,
       color
@@ -1676,6 +1688,19 @@ export class TransactionQueries {
     );
   }
 
+  /** Unlock specific reconciled rows of an account (undo of a reconcile). */
+  unmarkTransactionsAsReconciled(accountId: number, ids: number[]): void {
+    for (const chunk of chunkValues(ids)) {
+      run(
+        this.db,
+        `UPDATE transactions SET Reconciled = FALSE
+          WHERE AccountID = ? AND ID IN (${chunk.map(() => '?').join(', ')})`,
+        accountId,
+        ...chunk
+      );
+    }
+  }
+
   /**
    * Mark transactions cleared or uncleared. Reconciled rows are locked and
    * left untouched. Returns the IDs whose status actually changed.
@@ -1708,7 +1733,7 @@ export class TransactionQueries {
    * UpdateAccountReconciledAt - Updates the reconciled_at timestamp for an account
    * SQL: UPDATE accounts SET reconciled_at = ? WHERE id = ?
    */
-  updateAccountReconciledAt(accountId: number, reconciledAt: string): void {
+  updateAccountReconciledAt(accountId: number, reconciledAt: string | null): void {
     run(
       this.db,
       `
@@ -1773,7 +1798,8 @@ export class TransactionQueries {
   /**
    * UpdateTransferMemosForAccountRename - Updates all transfer memos when an account is renamed
    * Replaces "Transfer from {oldName}" with "Transfer from {newName}"
-   * and "to {oldName}" with "to {newName}" (for destination account in "Transfer from X to Y" format)
+   * and "to {oldName}" with "to {newName}" (legacy "Transfer from X to Y" memos),
+   * plus either side of the current "X → Y: memo" format on transfer rows.
    */
   updateTransferMemosForAccountRename(budgetId: number, oldName: string, newName: string): number {
     // Two patterns: "Transfer from {name}" (source side) and " to {name}"
@@ -1800,6 +1826,43 @@ export class TransactionQueries {
       // Matches previous behavior: the returned count is the last pattern's.
       changes = result.changes || 0;
     }
+
+    // Current format: "{source} → {destination}[: memo][ (conversion)]".
+    const rows = allRows<{ ID: number; Memo: string }>(
+      this.db,
+      `
+        SELECT ID, Memo FROM transactions
+        WHERE BudgetID = ? AND TransferID IS NOT NULL AND TransferID != ''
+          AND instr(Memo, ?) > 0
+      `,
+      budgetId,
+      TRANSFER_MEMO_ARROW
+    );
+    for (const row of rows) {
+      const memo = renameInTransferMemo(row.Memo, oldName, newName);
+      if (memo === row.Memo) continue;
+      run(this.db, 'UPDATE transactions SET Memo = ? WHERE ID = ?', memo, row.ID);
+      changes += 1;
+    }
     return changes;
   }
+}
+
+const TRANSFER_MEMO_ARROW = ' → ';
+
+/** Swaps an account name in a "{source} → {destination}: memo" transfer memo. */
+export function renameInTransferMemo(memo: string, oldName: string, newName: string): string {
+  const arrow = memo.indexOf(TRANSFER_MEMO_ARROW);
+  if (arrow < 0) return memo;
+  let source = memo.slice(0, arrow);
+  let rest = memo.slice(arrow + TRANSFER_MEMO_ARROW.length);
+  if (source === oldName) source = newName;
+  const after = rest.slice(oldName.length);
+  if (
+    rest.startsWith(oldName) &&
+    (after === '' || after.startsWith(':') || after.startsWith(' ('))
+  ) {
+    rest = newName + after;
+  }
+  return `${source}${TRANSFER_MEMO_ARROW}${rest}`;
 }

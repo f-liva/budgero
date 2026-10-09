@@ -1990,15 +1990,13 @@ export class YNABImportService {
       if (!memo && inflow > 0) {
         // This is the receiving account
         const sourceAccount = transferCounterpartyName(row);
-        memo = sourceAccount
-          ? `Transfer from ${sourceAccount} to ${currentAccount}`
-          : `Transfer to ${currentAccount}`;
+        memo = sourceAccount ? `${sourceAccount} → ${currentAccount}` : `→ ${currentAccount}`;
       } else if (!memo && outflow > 0) {
         // This is the sending account
         const destinationAccount = transferCounterpartyName(row);
         memo = destinationAccount
-          ? `Transfer from ${currentAccount} to ${destinationAccount}`
-          : `Transfer from ${currentAccount}`;
+          ? `${currentAccount} → ${destinationAccount}`
+          : `${currentAccount} →`;
       }
     }
 

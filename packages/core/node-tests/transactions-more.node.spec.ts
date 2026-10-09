@@ -1169,6 +1169,55 @@ describe('Transactions (additional coverage)', () => {
     expect(txAfterSecondRename.Memo).toBe('Transfer from Primary Checking to Emergency Fund');
   });
 
+  it('updates both sides of "Source → Destination: memo" transfer memos on rename', async () => {
+    const adapter: DatabaseAdapter = await NodeSqlJsAdapter.create();
+    const sm = new ServiceManager();
+    await sm.initialize(adapter);
+    const services = sm.getServices();
+    const budgetId = await services.budgets.createBudget({
+      name: 'Rename Arrow',
+      display_currency: 'USD',
+      badge_icon: 'dollar',
+      number_format: 'dollar',
+    });
+    const checking = await services.accounts.createAccount(
+      'Checking',
+      budgetId,
+      'checking',
+      'USD',
+      0
+    );
+    const savings = await services.accounts.createAccount('Savings', budgetId, 'savings', 'USD', 0);
+    const memo = 'Checking → Savings: Checking → Savings 2';
+    const out = await services.transactions.addTransaction(
+      0,
+      500,
+      checking.ID,
+      0,
+      budgetId,
+      '2024-03-15',
+      memo,
+      'tr_arrow'
+    );
+    const plain = await services.transactions.addTransaction(
+      0,
+      100,
+      checking.ID,
+      0,
+      budgetId,
+      '2024-03-15',
+      'Checking → Savings'
+    );
+
+    await services.accounts.updateAccount(checking.ID, 'Bank', 'checking', 'USD');
+    await services.accounts.updateAccount(savings.ID, 'Rainy Day', 'savings', 'USD');
+
+    expect(services.transactions.getTransactionByID(out).Memo).toBe(
+      'Bank → Rainy Day: Checking → Savings 2'
+    );
+    expect(services.transactions.getTransactionByID(plain).Memo).toBe('Checking → Savings');
+  });
+
   it('renaming account without name change does not modify anything', async () => {
     const adapter: DatabaseAdapter = await NodeSqlJsAdapter.create();
     const sm = new ServiceManager();

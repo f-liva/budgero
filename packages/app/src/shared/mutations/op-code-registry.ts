@@ -96,5 +96,7 @@ export function getInvalidatesForOp(op: string): string[][] | undefined {
  */
 export function getUndoSpec(op: string) {
   if (!isKnownOpCode(op)) return undefined;
-  return opCodeRegistry[op]?.undo;
+  const entry = opCodeRegistry[op];
+  if (!entry?.undo) return undefined;
+  return entry.redo ? { ...entry.undo, buildRedo: entry.redo.build } : entry.undo;
 }

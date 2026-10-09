@@ -220,7 +220,7 @@ export function formatTransferMemo(params: {
     needsConversion,
   } = params;
 
-  let transferMemo = t`Transfer from ${fromAccountName} to ${toAccountName}${memo ? `: ${memo}` : ''}`;
+  let transferMemo = `${fromAccountName} → ${toAccountName}${memo ? `: ${memo}` : ''}`;
 
   if (needsConversion) {
     transferMemo += ` (${formatNativeAmount(amount, fromCurrency)} ${fromCurrency} → ${formatNativeAmount(convertedAmount, toCurrency)} ${toCurrency})`;

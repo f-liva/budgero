@@ -11,6 +11,7 @@ import {
 } from '@shared/ui/dialog';
 import { getKeyboardShortcutLabels } from '@shared/lib/keyboard-shortcuts';
 import { CLEARED_SHORTCUT_KEY } from '@features/transactions/api/useClearedShortcut';
+import { DUPLICATE_SHORTCUT_KEY } from '@features/transactions/api/useDuplicateShortcut';
 import {
   UNCATEGORIZED_FILTER_KEY,
   UNCLEARED_FILTER_KEY,
@@ -40,6 +41,7 @@ export function KeyboardShortcutsDialog() {
       title: t`Transactions`,
       items: [
         { keys: CLEARED_SHORTCUT_KEY, label: t`Toggle cleared on selected rows` },
+        { keys: shortcuts.shift(DUPLICATE_SHORTCUT_KEY), label: t`Duplicate selected rows` },
         {
           keys: shortcuts.shift(UNCLEARED_FILTER_KEY),
           label: t`Show only uncleared (account page)`,

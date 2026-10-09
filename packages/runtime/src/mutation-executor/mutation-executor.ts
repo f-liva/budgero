@@ -131,7 +131,10 @@ export class MutationExecutor {
         const builtUndoOps = undoSpec.build(spec.payload, result, beforeState) || [];
         if (builtUndoOps.length) {
           undoOps = builtUndoOps;
-          redoOps = [{ op: spec.op, args: { ...spec.payload } }];
+          const builtRedoOps = undoSpec.buildRedo?.(spec.payload, result, beforeState);
+          redoOps = builtRedoOps?.length
+            ? builtRedoOps
+            : [{ op: spec.op, args: { ...spec.payload } }];
         }
       } catch {
         /* ignore */

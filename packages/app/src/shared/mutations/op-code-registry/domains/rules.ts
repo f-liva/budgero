@@ -36,6 +36,13 @@ export const ruleOps = {
         ];
       },
     },
+    // Redo restores the created rule as-is, keeping its ID.
+    redo: {
+      build: (_args, result) => {
+        const rule = result as TransactionRule | undefined;
+        return rule?.id ? [{ op: 'rules.restore', args: { snapshot: rule } }] : [];
+      },
+    },
   },
 
   'rules.update': {

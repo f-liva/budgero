@@ -22,7 +22,6 @@ import { Badge } from '@shared/ui/badge';
 import { Wallet, ArrowUpRight, ArrowDownRight, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { TooltipProvider } from '@shared/ui/tooltip';
 import { PayoffSimulator } from '@features/debt/ui/PayoffSimulator';
-import { useLoading } from '@shared/contexts/LoadingContext';
 import { RecurringTransactionEditor } from '@features/recurring/ui/RecurringTransactionEditor';
 import { getAccountTypeDefinition } from '@entities/account/model/accountTypes';
 import { formatDateISO } from '@shared/lib/date-utils';
@@ -60,8 +59,6 @@ export default function AccountPage() {
 
   const { accountId } = useParams<{ accountId: string }>();
   const numericId = Number(accountId);
-  const { isProcessingTransfer } = useLoading();
-
   const { mobilePageStats, filteredStats, handleMobilePageChange, handleFilteredStatsChange } =
     useTransactionStatsCallbacks();
 
@@ -570,7 +567,6 @@ export default function AccountPage() {
         <div className="flex-1 sm:px-6 space-y-6">
           <AccountTransactionsSection
             isTransactionsLoading={isTransactionsLoading}
-            isProcessingTransfer={isProcessingTransfer}
             transactionsData={registerRows}
             accountId={numericId}
             onMobilePageChange={handleMobilePageChange}

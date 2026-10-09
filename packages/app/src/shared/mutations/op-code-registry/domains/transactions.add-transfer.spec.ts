@@ -101,7 +101,8 @@ describe('transactions.addTransfer', () => {
       transferPayload.source.exchangeRateOverride,
       false,
       [],
-      false
+      false,
+      undefined
     );
     expect(transactionMocks.addTransaction).toHaveBeenNthCalledWith(
       2,
@@ -118,7 +119,8 @@ describe('transactions.addTransfer', () => {
       transferPayload.destination.exchangeRateOverride,
       false,
       [],
-      false
+      false,
+      undefined
     );
 
     expect(useUndoStore.getState().past).toHaveLength(1);
@@ -129,7 +131,17 @@ describe('transactions.addTransfer', () => {
         args: { transferId: transferPayload.transferId, budgetId: transferPayload.budgetId },
       },
     ]);
-    expect(item.redo).toEqual([{ op: 'transactions.addTransfer', args: transferPayload }]);
+    // Redo reuses the leg IDs from the first run, so older history stays valid.
+    expect(item.redo).toEqual([
+      {
+        op: 'transactions.addTransfer',
+        args: {
+          ...transferPayload,
+          source: { ...transferPayload.source, id: 101 },
+          destination: { ...transferPayload.destination, id: 202 },
+        },
+      },
+    ]);
 
     await useUndoStore.getState().undo();
     await useUndoStore.getState().redo();
@@ -143,12 +155,13 @@ describe('transactions.addTransfer', () => {
       transferPayload.transferId
     );
     expect(transactionMocks.addTransaction).toHaveBeenCalledTimes(6);
-    expect(transactionMocks.addTransaction.mock.calls.slice(2, 4)).toEqual(
-      transactionMocks.addTransaction.mock.calls.slice(0, 2)
-    );
-    expect(transactionMocks.addTransaction.mock.calls.slice(4, 6)).toEqual(
-      transactionMocks.addTransaction.mock.calls.slice(0, 2)
-    );
+    const calls = transactionMocks.addTransaction.mock.calls;
+    const withIds = [
+      [...calls[0].slice(0, -1), 101],
+      [...calls[1].slice(0, -1), 202],
+    ];
+    expect(calls.slice(2, 4)).toEqual(withIds);
+    expect(calls.slice(4, 6)).toEqual(withIds);
     expect(useUndoStore.getState().past).toHaveLength(1);
     expect(useUndoStore.getState().future).toHaveLength(0);
   });

@@ -5,7 +5,6 @@ import { useUiStore } from '@shared/store/useUiStore';
 import { extractDateKey, formatDateISO } from '@shared/lib/date-utils';
 import { List, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { TooltipProvider } from '@shared/ui/tooltip';
-import { useLoading } from '@shared/contexts/LoadingContext';
 import { TransactionsTable } from '@features/transactions';
 import { useAllTransactionsDetailed } from '@entities/transaction/api/useTransactions';
 import { useCategories } from '@entities/category/api/useCategories';
@@ -23,8 +22,6 @@ import { useTransactionStatsCallbacks } from './hooks/useTransactionStatsCallbac
 
 export default function AllTransactionsPage() {
   const { t } = useLingui();
-
-  const { isProcessingTransfer } = useLoading();
 
   const { mobilePageStats, filteredStats, handleMobilePageChange, handleFilteredStatsChange } =
     useTransactionStatsCallbacks();
@@ -203,21 +200,19 @@ export default function AllTransactionsPage() {
 
         {/* Transactions Section */}
         <div className="flex-1 sm:px-6 space-y-6">
-          {isProcessingTransfer ? (
-            <CenteredLoader className="py-12" label={t`Processing transfer...`} />
-          ) : (
-            <TransactionsTable
-              initialData={transactionsData}
-              hideAccountColumn={false}
-              onMobilePageChange={handleMobilePageChange}
-              forceBudgetCurrency
-              hideSecondaryAmounts
-              categories={categories}
-              onDateRangeChange={handleDateRangeChange}
-              onFilteredStatsChange={handleFilteredStatsChange}
-              onCreateRecurringFromSelection={recurringEditor.openFromTransaction}
-            />
-          )}
+          {/* Keep the table mounted while a transfer saves: it hosts the add dialog,
+              and Quick Add keeps that open. The global loading overlay covers the wait. */}
+          <TransactionsTable
+            initialData={transactionsData}
+            hideAccountColumn={false}
+            onMobilePageChange={handleMobilePageChange}
+            forceBudgetCurrency
+            hideSecondaryAmounts
+            categories={categories}
+            onDateRangeChange={handleDateRangeChange}
+            onFilteredStatsChange={handleFilteredStatsChange}
+            onCreateRecurringFromSelection={recurringEditor.openFromTransaction}
+          />
         </div>
       </div>
       <RecurringTransactionEditor

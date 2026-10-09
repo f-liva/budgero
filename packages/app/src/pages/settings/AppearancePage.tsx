@@ -4,7 +4,7 @@ import { Label } from '@shared/ui/label';
 import { ThemeSwitch } from '@shared/ui/theme-switch';
 import { LanguageSwitch } from '@shared/ui/language-switch';
 import { Separator } from '@shared/ui/separator';
-import { Palette, Download, Home, Smartphone, Activity, Languages } from 'lucide-react';
+import { Palette, Download, Home, Smartphone, Activity, Languages, List } from 'lucide-react';
 import { Button } from '@shared/ui/button';
 import { usePWA } from '@shared/hooks/usePWA';
 import { RadioGroup, RadioGroupItem } from '@shared/ui/radio-group';
@@ -23,6 +23,7 @@ import { AccountOrderCard } from '@features/account-management/ui/AccountOrderCa
 import { SettingsPageHeader } from '@pages/settings/SettingsPageHeader';
 import {
   useDialogBackgroundBlurPreference,
+  useHideZeroAmountsPreference,
   usePlanningNumberAnimationsPreference,
 } from '@shared/hooks/useUserPreferences';
 
@@ -51,6 +52,11 @@ export default function AppearancePage() {
     updateDialogBackgroundBlur,
     isUpdating: isUpdatingDialogBackgroundBlur,
   } = useDialogBackgroundBlurPreference();
+  const {
+    hideZeroAmounts,
+    updateHideZeroAmounts,
+    isUpdating: isUpdatingHideZeroAmounts,
+  } = useHideZeroAmountsPreference();
 
   const handleHomePageChange = (value: string) => {
     const page = value as HomePageOption;
@@ -274,6 +280,41 @@ export default function AppearancePage() {
               checked={dialogBackgroundBlur}
               onCheckedChange={updateDialogBackgroundBlur}
               disabled={isUpdatingDialogBackgroundBlur}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trans>
+              <List className="h-5 w-5" />
+              Transactions
+            </Trans>
+          </CardTitle>
+          <CardDescription>
+            <Trans>Choose how transaction amounts are shown.</Trans>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-0.5">
+              <Label htmlFor="hide-zero-amounts">
+                <Trans>Leave zero amounts empty</Trans>
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                <Trans>
+                  Show an empty Inflow or Outflow cell instead of 0, so the amount that matters
+                  stands out.
+                </Trans>
+              </p>
+            </div>
+            <Switch
+              id="hide-zero-amounts"
+              checked={hideZeroAmounts}
+              onCheckedChange={updateHideZeroAmounts}
+              disabled={isUpdatingHideZeroAmounts}
             />
           </div>
         </CardContent>

@@ -1,14 +1,56 @@
-import { S, type OpCodeEntry } from '../shared';
+import type {
+  CustomDashboard,
+  CustomDashboardWidget,
+  CustomDashboardWithWidgets,
+} from '@budgero/core/browser';
+import { S, redoWithIds, safeCapture, type OpCall, type OpCodeEntry } from '../shared';
+
+function addWidgetOp(widget: CustomDashboardWidget): OpCall {
+  return {
+    op: 'customDashboardWidgets.add',
+    args: {
+      id: widget.id,
+      dashboardId: widget.dashboardId,
+      reportId: widget.reportId,
+      chartId: widget.chartId,
+      desktopLayout: widget.desktopLayout,
+      mobileLayout: widget.mobileLayout,
+      titleOverride: widget.titleOverride,
+    },
+  };
+}
+
+/** The widget an add created: the one missing from the captured list of IDs. */
+function addedWidgetId(result: unknown, before: unknown): string | undefined {
+  const existing = new Set((before as string[] | null) ?? []);
+  return (result as CustomDashboardWithWidgets | undefined)?.widgets.find(
+    (widget) => !existing.has(widget.id)
+  )?.id;
+}
+
+const captureWidget = (args: Record<string, unknown>) =>
+  safeCapture(() => S().customDashboards!.getWidgetById(args.id as string));
 
 export const customDashboardOps = {
   'customDashboards.create': {
     execute: async (args) => {
       return await S().customDashboards!.createDashboard({
+        id: args.id as string | undefined,
         budgetId: args.budgetId as number,
         name: args.name as string,
       });
     },
     invalidates: [['customDashboards', '*']],
+    undo: {
+      build: (_args, result) => {
+        const id = (result as CustomDashboard | undefined)?.id;
+        return id ? [{ op: 'customDashboards.delete', args: { id } }] : [];
+      },
+    },
+    redo: redoWithIds('customDashboards.create', (args, result) => {
+      const id = (result as CustomDashboard | undefined)?.id;
+      return id ? { ...args, id } : null;
+    }),
   },
 
   'customDashboards.update': {
@@ -23,6 +65,21 @@ export const customDashboardOps = {
       ['customDashboards', '*'],
       ['customDashboard', '*'],
     ],
+    undo: {
+      capture: async (args) =>
+        safeCapture(() => S().customDashboards!.getDashboard(args.id as string)),
+      build: (args, _result, before) => {
+        const dashboard = before as CustomDashboard | null;
+        return dashboard
+          ? [
+              {
+                op: 'customDashboards.update',
+                args: { id: args.id, name: dashboard.name, sortOrder: dashboard.sortOrder },
+              },
+            ]
+          : [];
+      },
+    },
   },
 
   'customDashboards.delete': {
@@ -33,6 +90,26 @@ export const customDashboardOps = {
       ['customDashboards', '*'],
       ['customDashboard', '*'],
     ],
+    // Recreate the dashboard and its widgets under their original IDs.
+    undo: {
+      capture: async (args) =>
+        safeCapture(() => S().customDashboards!.getDashboard(args.id as string)),
+      build: (_args, _result, before) => {
+        const dashboard = before as CustomDashboardWithWidgets | null;
+        if (!dashboard) return [];
+        return [
+          {
+            op: 'customDashboards.create',
+            args: { id: dashboard.id, budgetId: dashboard.budgetId, name: dashboard.name },
+          },
+          {
+            op: 'customDashboards.update',
+            args: { id: dashboard.id, sortOrder: dashboard.sortOrder },
+          },
+          ...dashboard.widgets.map(addWidgetOp),
+        ];
+      },
+    },
   },
 
   'customDashboards.reorder': {
@@ -43,11 +120,26 @@ export const customDashboardOps = {
       });
     },
     invalidates: [['customDashboards', '*']],
+    undo: {
+      capture: async (args) =>
+        safeCapture(() =>
+          S()
+            .customDashboards!.getDashboards(args.budgetId as number)
+            .map((dashboard) => dashboard.id)
+        ),
+      build: (args, _result, before) => {
+        const orderedIds = before as string[] | null;
+        return orderedIds?.length
+          ? [{ op: 'customDashboards.reorder', args: { budgetId: args.budgetId, orderedIds } }]
+          : [];
+      },
+    },
   },
 
   'customDashboardWidgets.add': {
     execute: async (args) => {
       return await S().customDashboards!.addWidget({
+        id: args.id as string | undefined,
         dashboardId: args.dashboardId as string,
         reportId: args.reportId as string,
         chartId: args.chartId as string,
@@ -60,6 +152,22 @@ export const customDashboardOps = {
       ['customDashboard', '*'],
       ['customDashboards', '*'],
     ],
+    undo: {
+      capture: async (args) =>
+        safeCapture(() =>
+          (S().customDashboards!.getDashboard(args.dashboardId as string)?.widgets ?? []).map(
+            (widget) => widget.id
+          )
+        ),
+      build: (_args, result, before) => {
+        const id = addedWidgetId(result, before);
+        return id ? [{ op: 'customDashboardWidgets.delete', args: { id } }] : [];
+      },
+    },
+    redo: redoWithIds('customDashboardWidgets.add', (args, result, before) => {
+      const id = addedWidgetId(result, before);
+      return id ? { ...args, id } : null;
+    }),
   },
 
   'customDashboardWidgets.update': {
@@ -78,6 +186,28 @@ export const customDashboardOps = {
       ['customDashboard', '*'],
       ['customDashboards', '*'],
     ],
+    undo: {
+      capture: captureWidget,
+      build: (_args, _result, before) => {
+        const widget = before as CustomDashboardWidget | null;
+        return widget
+          ? [
+              {
+                op: 'customDashboardWidgets.update',
+                args: {
+                  id: widget.id,
+                  reportId: widget.reportId,
+                  chartId: widget.chartId,
+                  desktopLayout: widget.desktopLayout,
+                  mobileLayout: widget.mobileLayout,
+                  sortOrder: widget.sortOrder,
+                  titleOverride: widget.titleOverride ?? null,
+                },
+              },
+            ]
+          : [];
+      },
+    },
   },
 
   'customDashboardWidgets.delete': {
@@ -88,6 +218,21 @@ export const customDashboardOps = {
       ['customDashboard', '*'],
       ['customDashboards', '*'],
     ],
+    undo: {
+      capture: captureWidget,
+      build: (_args, _result, before) => {
+        const widget = before as CustomDashboardWidget | null;
+        return widget
+          ? [
+              addWidgetOp(widget),
+              {
+                op: 'customDashboardWidgets.update',
+                args: { id: widget.id, sortOrder: widget.sortOrder },
+              },
+            ]
+          : [];
+      },
+    },
   },
 
   'customDashboardWidgets.reorder': {
@@ -98,5 +243,24 @@ export const customDashboardOps = {
       });
     },
     invalidates: [['customDashboard', '*']],
+    undo: {
+      capture: async (args) =>
+        safeCapture(() =>
+          (S().customDashboards!.getDashboard(args.dashboardId as string)?.widgets ?? []).map(
+            (widget) => widget.id
+          )
+        ),
+      build: (args, _result, before) => {
+        const orderedIds = before as string[] | null;
+        return orderedIds?.length
+          ? [
+              {
+                op: 'customDashboardWidgets.reorder',
+                args: { dashboardId: args.dashboardId, orderedIds },
+              },
+            ]
+          : [];
+      },
+    },
   },
 } satisfies Record<string, OpCodeEntry>;

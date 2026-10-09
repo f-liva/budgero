@@ -176,7 +176,7 @@ describe('funding priority mutation undo', () => {
   it('keeps priority when undoing category deletion', async () => {
     await executor.execute({ op: 'categories.delete', payload: { id: 1, budgetId: 7 } });
     await useUndoStore.getState().undo();
-    expect(mock.addCategory).toHaveBeenCalledWith(10, 7, 'Rent', '', 8);
+    expect(mock.addCategory).toHaveBeenCalledWith(10, 7, 'Rent', '', 8, 1);
   });
 
   it('does not record a failed save as undoable', async () => {

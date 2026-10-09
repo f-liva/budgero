@@ -45,10 +45,11 @@ export class LabelService {
     return label;
   }
 
-  addLabel(budgetId: number, name: string, color: string): number {
+  /** `id` is only passed by undo/redo, to recreate a label under its original ID. */
+  addLabel(budgetId: number, name: string, color: string, id?: number): number {
     const normalizedName = this.normalizeLabelName(name);
     const normalizedColor = this.normalizeLabelColor(color);
-    return this.queries.insertLabel(budgetId, normalizedName, normalizedColor);
+    return this.queries.insertLabel(budgetId, normalizedName, normalizedColor, id);
   }
 
   updateLabel(id: number, budgetId: number, name: string, color: string): { updated: number } {

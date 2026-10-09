@@ -10,7 +10,6 @@ import { CurrencyConversionOverlay } from '@features/currencies/ui/CurrencyConve
 import { useUiStore } from '@shared/store/useUiStore';
 import { ClerkTokenSetup } from '@app/system/ClerkTokenSetup';
 import { useUser } from '@clerk/clerk-react';
-import { LoadingProvider } from '@shared/contexts/LoadingContext';
 import { ClerkSignoutHandler } from '@features/auth/ui/ClerkSignoutHandler';
 import { GlobalUndoHotkeys } from '@app/system/GlobalUndoHotkeys';
 import { ThemePresetProvider } from '@shared/contexts/ThemePresetContext';
@@ -30,7 +29,7 @@ import { ActivityHeartbeat } from '@app/system/ActivityHeartbeat';
 import { RateResync } from '@app/system/RateResync';
 import { STARTUP_INTENT_KEY } from '@shared/lib/pwa-constants';
 import { PersistedCalendarPreferencesProvider } from '@app/system/PersistedCalendarPreferencesProvider';
-import { PersistedDialogAppearanceProvider } from '@app/system/PersistedDialogAppearanceProvider';
+import { PersistedAppearanceProvider } from '@app/system/PersistedAppearanceProvider';
 
 const PWA_SHORTCUT_CHANNEL = 'budgero-pwa-shortcut-intent-v1';
 const PWA_SHORTCUT_HANDOFF_TIMEOUT_MS = 250;
@@ -253,13 +252,11 @@ function CommonProviders({ children }: { children: React.ReactNode }) {
   return (
     <RuntimeProvider>
       <PersistedCalendarPreferencesProvider>
-        <PersistedDialogAppearanceProvider>
+        <PersistedAppearanceProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <ThemePresetProvider>
-              <LoadingProvider>{children}</LoadingProvider>
-            </ThemePresetProvider>
+            <ThemePresetProvider>{children}</ThemePresetProvider>
           </ThemeProvider>
-        </PersistedDialogAppearanceProvider>
+        </PersistedAppearanceProvider>
       </PersistedCalendarPreferencesProvider>
     </RuntimeProvider>
   );

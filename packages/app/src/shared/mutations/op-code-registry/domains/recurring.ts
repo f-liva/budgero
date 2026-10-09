@@ -2,10 +2,13 @@ import type {
   CreateRecurringTransactionInput,
   MarkOccurrenceReadyOptions,
   MarkOccurrenceReadyResult,
+  RecurringTransaction,
   UpdateRecurringTransactionInput,
 } from '@budgero/core/browser';
 import {
   S,
+  redoWithIds,
+  safeCapture,
   RECURRING_OCCURRENCE_INVALIDATIONS,
   RECURRING_TEMPLATE_INVALIDATIONS,
   TRANSACTION_INVALIDATION_KEYS,
@@ -39,6 +42,18 @@ export const recurringOps = {
       ...RECURRING_OCCURRENCE_INVALIDATIONS,
       ...PROJECTION_CONSUMER_INVALIDATIONS,
     ],
+    undo: {
+      build: (_args, result) => {
+        const id = (result as RecurringTransaction | undefined)?.id;
+        return typeof id === 'number' ? [{ op: 'recurring.delete', args: { id } }] : [];
+      },
+    },
+    redo: redoWithIds('recurring.create', (args, result) => {
+      const id = (result as RecurringTransaction | undefined)?.id;
+      return typeof id === 'number'
+        ? { ...args, input: { ...(args.input as CreateRecurringTransactionInput), id } }
+        : null;
+    }),
   },
   'recurring.update': {
     execute: async (args) => {
@@ -52,6 +67,29 @@ export const recurringOps = {
       ...RECURRING_OCCURRENCE_INVALIDATIONS,
       ...PROJECTION_CONSUMER_INVALIDATIONS,
     ],
+    undo: {
+      capture: async (args) =>
+        safeCapture(() =>
+          S().recurring!.getRecurringTransaction(args.id as number, { includeInactive: true })
+        ),
+      build: (args, _result, before) => {
+        const template = before as RecurringTransaction | null;
+        if (!template) return [];
+        const patch: UpdateRecurringTransactionInput = {
+          accountId: template.accountId,
+          toAccountId: template.toAccountId,
+          categoryId: template.categoryId,
+          name: template.name,
+          memo: template.memo,
+          amount: template.amount,
+          direction: template.direction,
+          schedule: template.schedule,
+          notifyDaysBefore: template.notifyDaysBefore,
+          active: template.active,
+        };
+        return [{ op: 'recurring.update', args: { id: args.id, patch } }];
+      },
+    },
   },
   'recurring.delete': {
     execute: async (args) => {
@@ -106,6 +144,9 @@ export const recurringOps = {
       return await S().recurring!.skipOccurrence(args.id as number);
     },
     invalidates: [...RECURRING_OCCURRENCE_INVALIDATIONS, ...PROJECTION_CONSUMER_INVALIDATIONS],
+    undo: {
+      build: (args) => [{ op: 'recurring.resetOccurrence', args: { id: args.id } }],
+    },
   },
   'recurring.markNotified': {
     execute: async (args) => {

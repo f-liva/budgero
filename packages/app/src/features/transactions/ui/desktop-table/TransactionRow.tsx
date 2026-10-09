@@ -14,6 +14,7 @@ import { ExchangeRateCell } from '@features/transactions/ui/cells/ExchangeRateCe
 import { PayeeSelectCell } from '@features/transactions/ui/cells/PayeeSelectCell';
 import { LabelSelectCell } from '@features/transactions/ui/cells/LabelSelectCell';
 import { Badge } from '@shared/ui/badge';
+import { useHideZeroAmountsEnabled } from '@shared/contexts/HideZeroAmountsContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/ui/popover';
 import { ArrowLeftRight } from 'lucide-react';
 import { cn } from '@shared/lib/utils';
@@ -31,6 +32,7 @@ import { getRunningBalance } from '@features/transactions/lib/running-balance';
 import {
   hasReadOnlyTransferCategory,
   transferHasOffBudgetLeg,
+  transferPayeeLabel,
 } from '@features/transactions/lib/transfer-category';
 import { formatExchangeRate } from '@entities/currency/lib/exchange-rate-format';
 import { TransferRateDialog } from '@features/transactions/ui/transfer-rate/TransferRateDialog';
@@ -135,6 +137,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   const { t } = useLingui();
 
   const privacyMaskNumbers = useUiStore((state) => state.privacyMaskNumbers);
+  const hideZeroAmounts = useHideZeroAmountsEnabled();
   const selectedAccount = useUiStore((state) => state.selectedAccount);
   const selectedBudget = useUiStore((state) => state.selectedBudget);
   // In account display mode the cell edits the NATIVE amount, whose storage
@@ -152,6 +155,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   const isTransfer = !!transaction.TransferID && transaction.TransferID.trim() !== '';
   const isTransferCategoryReadOnly = hasReadOnlyTransferCategory(transaction);
   const includeTransfersInCategoryPicker = transferHasOffBudgetLeg(transaction);
+  const transferLabel = transferPayeeLabel(transaction);
   const hasUnsafeMoney = hasUnsafeTransactionMoney(transaction);
   const activateCell = (column: TransactionEditableColumn) =>
     onActivateCell(transaction.ID, column);
@@ -190,6 +194,9 @@ export const TransactionRow = React.memo(function TransactionRow({
     const colorClass = isInflow ? 'text-success' : 'text-destructive';
     const amount = isInflow ? transaction.InflowConverted : transaction.OutflowConverted;
     const originalAmount = isInflow ? transaction.InflowNative : transaction.OutflowNative;
+    const primaryValue = getPrimary(transaction) || 0;
+    const displayValue =
+      hideZeroAmounts && primaryValue === 0 ? '' : formatAmount(currentFormatter, primaryValue);
 
     return (
       <TableCell className="text-right font-mono text-xs">
@@ -206,7 +213,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                   colorClass
                 )}
               >
-                {formatAmount(currentFormatter, getPrimary(transaction) || 0)}
+                {displayValue}
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-60 text-sm">
@@ -223,11 +230,12 @@ export const TransactionRow = React.memo(function TransactionRow({
           </Popover>
         ) : editingColumn === kind ? (
           <CalculatorCell
-            value={asMilli(getPrimary(transaction) || 0)}
+            value={asMilli(primaryValue)}
             currencyCode={editCurrencyCode}
             onCommit={(val) =>
               onCellCommit(transaction.ID, isInflow ? 'InflowConverted' : 'OutflowConverted', val)
             }
+            zeroAsEmpty={hideZeroAmounts}
             formatter={(val) => currentFormatter.format(val)}
             displayFormatter={(val) => currentFormatter.format(val)}
             localizer={currentFormatter}
@@ -243,7 +251,7 @@ export const TransactionRow = React.memo(function TransactionRow({
           />
         ) : (
           <CellDisplayButton
-            value={formatAmount(currentFormatter, getPrimary(transaction) || 0)}
+            value={displayValue}
             title={t`Edit ${kind}`}
             onClick={() => activateCell(kind)}
             className={cn('text-right font-medium font-mono', colorClass)}
@@ -305,7 +313,9 @@ export const TransactionRow = React.memo(function TransactionRow({
           </TableCell>
         )}
         <TableCell className="max-w-[200px]">
-          <span className="px-2 text-xs xl:text-sm">{transaction.Payee}</span>
+          <span className="px-2 text-xs xl:text-sm">
+            {transaction.Payee || transferPayeeLabel(transaction)}
+          </span>
         </TableCell>
         {showLabelColumn && (
           <TableCell className="max-w-[180px]">
@@ -450,9 +460,10 @@ export const TransactionRow = React.memo(function TransactionRow({
           />
         ) : (
           <CellDisplayButton
-            value={transaction.Payee || '—'}
-            title={transaction.Payee || t`Edit payee`}
+            value={transaction.Payee || transferLabel || '—'}
+            title={transaction.Payee || transferLabel || t`Edit payee`}
             onClick={() => activateCell('payee')}
+            className={transferLabel ? 'text-muted-foreground' : undefined}
           />
         )}
       </TableCell>

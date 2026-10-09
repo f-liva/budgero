@@ -37,6 +37,8 @@ export interface CustomDashboardWithWidgets extends CustomDashboard {
 }
 
 export interface CreateCustomDashboardInput {
+  /** Restores a deleted dashboard under its original ID (undo). */
+  id?: string;
   budgetId: number;
   name: string;
 }
@@ -48,6 +50,8 @@ export interface UpdateCustomDashboardInput {
 }
 
 export interface AddCustomDashboardWidgetInput {
+  /** Restores a deleted widget under its original ID (undo). */
+  id?: string;
   dashboardId: string;
   reportId: string;
   chartId: string;
@@ -79,6 +83,7 @@ export interface ReorderCustomDashboardWidgetsInput {
 export interface CustomDashboardService {
   getDashboards(budgetId: number): CustomDashboard[];
   getDashboard(id: string): CustomDashboardWithWidgets | null;
+  getWidgetById(id: string): CustomDashboardWidget | null;
   createDashboard(input: CreateCustomDashboardInput): CustomDashboard;
   updateDashboard(input: UpdateCustomDashboardInput): CustomDashboard;
   deleteDashboard(id: string): void;
@@ -231,7 +236,7 @@ export class DatabaseCustomDashboardService implements CustomDashboardService {
     );
     const sortOrder = orderResult?.NextOrder ?? 0;
 
-    const id = createId();
+    const id = input.id ?? createId();
     const now = new Date().toISOString();
 
     try {
@@ -336,7 +341,7 @@ export class DatabaseCustomDashboardService implements CustomDashboardService {
     const sortOrder = orderResult?.NextOrder ?? 0;
 
     const now = new Date().toISOString();
-    const id = createId();
+    const id = input.id ?? createId();
 
     const desktopLayout = clampDesktopLayout(input.desktopLayout ?? DEFAULT_DESKTOP_LAYOUT);
     const mobileLayout = clampMobileLayout(input.mobileLayout ?? DEFAULT_MOBILE_LAYOUT);
@@ -483,7 +488,7 @@ export class DatabaseCustomDashboardService implements CustomDashboardService {
     });
   }
 
-  private getWidgetById(id: string): CustomDashboardWidget | null {
+  getWidgetById(id: string): CustomDashboardWidget | null {
     const row = getRow<DashboardWidgetRow>(
       this.db,
       `SELECT * FROM custom_dashboard_widgets WHERE ID = ?`,

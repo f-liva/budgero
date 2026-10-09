@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { hasReadOnlyTransferCategory, transferHasOffBudgetLeg } from './transfer-category';
+import { asMilli } from '@budgero/core/browser';
+import {
+  hasReadOnlyTransferCategory,
+  transferHasOffBudgetLeg,
+  transferPayeeLabel,
+} from './transfer-category';
 
 describe('hasReadOnlyTransferCategory', () => {
   it('is read-only only when both linked accounts are on-budget', () => {
@@ -52,5 +57,25 @@ describe('transferHasOffBudgetLeg', () => {
         TransferAccountOnBudget: false,
       })
     ).toBe(false);
+  });
+});
+
+describe('transferPayeeLabel', () => {
+  const leg = {
+    TransferID: 'transfer-1',
+    TransferAccountName: 'Savings',
+    Payee: '',
+    OutflowConverted: asMilli(5000),
+  };
+
+  it('points at the other account in the direction the money moved', () => {
+    expect(transferPayeeLabel(leg)).toBe('→ Savings');
+    expect(transferPayeeLabel({ ...leg, OutflowConverted: asMilli(0) })).toBe('← Savings');
+  });
+
+  it('leaves real payees and non-transfers alone', () => {
+    expect(transferPayeeLabel({ ...leg, Payee: 'Bank' })).toBeNull();
+    expect(transferPayeeLabel({ ...leg, TransferID: '' })).toBeNull();
+    expect(transferPayeeLabel({ ...leg, TransferAccountName: null })).toBeNull();
   });
 });

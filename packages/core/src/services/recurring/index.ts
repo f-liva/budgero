@@ -495,6 +495,7 @@ export class RecurringTransactionService {
       this.db,
       `
       INSERT INTO recurring_transactions (
+        ID,
         BudgetID,
         AccountID,
         ToAccountID,
@@ -506,8 +507,9 @@ export class RecurringTransactionService {
         ScheduleJSON,
         NotifyDaysBefore,
         Active
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
+      input.id ?? null,
       input.budgetId,
       input.accountId,
       toAccountId,

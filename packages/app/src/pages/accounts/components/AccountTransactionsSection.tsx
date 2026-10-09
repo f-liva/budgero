@@ -8,7 +8,6 @@ import type { MobilePageStats } from '../account-page.utils';
 
 export interface AccountTransactionsSectionProps {
   isTransactionsLoading: boolean;
-  isProcessingTransfer: boolean;
   transactionsData: GetTransactionsByAccountRow[];
   accountId: number;
   onMobilePageChange: (stats: MobilePageStats | null) => void;
@@ -28,7 +27,6 @@ export interface AccountTransactionsSectionProps {
 
 export const AccountTransactionsSection = React.memo(function AccountTransactionsSection({
   isTransactionsLoading,
-  isProcessingTransfer,
   transactionsData,
   accountId,
   onMobilePageChange,
@@ -47,13 +45,10 @@ export const AccountTransactionsSection = React.memo(function AccountTransaction
 }: AccountTransactionsSectionProps) {
   const { t } = useLingui();
 
-  if (isTransactionsLoading || isProcessingTransfer) {
-    return (
-      <CenteredLoader
-        className="py-12"
-        label={isProcessingTransfer ? t`Processing transfer...` : t`Loading transactions...`}
-      />
-    );
+  // Only the first load swaps the table out. A transfer save must not unmount it,
+  // since the table hosts the add dialog that Quick Add keeps open.
+  if (isTransactionsLoading) {
+    return <CenteredLoader className="py-12" label={t`Loading transactions...`} />;
   }
 
   return (

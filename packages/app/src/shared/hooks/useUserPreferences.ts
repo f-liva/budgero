@@ -22,6 +22,7 @@ interface UserMetaService {
   getShowGroupPercent?(): Promise<boolean> | boolean;
   getPlanningNumberAnimations?(): Promise<boolean> | boolean;
   getDialogBackgroundBlur?(): Promise<boolean> | boolean;
+  getHideZeroAmounts?(): Promise<boolean> | boolean;
 }
 
 /** Runtime services with userMeta */
@@ -320,6 +321,60 @@ export function useDialogBackgroundBlurPreference() {
     dialogBackgroundBlur,
     isLoading: queryRest.isLoading,
     updateDialogBackgroundBlur: updateMutation.mutate,
+    isUpdating: updateMutation.isPending,
+  };
+}
+
+/** Whether zero transaction amounts render as empty cells. Off by default. */
+export function useHideZeroAmounts() {
+  const runtime = useRuntime();
+  const runtimeInitialized = useRuntimeInitialized();
+  const spaceId = useActiveSpaceId();
+
+  return useQuery<boolean>({
+    queryKey: ['hideZeroAmounts', spaceId ?? 'global'],
+    queryFn: async () => {
+      const services = runtime.services() as ServicesWithUserMeta;
+      return (await services?.userMeta?.getHideZeroAmounts?.()) ?? false;
+    },
+    enabled: runtimeInitialized,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+}
+
+/** Query + mutation pair for showing zero amounts as empty cells. */
+export function useHideZeroAmountsPreference() {
+  const runtime = useRuntime();
+  const spaceId = useActiveSpaceId();
+  const queryClient = useQueryClient();
+  const queryKey = ['hideZeroAmounts', spaceId ?? 'global'] as const;
+  const { data: hideZeroAmounts = false, ...queryRest } = useHideZeroAmounts();
+
+  const updateMutation = useMutation<void, Error, boolean, { previous: boolean | undefined }>({
+    mutationFn: async (value: boolean) => {
+      await executeSpaceMutation<void>(runtime, {
+        op: 'userPreferences.setHideZeroAmounts',
+        payload: { value },
+        meta: { label: 'Update empty zero amounts setting' },
+      });
+    },
+    onMutate: async (value) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<boolean>(queryKey);
+      queryClient.setQueryData(queryKey, value);
+      return { previous };
+    },
+    onError: (_error, _value, context) => {
+      queryClient.setQueryData(queryKey, context?.previous ?? false);
+    },
+  });
+
+  return {
+    hideZeroAmounts,
+    isLoading: queryRest.isLoading,
+    updateHideZeroAmounts: updateMutation.mutate,
     isUpdating: updateMutation.isPending,
   };
 }

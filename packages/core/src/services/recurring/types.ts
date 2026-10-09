@@ -61,6 +61,8 @@ export interface RecurringTransaction {
 }
 
 export interface CreateRecurringTransactionInput {
+  /** Only passed by undo/redo, to recreate a template under its original ID. */
+  id?: number;
   budgetId: number;
   accountId: number;
   toAccountId?: number | null;

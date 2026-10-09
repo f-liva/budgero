@@ -297,14 +297,16 @@ export class CurrencyQueries {
     rate: number,
     startDate: string,
     endDate: string | null,
-    budgetId: number
+    budgetId: number,
+    id?: number
   ): number {
     const result = run(
       this.db,
       `
-      INSERT INTO custom_currency_rates (FromCurrency, ToCurrency, Rate, StartDate, EndDate, BudgetID)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO custom_currency_rates (ID, FromCurrency, ToCurrency, Rate, StartDate, EndDate, BudgetID)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `,
+      id ?? null,
       fromCurrency,
       toCurrency,
       rate,

@@ -134,6 +134,8 @@ export function formatOpCode(op: string): string {
     'transactions.moveToNewAccount': 'Move Transaction Account',
     'transactions.reassign': 'Reassign Transactions',
     'transactions.reconcile': 'Reconcile Account',
+    'transactions.reconcileCleared': 'Reconcile Account',
+    'transactions.unreconcile': 'Undo Reconcile',
     'transactions.upsertSplits': 'Update Splits',
     'transactions.clearSplits': 'Clear Splits',
     'categories.create': 'Create Category',
